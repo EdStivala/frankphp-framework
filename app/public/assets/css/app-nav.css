@@ -90,9 +90,22 @@
 .sidebar-toggle:hover{
 	background-color: var(--brand-primary-dark);
 	border-color: var(--brand-primary-dark);
-	color: #FFFFFF; 
+	color: #FFFFFF;
 	transform: translateY(-1px);
 	box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+/* Framework version footer */
+.sidebar-version{
+	margin-top: 8px;
+	text-align: center;
+	font-size: .7rem;
+	color: var(--muted);
+	white-space: nowrap;
+}
+
+.sidebar.collapsed .sidebar-version{
+	display: none;
 }
 
 /* Popout submenu (for collapsed sidebar) */

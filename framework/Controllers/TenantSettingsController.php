@@ -27,7 +27,7 @@ class TenantSettingsController extends BaseController
     {
         if (!in_array($user['role'] ?? '', ['admin', 'owner'], true)) {
             return Response::redirect(
-                "/tenant/{$tenant['id']}/tenant-settings?error=forbidden"
+                "/tenant/{$tenant['id']}/dashboard?error=forbidden"
             );
         }
         return null;

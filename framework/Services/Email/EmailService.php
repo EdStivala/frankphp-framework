@@ -11,6 +11,8 @@ use Frank\Services\Email\PHPMailer\PHPMailer;
 use Frank\Services\Email\PHPMailer\Exception;
 use Frank\Services\Email\PHPMailer\SMTP;
 use Frank\Services\Email\Templates\PasswordResetEmailTemplate;
+use Frank\Services\Email\Templates\SignupVerificationEmailTemplate;
+use Frank\Services\Email\Templates\PlatformOwnerSignupAlertTemplate;
 
 /**
  * EmailService
@@ -48,6 +50,7 @@ class EmailService
     private string $fromName;
     private string $replyToEmail;
 	private string $adminEmail;
+	private array  $templates;
 
     public function __construct(
         string $host,
@@ -58,6 +61,7 @@ class EmailService
         string $fromName,
         string $replyTo,
         string $adminEmail,
+        array  $templates = [],
     ) {
         $this->host         = $host;
         $this->port         = $port;
@@ -67,6 +71,7 @@ class EmailService
         $this->fromName     = $fromName;
         $this->replyToEmail = $replyTo;
 		$this->adminEmail	= $adminEmail;
+		$this->templates    = $templates;
     }
 
     /**
@@ -85,7 +90,21 @@ class EmailService
             fromName: $mailConfig['from_name'],
             replyTo:  $mailConfig['reply_to'],
             adminEmail:	$mailConfig['admin_email'],
+            templates:  $mailConfig['templates'] ?? [],
         );
+    }
+
+    /**
+     * Resolves a template class for a given framework email flow —
+     * an app-level override from config('mail.templates') if one is
+     * registered for $key, otherwise the framework's own default.
+     * The override class must implement the same static buildHtml()/
+     * buildText() signature as the default it replaces (see
+     * codebase.md §16.8 "Overriding Framework Email Templates").
+     */
+    private function resolveTemplateClass(string $key, string $default): string
+    {
+        return $this->templates[$key] ?? $default;
     }
 
 	/**
@@ -100,12 +119,9 @@ class EmailService
 	): EmailResult
 	{
 		$subject  = 'Your verification code';
-		$htmlBody = \Frank\Services\Email\Templates\SignupVerificationEmailTemplate::buildHtml(
-		$email, $code, $expiryMinutes
-		);
-		$textBody = \Frank\Services\Email\Templates\SignupVerificationEmailTemplate::buildText(
-		$email, $code, $expiryMinutes
-		);
+		$templateClass = $this->resolveTemplateClass('signup_verification', SignupVerificationEmailTemplate::class);
+		$htmlBody = $templateClass::buildHtml($email, $code, $expiryMinutes);
+		$textBody = $templateClass::buildText($email, $code, $expiryMinutes);
 
 		return $this->send(new EmailMessage(
 		credentialsUserName:   $this->username,
@@ -136,12 +152,9 @@ class EmailService
 	): EmailResult
 	{
 		$subject  = 'New Signup Alert';
-		$htmlBody = \Frank\Services\Email\Templates\PlatformOwnerSignupAlertTemplate::buildHtml(
-		$triggeringEmail, $event
-		);
-		$textBody = \Frank\Services\Email\Templates\PlatformOwnerSignupAlertTemplate::buildText(
-		$triggeringEmail, $event
-		);
+		$templateClass = $this->resolveTemplateClass('platform_owner_signup_alert', PlatformOwnerSignupAlertTemplate::class);
+		$htmlBody = $templateClass::buildHtml($triggeringEmail, $event);
+		$textBody = $templateClass::buildText($triggeringEmail, $event);
 
 		return $this->send(new EmailMessage(
 		credentialsUserName:   $this->username,
@@ -164,8 +177,9 @@ class EmailService
     public function sendPasswordReset(string $email, string $name, string $resetUrl): EmailResult
     {
         $subject  = 'Password Reset Request';
-        $htmlBody = PasswordResetEmailTemplate::buildHtml($name, $resetUrl);
-        $textBody = PasswordResetEmailTemplate::buildText($name, $resetUrl);
+        $templateClass = $this->resolveTemplateClass('password_reset', PasswordResetEmailTemplate::class);
+        $htmlBody = $templateClass::buildHtml($name, $resetUrl);
+        $textBody = $templateClass::buildText($name, $resetUrl);
 
         return $this->send(new EmailMessage(
             credentialsUserName:   $this->username,
@@ -175,41 +189,6 @@ class EmailService
             htmlBody:              $htmlBody,
             toName:                $name,
             textBody:              $textBody,
-            from:                  $this->fromEmail,
-            fromName:              $this->fromName,
-            replyTo:               $this->replyToEmail,
-        ));
-    }
-
-    public function sendUserInvite(string $email, string $name, string $inviteUrl): EmailResult
-    {
-        $subject  = "You've been invited";
-        $htmlBody = $this->buildUserInviteHtml($name, $inviteUrl);
-
-        return $this->send(new EmailMessage(
-            credentialsUserName:   $this->username,
-            credentialsUserSecret: $this->password,
-            to:                    $email,
-            subject:               $subject,
-            htmlBody:              $htmlBody,
-            toName:                $name,
-            from:                  $this->fromEmail,
-            fromName:              $this->fromName,
-            replyTo:               $this->replyToEmail,
-        ));
-    }
-
-    public function sendNotification(string $email, string $name, string $subject, string $body): EmailResult
-    {
-        $htmlBody = $this->buildNotificationHtml($name, $body);
-
-        return $this->send(new EmailMessage(
-            credentialsUserName:   $this->username,
-            credentialsUserSecret: $this->password,
-            to:                    $email,
-            subject:               $subject,
-            htmlBody:              $htmlBody,
-            toName:                $name,
             from:                  $this->fromEmail,
             fromName:              $this->fromName,
             replyTo:               $this->replyToEmail,
@@ -279,15 +258,5 @@ class EmailService
     private function logError(string $error, string $to): void
     {
         error_log(sprintf('[EmailService] ERROR — %s → %s at %s', $error, $to, date('Y-m-d H:i:s')));
-    }
-
-    private function buildUserInviteHtml(string $name, string $inviteUrl): string
-    {
-        return "<html><body><h1>Welcome {$name}!</h1><p><a href='{$inviteUrl}'>Accept Invitation</a></p></body></html>";
-    }
-
-    private function buildNotificationHtml(string $name, string $body): string
-    {
-        return "<html><body><h1>Hello {$name}</h1><p>{$body}</p></body></html>";
     }
 }

@@ -1,5 +1,5 @@
 <?php
-$title = 'Create Account - BitFitter';
+$title = 'Create Account - FrankPHP';
 ob_start();
 ?>
 
@@ -10,9 +10,9 @@ ob_start();
 
 			<h3 class="text-center mb-4">
 				<img
-				src="assets\images\bf_logo_full.svg"
+				src="/assets/images/logo_full.svg"
 					style="width: 200px;"
-					alt="BitFitter new user sign up"
+					alt="FrankPHP new user sign up"
 				/>
 			</h3>
 

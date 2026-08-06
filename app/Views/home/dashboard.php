@@ -9,6 +9,11 @@ ob_start();
 <h5>
     (Replace with your own custom dashboard / landing page)
 </h5>
+
+<?php if (($_GET['error'] ?? '') === 'forbidden') : ?>
+    <div class="alert alert-danger settings-alert"><i class="bi bi-lock-fill me-2"></i>You don't have permission to view that page.</div>
+<?php endif; ?>
+
 <div class="row">
 	<div class="col-8">
 		<div class="card mt-2">

@@ -58,6 +58,16 @@ return [
         'from_name'    => Env::get('MAIL_FROM_NAME', Env::get('APP_NAME', 'FrankPHP App')),
         'reply_to'     => Env::get('MAIL_REPLY_TO', Env::require('MAIL_FROM_ADDRESS')),
         'admin_email'  => Env::require('MAIL_SITE_ADMIN'),
+
+        // Optional per-app overrides for the framework's required email
+        // templates (signup verification, password reset, platform-owner
+        // alert). See codebase.md §16.8. Leave empty to use the framework
+        // defaults — nothing here is required.
+        'templates' => [
+            // 'signup_verification'        => \App\Email\Templates\MySignupVerificationTemplate::class,
+            // 'password_reset'              => \App\Email\Templates\MyPasswordResetTemplate::class,
+            // 'platform_owner_signup_alert' => \App\Email\Templates\MyPlatformOwnerAlertTemplate::class,
+        ],
     ],
 
     // ----------------------------------------------------------------

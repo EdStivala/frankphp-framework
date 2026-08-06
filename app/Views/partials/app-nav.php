@@ -1,31 +1,7 @@
 <div class="nav-layout">	
 	<nav id="sidebar" class="sidebar d-flex flex-column collapsed" aria-label="Sidebar navigation">
-		<!-- 
-		<div class="align-items-center justify-content-between mb-2 px-1">
-			<div class=" align-items-center gap-2 sidebar-logo">
-				<img
-					src="\assets\images\revisio_logo.svg">
-				</img>
-			</div>
-		</div>
-		-->
-		
 		<ul class="nav flex-column" role="menu">
-		
-			<!--
-			<li class="nav-item" role="none">
-				<a 
-					href="/tenant/<?= $tenant['id'] ?>/dashboard" 
-					class="nav-link <?= $pageTag == 'Dashboard' ? 'active' : null ?>" 
-					role="menuitem">
-					<span class="side-icon">
-						<i class="icon icon-home"></i>
-					</span>
-					<span class="side-label">Home</span>
-				</a>
-			</li>
-			-->
-			
+
 			<li class="nav-item" data-menu="dashboard" role="none">
 				<a
 					href="/tenant/<?= $tenant['id'] ?>/dashboard"
@@ -37,11 +13,6 @@
 					</span>
 					<span class="side-label">
 						<span class="side-label-text">App Dashboard</span>
-						<!--
-						<span class="d-none d-lg-inline">
-						<i class="bi bi-chevron-right small"></i>
-						</span>
-						-->
 					</span>
 				</a>
 			</li>
@@ -96,6 +67,8 @@
 		<button id="collapseBtn" class="btn btn-sm sidebar-toggle" title="Collapse sidebar" aria-pressed="false">
 			<i class="bi bi-chevron-left"></i>
 		</button>
+
+		<div class="sidebar-version">FrankPHP v<?= htmlspecialchars(FRANK_VERSION) ?></div>
 	</nav>
 	
 	<!-- Popouts for collapsed sidebar -->

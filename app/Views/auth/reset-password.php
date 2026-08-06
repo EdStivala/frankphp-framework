@@ -1,5 +1,5 @@
 <?php
-$title = 'Reset Password - ReVisio360';
+$title = 'Reset Password - FrankPHP';
 ob_start();
 ?>
 
@@ -9,7 +9,7 @@ ob_start();
 		<div class="card-body p-4">
 			<h3 class="text-center mb-4">
 				<img
-					src="assets\images\bf_logo_full.svg"
+					src="/assets/images/logo_full.svg"
 					style="width: 200px;"
 				/>
 			</h3>

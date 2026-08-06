@@ -5,8 +5,6 @@
 <html lang="en">
 	<head>
 		<?php include(APP_VIEWS_DIR . '/partials/gtm_head.html'); ?>
-	
-		<link rel="canonical" href="http://app,.bitfitter.me/" />
 
 		<meta charset="utf-8">
 		<meta http-equiv="x-ua-compatible" content="ie=edge">
@@ -16,7 +14,7 @@
 <meta name="description" content="FrankPHP is a pragmatic PHP scaffold for building multi-tenant, multi-user apps fast. Launch on shared hosting with FTP and MySQL, skip unnecessary infrastructure, and scale later when the product proves itself.">
 		<meta name="ROBOTS" content="index, follow">
 		<meta name="Author" content="Ed Stivala Limited">
-		<title>FrankPHP | The AI-Native PHP Framework for multi-tenant SaaS Apps</title>
+		<title><?= htmlspecialchars($title ?? 'FrankPHP | The AI-Native PHP Framework for multi-tenant SaaS Apps') ?></title>
 
 		<link href="../assets/vendor/bootstrap-5.3.6-dist/CSS/bootstrap.min.css" rel="stylesheet">
 		<link href="../assets/vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">

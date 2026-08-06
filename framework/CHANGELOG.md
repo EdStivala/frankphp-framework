@@ -1,5 +1,50 @@
 # Changelog
 
+## [2.0.0] - 2026-08-06
+
+### Human-readable summary
+
+FrankPHP 2.0.0 is the **framework/application split**: the single project folder is now two independent sibling folders, `framework/` and `app/`, each with its own PSR-4 namespace root (`Frank\` and `App\`, no searching or fallback between them). `framework/` contains nothing but framework-owned code and is meant to be replaced wholesale on every future update. `app/` — routes, business logic, and now also `Views/`, `public/`, `Config/config.php`, `.env`, and `MYAPP.md`, all of which used to live inside the framework folder — is never touched by an update once a developer has customized it. This is the precursor to publishing FrankPHP as a public GitHub repository rather than a Gumroad zip.
+
+Every framework class was renamed from `App\` to `Frank\`. `HomeController` — the starter dashboard controller — moved to `app/Controllers/` as app-owned demo content, since every real application replaces it. Several real bugs were found and fixed along the way, not just moved: a schema-path resolution bug, a double database-seeding bug, an infinite-redirect-loop bug in `TenantSettingsController`'s forbidden-access check, and hardcoded BitFitter branding sitting in framework defaults (`EmailMessage`'s sender fallback). The `Container` and `Router` both gained an explicit `override()` method — `singleton()`/`bind()`/`add()` now throw on a duplicate id/route instead of silently allowing one framework component to shadow another, and `override()` is the one deliberate way to replace one on purpose. `EmailService`'s three framework-required email flows (signup verification, password reset, platform-owner alert) are now overridable per-application via `config('mail.templates')`, without ever editing the framework's own template files.
+
+A broken, unused feature (`cron_task_reminders.php` — referenced a non-existent `Task` model and was hardcoded to a different project's domain) was removed outright rather than migrated. `codebase.md` itself received a full accuracy pass — the directory structure, route tables, and numerous `App\Core\...` references throughout the document were still describing the pre-split, single-folder layout and have been corrected.
+
+### Added
+
+- **`app/` as a sibling of `framework/`** — the application half of the split: `Controllers/`, `Models/`, `Services/`, `Presenters/` (empty, ready for application code), plus `Views/`, `public/`, `Config/config.php`, `.env`/`env.example`, `MYAPP.md`, and `Scaffold/examples/` (cookbook-style reference implementations — organization, media, form-presenter, video-library — moved out of live framework code, not deleted).
+- `Controllers/AccountSettingsController.php` — per-user account settings, no role restriction (distinct from `TenantSettingsController`, which is admin/owner-only).
+- `Container::override(id, factory, shared = true)` and `Router::override(method, pattern, handler, middleware)` — the one supported way to deliberately replace a framework-registered binding or route from application code.
+- `Database::runSchemaFileIfMissingTable()` promoted to a general-purpose primitive — applications may now call it a second time for their own `app/sql/schema.app.sql`, guarded by an application-chosen sentinel table. Wired into `app/bootstrap.php` behind a `file_exists()` guard, so it's a no-op until an application actually creates that file.
+- `config('mail.templates')` — optional per-application overrides for the three framework-required email templates (signup verification, password reset, platform-owner alert). Framework ships working defaults; nothing needs configuring for a fresh install to send correct email.
+- `codebase.md` §16.7 "Extending Framework-Owned Tables" — documents the supported pattern (a satellite table with a foreign key, never editing `tenants`/`users` directly) for applications that need to attach their own data to a tenant or user.
+- `codebase.md` §16.8 "Overriding Framework Email Templates" — documents the `mail.templates` mechanism above, including the exact static method signature each override must implement.
+- `FRANK_VERSION` constant, read once from `framework/VERSION`, shown in the starter app's sidebar footer.
+- `Services/Email/Templates/PlatformOwnerSignupAlertTemplate.php` — replaces `TenantOwnerAdvisoryTemplate.php` (renamed; see Changed).
+- `sql/schema.core.sql` — replaces `sql/schema.sql` (renamed; see Changed).
+
+### Changed
+
+- Every framework class renamed from `App\` to `Frank\` — `Core/`, `Controllers/`, `Middleware/`, `Models/`, `Services/`. Two independent, single-path PSR-4 mappings (`Frank\` → `framework/`, `App\` → `app/`); a class's namespace alone determines where it's found, no searching.
+- All framework routes now consistently use fully-qualified `Frank\Controllers\...` handler strings and `Frank\Middleware\...` middleware strings. Previously an inconsistent mix of bare shorthand and `App\`-prefixed strings, some of which were already wrong before this release.
+- `framework/bootstrap.php` now hard-requires `app/bootstrap.php` as its final step, passing `$container`/`$router`/`$config` already in scope. A missing `app/bootstrap.php` is a fatal boot error by design.
+- `Core/Database.php` — fixed a schema-path resolution bug (was resolving one directory too high); removed a redundant hardcoded seed-data `INSERT` that ran alongside `schema.core.sql`'s own seed data, which caused double-seeding. `schema.core.sql`'s seed data (one tenant, two users, password `password`) is now the sole source.
+- `Core/BaseController::view()` simplified — no more namespace branching; always resolves against `APP_VIEWS_DIR`, a constant defined once in `framework/bootstrap.php`.
+- `Controllers/TenantSettingsController.php` — fixed a real bug: the forbidden-access check redirected a rejected user back to the exact same gated route, causing an infinite redirect loop for any non-admin/owner user who hit it (browsers reported this as a connection failure, not a permissions error). Now redirects to the tenant dashboard, matching the pattern already used correctly in `UserManagementController`.
+- `Services/Email/EmailMessage.php` — removed hardcoded `noreply@bitfitter.me` / `BitFitter` / `hello@bitfitter.me` constructor defaults. `from` and `fromName` are now required arguments; every call site already supplied them explicitly, so this is a dead-code removal, not a behavior change — but it closes off a landmine for any future caller that forgot to.
+- `Services/Email/EmailService.php` — the three framework-required send methods now resolve their template class through `config('mail.templates')` before falling back to the framework default (see Added). `sendPlatformOwnerSignupAlert()` renamed from `sendTenantOwnerAdvisory()` — it alerts a single platform-wide operator address (`MAIL_SITE_ADMIN`), not a per-tenant owner, which the old name implied incorrectly.
+- `tools/build_release.php` — `required_files`/`exclude_paths` updated to match the post-split `framework/` structure. Previously still expected `Config/config.php`, `Views/`, `public/`, `private/`, and `Helpers/` to exist inside `framework/` — none of them do anymore.
+- `codebase.md` — full accuracy pass. The directory structure (§2) was completely rewritten for the split; numerous `App\Core\...` references throughout the document (Clock, Container, BaseController, BaseModel, Database) corrected to `Frank\Core\...`; removed two phantom references to a `UserController.php`/`GET /me` route that don't exist in the real codebase; corrected the dashboard route's ownership (app-owned, not framework-owned) in three places; documented `Container::override()`/`Router::override()`, which had never been written up.
+
+### Removed
+
+- `cron_task_reminders.php` and `Services/Email/Templates/TaskReminderEmailTemplate.php` — a broken, unused feature. Referenced a `Task` model that doesn't exist and was hardcoded to an unrelated project's domain. Deleted outright rather than migrated.
+- `POST /api/v1/tenant/{tenant_id}/organizations` (`Api\V1\OrganizationController`) is no longer a live framework route — the controller moved to `app/Scaffold/examples/organization/` as a reference implementation. An application that wants this endpoint now copies the example in rather than getting it by default.
+
+### Note on this release's scope
+
+This entry covers `framework/` only, per §15.3 — that's what `CHANGELOG.md` tracks. The starter content shipped in `app/` (branding genericized, several broken image paths and a dead-title bug fixed, a forbidden-access flash-message convention established) changed too, but as application-owned content it isn't itemized here.
+
 ## [1.4.0] - 2026-06-09
 
 ### Human-readable summary

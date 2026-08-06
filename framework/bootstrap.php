@@ -75,6 +75,10 @@ date_default_timezone_set(\Frank\Core\Clock::resolveTimezone(null, null, $config
 // ----------------------------------------------------------------
 define('APP_VIEWS_DIR', APP_BASE_DIR . '/app/Views');
 
+// Framework version, read once from framework/VERSION. Available to any
+// view as the FRANK_VERSION constant — e.g. app-nav.php's sidebar footer.
+define('FRANK_VERSION', trim(file_get_contents(__DIR__ . '/VERSION')));
+
 // ----------------------------------------------------------------
 // 5. Container — built after config so closures can capture $config
 // ----------------------------------------------------------------

@@ -1,5 +1,5 @@
 <?php
-$title = 'Login to BitFitter';
+$title = 'Login to FrankPHP';
 
 // Generate CSRF token if not already set
 if (session_status() === PHP_SESSION_NONE)
@@ -18,9 +18,9 @@ ob_start();
 		<div class="card-body p-4">
 			<h3 class="text-center mb-4">
 				<img
-				src="assets/images/bf_logo_full.svg"
+				src="/assets/images/logo_full.svg"
 				style="width: 200px;"
-				alt="BitFitter Login Panel"
+				alt="FrankPHP Login Panel"
 				/>
 			</h3>
 
@@ -88,7 +88,7 @@ ob_start();
 				
 				<div class="text-center pt-3 border-top">
 					<p class="mb-0 text-muted small">
-						New to BitFitter?
+						New to FrankPHP?
 						<a href="/signup" class="text-decoration-none fw-bold">Create a free account</a>
 					</p>
 				</div>

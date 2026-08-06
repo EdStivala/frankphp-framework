@@ -15,8 +15,6 @@ ob_start();
     <div class="alert alert-success settings-alert">Settings saved.</div>
 <?php elseif (($_GET['error'] ?? '') === 'save_failed') : ?>
     <div class="alert alert-danger settings-alert">Could not save settings — please try again.</div>
-<?php elseif (($_GET['error'] ?? '') === 'forbidden') : ?>
-    <div class="alert alert-danger settings-alert">You don't have permission to view this page.</div>
 <?php endif; ?>
 
 <div class="settings-layout">

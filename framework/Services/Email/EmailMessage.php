@@ -26,11 +26,11 @@ class EmailMessage
         string $to,
         string $subject,
         string $htmlBody,
+        string $from,
+        string $fromName,
         string $toName = '',
         ?string $textBody = null,
-        string $from = 'noreply@bitfitter.me',
-        string $fromName = 'BitFitter',
-        ?string $replyTo = 'hello@bitfitter.me'
+        ?string $replyTo = null
     ) {
 		$this->credentialsUserName = $credentialsUserName;
 		$this->credentialsUserSecret = $credentialsUserSecret;

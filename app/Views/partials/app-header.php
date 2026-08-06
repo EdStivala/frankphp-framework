@@ -3,7 +3,7 @@
 
 	<div class="logo-text">
 		<img
-		src="/assets/images/bf_logo_full.svg"
+		src="/assets/images/logo_full.svg"
 		/>
 	</div>
 		
