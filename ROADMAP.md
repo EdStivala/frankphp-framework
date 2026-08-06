@@ -47,14 +47,6 @@ separate pass.
 - Update the documentation site (docs.n3wmedia.com) to reflect the move to
   GitHub and the framework/app split.
 - Update n3wmedia.com itself to reflect the move to GitHub.
-- Turn the positioning copy already drafted in this conversation ("A Micro
-  SaaS Business framework...") into the actual README/About page.
-
-## Release Process (2.0.0)
-
-- Build and attach a framework-only zip (`build_release.php`) to the GitHub
-  v2.0.0 Release as a second asset, distinct from GitHub's automatic full
-  source zip — so updaters have an unambiguous framework-only download.
 
 ## Ongoing Maintenance (not version-specific)
 
