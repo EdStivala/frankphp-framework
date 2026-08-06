@@ -1,0 +1,17 @@
+[
+    "GET / => App\\\\Controllers\\\\HomeController@dashboard [$tm, $auth]",
+    "GET /forgot-password => AuthController@showForgotPassword []",
+    "GET /login => App\\\\Controllers\\\\AuthController@showLogin []",
+    "GET /logout => App\\\\Controllers\\\\AuthController@logout []",
+    "GET /reset-password => AuthController@showResetPassword []",
+    "GET /signup => SignupController@showSignup []",
+    "GET /signup/verify => SignupController@showVerify []",
+    "GET /tenant/{tenant_id}/dashboard => App\\\\Controllers\\\\HomeController@dashboard [$tm, $auth]",
+    "POST /api/v1/tenant/{tenant_id}/organizations => App\\\\Controllers\\\\Api\\\\V1\\\\OrganizationController@index [$tm, $apiAuth, $json]",
+    "POST /forgot-password => AuthController@sendPasswordReset []",
+    "POST /login => App\\\\Controllers\\\\AuthController@login [$json]",
+    "POST /reset-password => AuthController@resetPassword []",
+    "POST /signup => SignupController@initiateSignup [$json]",
+    "POST /signup/resend => SignupController@resendCode [$json]",
+    "POST /signup/verify => SignupController@completeSignup [$json]"
+]

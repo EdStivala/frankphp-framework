@@ -1,0 +1,20 @@
+.login-card{
+	width: 100%;
+	max-width: 420px;
+	border-radius: var(--card-radius);
+	box-shadow: 0 10px 30px rgba(20, 20, 50, 0.08);
+	overflow: hidden;
+	background: #ffffff;
+}
+
+a {
+	color: var(--brand-primary);
+}
+
+/* make form compact on small screens */
+
+@media (max-width:420px){
+	.login-card{
+		border-radius: 12px
+	}
+}

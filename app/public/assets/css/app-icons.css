@@ -1,0 +1,25 @@
+/*--------------------------------------------------------------
+# Bespoke Icons to replace standard Bootstrap
+--------------------------------------------------------------*/
+
+.icon {
+	display: inline-block;
+	width: 1.5em;
+	height: 1.5em;
+	background-color: currentColor;        /* inherits CSS color */
+	-webkit-mask-size: cover;
+	mask-size: cover;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+}
+
+.icon-dashboard {
+	-webkit-mask-image: url('/assets/icons/dashboard.svg');
+	mask-image: url('/assets/icons/dashboard.svg');
+}
+.icon-users {
+	-webkit-mask-image: url('/assets/icons/users.svg');
+	mask-image: url('/assets/icons/users.svg');
+}

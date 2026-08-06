@@ -1,0 +1,627 @@
+/**
+* The FrankPHP is a product created by Ed Stivala, N3WMedia Labs
+* Copyright (c) 2026 Ed Stivala Limited
+* License: MIT
+*/
+
+/*--------------------------------------------------------------
+# Site Wide Variables and Page Containers
+--------------------------------------------------------------*/
+
+/* --- DESIGN SYSTEM --- */
+
+:root {
+
+	/* Brand Colors */
+	--brand-primary: #2B3A67;
+	--brand-primary-dark: #2CB7B1;
+	--brand-primary-light: #F7C700;
+	--brand-primary-glass: color-mix(in srgb, var(--brand-primary), transparent 90%);
+
+	/* Semantic Colors */
+	--color-success: #10B981;
+	--color-warning: #F59E0B;
+	--color-danger: #EF4444;
+	--color-danger-dark: #B91C1C;
+	--color-danger-light: #FEF2F2;
+
+	/* 10-Step Neutral Grey Scale */
+	--grey-50:  #F9FAFB;
+	--grey-100: #F3F4F6;
+	--grey-200: #E5E7EB;
+	--grey-300: #D1D5DB;
+	--grey-400: #9CA3AF;
+	--grey-500: #6B7280;
+	--grey-600: #4B5563;
+	--grey-700: #374151;
+	--grey-800: #1F2937;
+	--grey-900: #111827;
+
+	/* UI Mappings */
+	--app-bg: var(--grey-50);
+	--sidebar-bg: var(--grey-100);
+	--text-main: var(--grey-700);
+	--text-heading: var(--grey-900);
+	--border-default: var(--grey-200);
+
+
+	--sidebar-width: 260px;
+	--sidebar-collapsed: 80px;
+	--topbar-height: 56px;
+}
+
+
+/* --- GLOBAL HTML --- */
+
+body{
+	
+	background: var(--app-bg);
+	color: var(--text-main);
+	font-family: 'Inter', system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	margin: 0;
+	height: 100%;
+	overflow-y: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	color: var(--text-heading);
+	font-weight: 600;
+}
+
+/* Classes to support the app-main template structure */
+.mainBody {
+	padding-top: var(--topbar-height);
+}
+.page-content-area{
+	margin-left: var(--sidebar-collapsed);
+	height:  100vh;
+	overflow-y:  auto;
+	padding: 1.5rem;
+}
+.page-header {
+	margin-bottom: 1.5rem;
+}
+
+/* --- COMPONENTS --- */
+
+/* Basic Card */
+.card {
+	background: #FFFFFF;
+	border: 1px solid var(--border-default);
+	border-radius: 8px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+	transition: all 0.2s ease;
+	overflow: visible;
+}
+.card:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.card-header-modern {
+	padding: 1.25rem 1.5rem;
+	background: transparent;
+	border-bottom: 1px solid var(--grey-100);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+.card-header-modern h5 {
+	font-size: 0.95rem;
+	margin: 0;
+}
+
+.card-body {
+	overflow: visible;
+	position: relative;
+}
+
+
+/* Tips Card - Explanatory info on completing a page */
+.tips-card {
+	background-color: #f7fafc;
+	border: 1px solid #e2e8f0;
+}
+.tips-card .card-body {
+	padding: 1.25rem;
+}
+.tips-card h6 {
+	color: #2d3748;
+	font-size: 0.875rem;
+	font-weight: 600;
+}
+.tips-card ul {
+	font-size: 0.875rem;
+	color: #4a5568;
+	line-height: 1.6;
+}
+.tips-card i { 
+	color: var(--brand-primary);
+}
+
+/* Accordion styling */
+.accordion {
+	border-radius: 12px;
+	overflow: hidden;
+}
+.accordion-item {
+	border: none;
+	background-color: white;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+	margin-bottom: 0.75rem;
+	border-radius: 12px !important;
+	overflow: hidden;
+}
+.accordion-button {
+	background-color: white;
+	color: #4a5568;
+	font-weight: 500;
+	font-size: 0.9375rem;
+	padding: 1rem 1.25rem;
+	border: none;
+	box-shadow: none;
+}
+.accordion-button:not(.collapsed) {
+	background-color: white;
+	color: var(--brand-primary, #3F51B5);
+	box-shadow: none;
+}
+.accordion-button:focus {
+	border-color: transparent;
+	box-shadow: none;
+}
+.accordion-button::after {
+	background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%234a5568'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+}
+.accordion-button:not(.collapsed)::after {
+	background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%233F51B5'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+}
+.accordion-body {
+	padding: 1.25rem 1.5rem;
+	border-top: 1px solid #f0f0f0;
+}
+
+/* Forms */
+.form-label {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--grey-600);
+	margin-bottom: 0.4rem;
+}
+.form-control, .form-select {
+	border: 1px solid var(--grey-300);
+	border-radius: 6px;
+	font-size: 0.875rem;
+	padding: 0.5rem 0.75rem;
+}
+.form-control:focus {
+	border-color: var(--brand-primary);
+	box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+	outline: none;
+}
+
+/* Force intl-tel-input to respect Bootstrap columns for Form Label to work properly*/
+.iti {
+	width: 100% !important;
+	display: block !important;
+}
+
+
+/* Tabs : Bootstrap Nav Tab folder/document layout */
+.nav-tabs {
+	border-bottom: 1px solid var(--border-default);
+	gap: 0.25rem;
+}
+.nav-tabs .nav-link {
+	border: none;
+	color: var(--grey-500);
+	font-size: 0.875rem;
+	padding: 0.75rem 1rem;
+	font-weight: 500;
+}
+.nav-tabs .nav-link.active {
+	background-color: white;
+	color: var(--brand-primary, #3F51B5);
+	border: 1px solid var(--border-default);
+	border-bottom: none;
+	font-weight: 600;
+}
+.tab-content > .tab-pane {
+	background-color: white;
+	border-radius: 0 0 12px 12px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Buttons */
+.btn {
+	border-radius: 6px;
+	font-weight: 500;
+	font-size: 0.875rem;
+	padding: 0.5rem 1rem;
+	transition: all 0.2s ease;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+}
+.btn-brand-primary {
+	background-color: var(--brand-primary);
+	border: 1px solid var(--brand-primary);
+	color: #FFFFFF;
+	font-weight: 600; /* Increased weight for better readability */
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Subtle depth */
+}
+.btn-brand-primary:hover {
+	background-color: var(--brand-primary-dark);
+	border-color: var(--brand-primary-dark);
+	color: #FFFFFF; /* Maintain white for consistency */
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+.btn-outline-secondary {
+	border: 1px solid var(--grey-300);
+	color: var(--grey-700);
+	background: white;
+}
+.btn-outline-secondary:hover {
+	background: var(--grey-50);
+	color: var(--grey-900);
+}
+.btn-outline-primary {
+	border: 1px solid var(--brand-primary);
+	color: var(--brand-primary);
+	background: white;
+}
+.btn-outline-primary:hover {
+	background: var(--brand-primary-light);
+}
+.btn-outline-danger {
+	border: 1px solid var(--color-danger);
+	color: var(--color-danger);
+	background: white;
+}
+.btn-outline-danger:hover {
+	background: var(--color-danger-light);
+}
+.btn-danger {
+	background: var(--color-danger);
+	color: white;
+	border: none;
+	transition: all 0.15s ease;
+}
+.btn-danger:hover {
+	background: var(--color-danger-dark);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+.btn-circular {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	width: 36px;
+	height: 36px;
+	font-size: 1.15rem;
+	background-color: var(--brand-primary-glass);
+	border: 1px solid var(--brand-primary);
+	color: var(--brand-primary-dark);
+}
+
+.btn-circular:hover {
+	background-color: var(--brand-primary-dark);
+	border-color: var(--brand-primary-dark);
+	color: #FFFFFF; /* Maintain white for consistency */
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+.btn-circular-text {
+	color: var(--brand-primary);
+}
+
+/* Additional CSS to add to app-core.css for Task components */
+
+/* --- TASK COMPONENTS --- */
+
+/* Task Filter Tabs */
+.task-filter-tabs {
+	display: flex;
+	gap: 0.25rem;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--grey-200);
+	background: var(--grey-50);
+}
+.filter-tab {
+	flex: 1;
+	padding: 0.375rem 0.5rem;
+	font-size: 0.75rem;
+	color: var(--grey-600);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	font-weight: 500;
+}
+.filter-tab:hover {
+	background: white;
+	color: var(--grey-900);
+}
+.filter-tab.active {
+	background: white;
+	color: var(--brand-primary);
+	border-color: var(--grey-200);
+}
+.task-count {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 0.25rem;
+	font-size: 0.65rem;
+	font-weight: 600;
+	background: var(--grey-200);
+	color: var(--grey-700);
+	border-radius: 9px;
+	margin-left: 0.25rem;
+}
+
+.filter-tab.active .task-count {
+	background: var(--brand-primary-light);
+	color: var(--brand-primary);
+}
+
+/* Task Items */
+.task-item {
+	display: flex;
+	align-items: start;
+	padding: 0.75rem;
+	margin-bottom: 0.5rem;
+	border: 1px solid var(--grey-200);
+	border-radius: 6px;
+	background: white;
+	transition: all 0.15s ease;
+	cursor: pointer;
+}
+.task-item:hover {
+	transform: translateX(2px);
+	border-color: var(--brand-primary);
+	background: var(--grey-50);
+}
+.task-item.overdue {
+	border-color: #FEE2E2;
+	background: #FEF2F2;
+}
+.task-item.today {
+	border-color: #FEF3C7;
+	background: #FFFBEB;
+}
+.task-checkbox {
+	flex-shrink: 0;
+	margin-top: 0.125rem;
+	margin-right: 0.75rem;
+}
+.task-checkbox input[type="checkbox"] {
+	width: 16px;
+	height: 16px;
+	cursor: pointer;
+	accent-color: var(--brand-primary);
+}
+.task-content {
+	flex: 1;
+	min-width: 0;
+}
+.task-header {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	margin-bottom: 0.25rem;
+	flex-wrap: wrap;
+}
+.task-name {
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: var(--grey-900);
+	text-decoration: none;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.task-name:hover {
+	color: var(--brand-primary);
+}
+.task-name.completed {
+	text-decoration: line-through;
+	color: var(--grey-500);
+}
+.task-type-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.125rem 0.375rem;
+	font-size: 0.65rem;
+	border-radius: 3px;
+	font-weight: 500;
+}
+.task-type-call {
+	background: #EFF6FF;
+	color: #1E40AF;
+}
+.task-type-email {
+	background: #F0FDF4;
+	color: #15803D;
+}
+.task-type-meeting {
+	background: #FEF3C7;
+	color: #92400E;
+}
+.task-type-followup {
+	background: #FCE7F3;
+	color: #9F1239;
+}
+.task-type-deadline {
+	background: #FEE2E2;
+	color: #991B1B;
+}
+.task-type-other {
+	background: var(--grey-100);
+	color: var(--grey-700);
+}
+.task-priority-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+.priority-urgent {
+	background: var(--color-danger);
+}
+.priority-high {
+	background: var(--color-warning);
+}
+.priority-normal {
+	background: var(--grey-500);
+}
+.priority-low {
+	background: var(--grey-300);
+}
+.task-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.75rem;
+	color: var(--grey-500);
+	flex-wrap: wrap;
+}
+.task-meta-item {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+.task-meta-item i {
+	font-size: 0.65rem;
+}
+.task-date.overdue {
+	color: var(--color-danger);
+	font-weight: 600;
+}
+.task-date.today {
+	color: var(--color-warning);
+	font-weight: 600;
+}
+.task-date.upcoming {
+	color: var(--color-success);
+}
+
+/* Task Quick Actions */
+.task-actions {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	flex-shrink: 0;
+}
+.task-action-btn {
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	color: var(--grey-600);
+	background: transparent;
+	border: 1px solid var(--grey-300);
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+.task-action-btn:hover {
+	color: var(--brand-primary);
+	border-color: var(--brand-primary);
+	background: var(--brand-primary-light);
+}
+
+/* Task Section Containers */
+.task-section {
+	animation: fadeIn 0.2s ease-in;
+}
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+/* Task Status Badges (for grid/list views) */
+.task-status-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	border-radius: 4px;
+	font-weight: 500;
+}
+.status-not-started {
+	background: var(--grey-100);
+	color: var(--grey-700);
+}
+.status-in-progress {
+	background: #DBEAFE;
+	color: #1E40AF;
+}
+.status-completed {
+	background: #D1FAE5;
+	color: #065F46;
+}
+.status-cancelled {
+	background: #FEE2E2;
+	color: #991B1B;
+}
+.status-deferred {
+	background: #FEF3C7;
+	color: #92400E;
+}
+
+/* Modal Dialogue Styling */
+.modal-content {
+	animation: modalSlideIn 0.2s ease-out;
+}
+@keyframes modalSlideIn {
+	from {
+		transform: translateY(-20px);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+.modal-backdrop.show {
+	opacity: 0.5;
+}
+
+/* Adjust Synchfusion Input Fields to better match standard Bootstrap5 layouts */
+	.e-prepend-textbox {
+		height: 38px;
+	}
+
+/* Specific fix for Syncfusion dropdown telephone country codes */
+.e-ddl.e-popup,
+.e-dropdown-popup,
+.e-input-group-icon + .e-popup {
+	z-index: 1050 !important; /* Ensure dropdown appears above card content */
+}
+
+/* Responsive small screens */
+@media (max-width: 992px){
+	.sidebar {
+		transform: translateX(-100%);
+		transition: transform .22s ease;
+	}
+
+	.sidebar.open {
+		transform: none
+	}
+
+	.page-content-area {
+		margin-left: 1.5rem;
+		padding: 1rem
+	}
+}

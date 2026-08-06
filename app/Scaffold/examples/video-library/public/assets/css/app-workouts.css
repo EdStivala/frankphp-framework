@@ -1,0 +1,57 @@
+/**
+ * app-workouts.css
+ * EXAMPLE STYLESHEET — one part of the scaffold/examples/video-library/
+ * recipe: starter CSS for a workout/exercise library grid, the kind of
+ * page that would use the modals in Views/modals/videos/ in this same
+ * folder (add/edit/delete a bookmark or library video) to manage its
+ * contents. No such browsing page ships in this example — this file is a
+ * starting point if you build one. Not loaded by the framework layout by
+ * default — pass it via the layout's `headExtra` slot, e.g.
+ * `'headExtra' => ['/assets/css/app-workouts.css']`.
+ *
+ * Decision order followed (CODEBASE §12):
+ *   Bootstrap 5 utility → app-core.css → this file
+ * No inline styles. No single-use classes.
+ */
+
+.workout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.workout-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.workout-card:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.workout-card-thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--grey-100);
+    display: block;
+}
+
+.workout-card-body {
+    padding: 0.875rem 1rem;
+}
+
+.workout-card-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-heading);
+    margin-bottom: 0.25rem;
+}
+
+.workout-card-genre {
+    font-size: 0.75rem;
+    color: var(--grey-500);
+}

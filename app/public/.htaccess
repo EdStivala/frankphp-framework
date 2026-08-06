@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# 1. If the request is for an actual file that exists, serve it
+RewriteCond %{REQUEST_FILENAME} !-f
+
+# 2. If the request is for an actual directory that exists, serve it
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# 3. Passes the path as a 'q' variable and appends existing query strings (QSA)
+RewriteRule ^(.*)$ /index.php?url=$1 [L,QSA]

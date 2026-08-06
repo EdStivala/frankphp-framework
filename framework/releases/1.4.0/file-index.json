@@ -1,0 +1,562 @@
+{
+    ".claude/settings.local.json": {
+        "size": 80,
+        "mtime": 1781040713,
+        "sha1": "7f6f2fbed26547fe3212d284049c88bd4b84ac28"
+    },
+    ".env": {
+        "size": 2086,
+        "mtime": 1780994059,
+        "sha1": "c658d518cc3b8761ee6ab089788000491ac995b4"
+    },
+    "CHANGELOG.md": {
+        "size": 29899,
+        "mtime": 1781045244,
+        "sha1": "f0c8e3544cd4264793ccf72806ca1213e4c06d2e"
+    },
+    "Config/config.php": {
+        "size": 3062,
+        "mtime": 1778772157,
+        "sha1": "d8e8c64c9bec7b8ed2186c45f4a44ce34701f67b"
+    },
+    "Controllers/Api/V1/OrganizationController.php": {
+        "size": 1443,
+        "mtime": 1778265375,
+        "sha1": "b5def7b553ece765d25f22a0eb8e7be4ec41990c"
+    },
+    "Controllers/AuthController.php": {
+        "size": 7942,
+        "mtime": 1781013120,
+        "sha1": "4cc0ce72e519d7954a80fc65fbc40ae613cb97ee"
+    },
+    "Controllers/HomeController.php": {
+        "size": 521,
+        "mtime": 1778265377,
+        "sha1": "291105d8c35a06640a7dd9cb81bf493a00ab9768"
+    },
+    "Controllers/SignupController.php": {
+        "size": 3121,
+        "mtime": 1778604479,
+        "sha1": "3f2f68ffa6f19a4631406757a2ef41c9876a14a9"
+    },
+    "Controllers/TenantSettingsController.php": {
+        "size": 3218,
+        "mtime": 1778265377,
+        "sha1": "b9b747af6cdfcbf5b2091bf54b4efbbf84850d8b"
+    },
+    "Controllers/UserManagementController.php": {
+        "size": 1770,
+        "mtime": 1781041934,
+        "sha1": "5ab3b87fe0319f4cb56c93c9d74121b933a661fc"
+    },
+    "Core/BaseApiController.php": {
+        "size": 3517,
+        "mtime": 1778751170,
+        "sha1": "7514389084249d368a040085cda3a40e2904f4aa"
+    },
+    "Core/BaseController.php": {
+        "size": 461,
+        "mtime": 1778751126,
+        "sha1": "2294dc9b77e2eeac4b8c174edbe3ec2a24d9f316"
+    },
+    "Core/BaseModel.php": {
+        "size": 6920,
+        "mtime": 1778751131,
+        "sha1": "0645bb7fee1dea04dd6d8ddc1d3872c899b93caf"
+    },
+    "Core/BasePresenter.php": {
+        "size": 404,
+        "mtime": 1778751138,
+        "sha1": "85be535848fa84def2974f82fd3336da8b63cf19"
+    },
+    "Core/Clock.php": {
+        "size": 15217,
+        "mtime": 1780737698,
+        "sha1": "ac00d8850f21522aa1b8f6e56ff1ec4552bc3185"
+    },
+    "Core/Container.php": {
+        "size": 2943,
+        "mtime": 1778604317,
+        "sha1": "6e42fa07c22b724770a47e8d28ed07a940a264ca"
+    },
+    "Core/Database.php": {
+        "size": 2463,
+        "mtime": 1778751179,
+        "sha1": "c75f4fc99fb8c821b7fe5ea3a8710663114bba7b"
+    },
+    "Core/Env.php": {
+        "size": 3599,
+        "mtime": 1778751190,
+        "sha1": "aec9ca732313eb090948e709dbf6de821207594b"
+    },
+    "Core/MiddlewareInterface.php": {
+        "size": 252,
+        "mtime": 1778751197,
+        "sha1": "d41af861de2fb29b0305727ddaabaa75ef354fa7"
+    },
+    "Core/Request.php": {
+        "size": 1423,
+        "mtime": 1778751202,
+        "sha1": "0df2ea7ae4007f37fe4f0393b5febc8f31fc2692"
+    },
+    "Core/Response.php": {
+        "size": 669,
+        "mtime": 1778751208,
+        "sha1": "1e91ab11b5be242bcdf0f103bae68d83e28ea473"
+    },
+    "Core/Router.php": {
+        "size": 3401,
+        "mtime": 1778751214,
+        "sha1": "a8656fd326c9676afa9511a2551f3023bd6a6cac"
+    },
+    "Helpers/media.php": {
+        "size": 2777,
+        "mtime": 1778265377,
+        "sha1": "d17ed4de6b24e3d537b3d0faf9c272363e314336"
+    },
+    "MYAPP.md": {
+        "size": 5892,
+        "mtime": 1778265377,
+        "sha1": "31a324a8609c90a2e3c23ead9af3242773c87681"
+    },
+    "Middleware/ApiAuthMiddleware.php": {
+        "size": 1388,
+        "mtime": 1778751404,
+        "sha1": "18b960723d960dd1796279e7899f4f1d175ce73a"
+    },
+    "Middleware/AuthMiddleware.php": {
+        "size": 1357,
+        "mtime": 1778751397,
+        "sha1": "3b15143668273f5cdb12f21b6790ffb13a2ee6cb"
+    },
+    "Middleware/JsonBodyParserMiddleware.php": {
+        "size": 780,
+        "mtime": 1778751391,
+        "sha1": "846835a01893ed01b5a1fa05b6a7a4ec1267c2ec"
+    },
+    "Middleware/TenantMiddleware.php": {
+        "size": 916,
+        "mtime": 1778751378,
+        "sha1": "7c5bb382c6b5c97b709f05d33e5995f01b2f90b5"
+    },
+    "Models/Tenant.php": {
+        "size": 2963,
+        "mtime": 1781014224,
+        "sha1": "2cf0a6538a239a4df591e42ba312be88e2674e0f"
+    },
+    "Models/User.php": {
+        "size": 17580,
+        "mtime": 1781041909,
+        "sha1": "4d80d30447e9ce2e1bceabdf7b803cee82f5a5e7"
+    },
+    "Presenters/FormPresenter.php": {
+        "size": 1348,
+        "mtime": 1778265377,
+        "sha1": "06c422195746a320d0fac3c2643ffca6a5ab746e"
+    },
+    "RELEASE_MANIFEST.json": {
+        "size": 1650,
+        "mtime": 1781018787,
+        "sha1": "c3329c2fbc54f4654cf0af3e79108398a3bfc084"
+    },
+    "Services/Email/EmailMessage.php": {
+        "size": 1562,
+        "mtime": 1778265377,
+        "sha1": "1e44faa53b0f182f41a441c890b37fcf890d781a"
+    },
+    "Services/Email/EmailResult.php": {
+        "size": 1022,
+        "mtime": 1778265377,
+        "sha1": "3f5ee831a8cbe0fc15fe6487261409f529d86c72"
+    },
+    "Services/Email/EmailService.php": {
+        "size": 10721,
+        "mtime": 1778773142,
+        "sha1": "9d0796484ed58e4543f223f275be9f2fa5c9a672"
+    },
+    "Services/Email/PHPMailer/Exception.php": {
+        "size": 1224,
+        "mtime": 1778265377,
+        "sha1": "5639ad61465129be32221ad5f2da0743f2df96be"
+    },
+    "Services/Email/PHPMailer/OAuth.php": {
+        "size": 3744,
+        "mtime": 1778265377,
+        "sha1": "48f194830044013e295681dacf142d742e75886a"
+    },
+    "Services/Email/PHPMailer/PHPMailer.php": {
+        "size": 171115,
+        "mtime": 1778265377,
+        "sha1": "56f0134b4abfa9704bf4df1165e577f9f39fbf43"
+    },
+    "Services/Email/PHPMailer/POP3.php": {
+        "size": 11732,
+        "mtime": 1778265377,
+        "sha1": "8e8d097a4a144e47b172c49b4c25c8a0fe9bc552"
+    },
+    "Services/Email/PHPMailer/SMTP.php": {
+        "size": 47295,
+        "mtime": 1778265377,
+        "sha1": "cfc5e1441b8ead10a19200130732508ba28da2a3"
+    },
+    "Services/Email/PHPMailer/validate.js": {
+        "size": 2735,
+        "mtime": 1778265377,
+        "sha1": "02c7c1a3766de6ac39a8f2cfdb8ffb47d63d4281"
+    },
+    "Services/Email/Templates/PasswordResetEmailTemplate.php": {
+        "size": 5386,
+        "mtime": 1778780223,
+        "sha1": "8c27c129d8af9d054965d198ff2aff90badb9280"
+    },
+    "Services/Email/Templates/SignupVerificationEmailTemplate.php": {
+        "size": 4590,
+        "mtime": 1778779073,
+        "sha1": "4c96c64d4d98fcedca285ed89029e3a9867f1cb6"
+    },
+    "Services/Email/Templates/TaskReminderEmailTemplate.php": {
+        "size": 14591,
+        "mtime": 1778265377,
+        "sha1": "6b0120b6c212891e5baa477463a25e0fa1e5b84b"
+    },
+    "Services/Email/Templates/TenantOwnerAdvisoryTemplate.php": {
+        "size": 2993,
+        "mtime": 1778779326,
+        "sha1": "b3f175290af1f8160733ae32662e472c800dda80"
+    },
+    "Services/PasswordResetService.php": {
+        "size": 8657,
+        "mtime": 1781013120,
+        "sha1": "08e78b18f67f34b9160dbbab4ea270d8841b51c7"
+    },
+    "Services/ServiceResult.php": {
+        "size": 1733,
+        "mtime": 1778265377,
+        "sha1": "2496fe82647c975487ed6795d97a92f323602a7d"
+    },
+    "Services/SignupService.php": {
+        "size": 11900,
+        "mtime": 1781013120,
+        "sha1": "d95fd4c158482c5183c446b19a8bb409c268fa77"
+    },
+    "Services/TenantService.php": {
+        "size": 2869,
+        "mtime": 1781014224,
+        "sha1": "eca7b676b26bc637ee7fb24ec0b66343f891eb7d"
+    },
+    "Services/UserManagementService.php": {
+        "size": 3373,
+        "mtime": 1781041925,
+        "sha1": "f74428ae36d5f0b1c059917f3a5256ccfa359c5c"
+    },
+    "Services/UserService.php": {
+        "size": 3850,
+        "mtime": 1781014224,
+        "sha1": "e0286fec1ea5a4ac419e0ca746122a8428c6b656"
+    },
+    "VERSION": {
+        "size": 5,
+        "mtime": 1781044609,
+        "sha1": "e2060004dffbdc6873d309c73a458221a047212b"
+    },
+    "Versions/FrankPHP_v1.3.0_base_install_migration_review.md": {
+        "size": 3008,
+        "mtime": 1780739244,
+        "sha1": "775292c6286ea4d744839cb2d12f2a7e6f479285"
+    },
+    "Versions/FrankPHP_v1.3.0_existing_data_migration_notes.md": {
+        "size": 2414,
+        "mtime": 1780739209,
+        "sha1": "7800a7bcf769a308009994b7b507af3327d0ad92"
+    },
+    "Views/auth/forgot-password-sent.php": {
+        "size": 1152,
+        "mtime": 1778265377,
+        "sha1": "8ff7e7d589f33db8ed9205a52df2f1e34ad69ef2"
+    },
+    "Views/auth/forgot-password.php": {
+        "size": 1423,
+        "mtime": 1778265377,
+        "sha1": "f7ff77af108fc01c04dc239e7a0fcf1ac0e8e28e"
+    },
+    "Views/auth/login.php": {
+        "size": 3422,
+        "mtime": 1778265377,
+        "sha1": "b3a33c34bc8705611baa8ffeb4472d7c78e5edb7"
+    },
+    "Views/auth/reset-password-error.php": {
+        "size": 1197,
+        "mtime": 1778265377,
+        "sha1": "95ced236dca6c9728a3eb8cdff1f2d6ec6c83425"
+    },
+    "Views/auth/reset-password.php": {
+        "size": 3363,
+        "mtime": 1778265377,
+        "sha1": "907e31d24fd5378d8879b6208167d355618dd710"
+    },
+    "Views/auth/signup-verify.php": {
+        "size": 2665,
+        "mtime": 1778265377,
+        "sha1": "11f99c2679369de5cfafda128187c65816272ea6"
+    },
+    "Views/auth/signup.php": {
+        "size": 3491,
+        "mtime": 1778265377,
+        "sha1": "a944eeb9b730fb2b2d7787a9dafcdc76d3f8f0b3"
+    },
+    "Views/home/dashboard.php": {
+        "size": 12129,
+        "mtime": 1781017797,
+        "sha1": "e3e32d19b2f9bbd9c3787d12b6f9319bc240f9a9"
+    },
+    "Views/layouts/app-main.php": {
+        "size": 4226,
+        "mtime": 1781041230,
+        "sha1": "00c96b5e181094c5ec277067c9579c06fc31fd12"
+    },
+    "Views/layouts/authViews.php": {
+        "size": 2405,
+        "mtime": 1778782820,
+        "sha1": "ef62d893fb3d9ef081c451b07ab2e2f96b52299c"
+    },
+    "Views/layouts/legal.php": {
+        "size": 2771,
+        "mtime": 1778265377,
+        "sha1": "f0b78975f5129ef4c2e23dcf16df4fecc5044a14"
+    },
+    "Views/modals/confirm-delete-modal.php": {
+        "size": 2779,
+        "mtime": 1778265377,
+        "sha1": "3a764a3deb3eb54f74687d887bc39247b43d1e1e"
+    },
+    "Views/modals/rich-text-editor-modal.php": {
+        "size": 7981,
+        "mtime": 1778265377,
+        "sha1": "27dbee7829edb552a26423c07e01e68f24286b05"
+    },
+    "Views/modals/videos/modal-add-bookmark.php": {
+        "size": 2501,
+        "mtime": 1778265377,
+        "sha1": "0a4f06b7a78c45451f9f6edf598f7caf0812b346"
+    },
+    "Views/modals/videos/modal-add-library-video.php": {
+        "size": 3049,
+        "mtime": 1778265377,
+        "sha1": "31cbaf59d52ccc47643d306907cc925d5b3ba047"
+    },
+    "Views/modals/videos/modal-delete-bookmark.php": {
+        "size": 1061,
+        "mtime": 1778265377,
+        "sha1": "230481e24741230eaa4ce2b9f87f33d90c2e8972"
+    },
+    "Views/modals/videos/modal-delete-library-video.php": {
+        "size": 1110,
+        "mtime": 1778265377,
+        "sha1": "d6a4bf5af131fa18d31185040aac9e71f50d0818"
+    },
+    "Views/modals/videos/modal-edit-bookmark.php": {
+        "size": 2110,
+        "mtime": 1778265377,
+        "sha1": "a21e5d6ac670f8ac6105cd884e7648dee6b54855"
+    },
+    "Views/modals/videos/modal-edit-library-video.php": {
+        "size": 2164,
+        "mtime": 1778265377,
+        "sha1": "28a8492deea399a4a427ac118ff8860b02a448a7"
+    },
+    "Views/modals/videos/modal-video-player.php": {
+        "size": 1393,
+        "mtime": 1778265377,
+        "sha1": "fc4b502fb118d5afc701e241980e9abd3bbc7140"
+    },
+    "Views/partials/app-header.php": {
+        "size": 1797,
+        "mtime": 1781043301,
+        "sha1": "6e8cccf3a9e4bd5310d7532cb45f22d3f003c522"
+    },
+    "Views/partials/app-nav.php": {
+        "size": 2517,
+        "mtime": 1781044435,
+        "sha1": "8d38b8bd1fecbb5f8eef3f7ee9338db27343b038"
+    },
+    "Views/partials/gtm_body.html": {
+        "size": 245,
+        "mtime": 1778265377,
+        "sha1": "ef578f4d436785551983f38bdd22b49ab8ed9a52"
+    },
+    "Views/partials/gtm_head.html": {
+        "size": 433,
+        "mtime": 1778265377,
+        "sha1": "21ddfda207538f96070db3d5103b9f378d36affb"
+    },
+    "Views/users/management-dashboard.php": {
+        "size": 4081,
+        "mtime": 1781041948,
+        "sha1": "1139435290a78df48e73ca533b2fd93013d68ebf"
+    },
+    "bootstrap.php": {
+        "size": 7286,
+        "mtime": 1781044703,
+        "sha1": "df0ffd37c70c14c443cd3a214ad3331d091a9c79"
+    },
+    "codebase.md": {
+        "size": 54260,
+        "mtime": 1781045365,
+        "sha1": "47bd4a5dcc45a7cb364c8619d5516f1cc5fdcb4e"
+    },
+    "cron_task_reminders.php": {
+        "size": 6643,
+        "mtime": 1778265377,
+        "sha1": "5df8e10647b9f4bbaaa8ab17bb99411d8f82fe4b"
+    },
+    "env.example": {
+        "size": 2146,
+        "mtime": 1778772117,
+        "sha1": "96c30a474d61c6ef56cc95549d7534a7ec50b4eb"
+    },
+    "public/.htaccess": {
+        "size": 350,
+        "mtime": 1778265377,
+        "sha1": "16475e387da77295a71f0be8222dd8104effe3e0"
+    },
+    "public/assets/css/app-core.css": {
+        "size": 12850,
+        "mtime": 1778778561,
+        "sha1": "b972fb43dda8a3601cb17ebc87e3c8e4bb0a3946"
+    },
+    "public/assets/css/app-header.css": {
+        "size": 2539,
+        "mtime": 1778265377,
+        "sha1": "964f4a4685e2479c9c93fbe01a33077a52aef8e2"
+    },
+    "public/assets/css/app-icons.css": {
+        "size": 708,
+        "mtime": 1781043893,
+        "sha1": "e942742f5941743840aaf1ed990ebb1f6ed0781e"
+    },
+    "public/assets/css/app-nav.css": {
+        "size": 2862,
+        "mtime": 1778265377,
+        "sha1": "5ced3f07bb9c25f84237163970114dbb2a4a3759"
+    },
+    "public/assets/css/app-pages-users.css": {
+        "size": 3793,
+        "mtime": 1781041953,
+        "sha1": "3adfa92554b17dc072553eba69e548c1a26b03ce"
+    },
+    "public/assets/css/authViews.css": {
+        "size": 320,
+        "mtime": 1778265377,
+        "sha1": "b83725bb4bc2b67c88e6cde9673295f24710aa25"
+    },
+    "public/assets/icons/dashboard.svg": {
+        "size": 1319,
+        "mtime": 1781043765,
+        "sha1": "0e370051c4e1a8208366d0485d6aa82f4cdf66ff"
+    },
+    "public/assets/icons/users.svg": {
+        "size": 2371,
+        "mtime": 1781043649,
+        "sha1": "39e39d6f6c0180b7f8cec1a2da7a2a6f6f4ffcf1"
+    },
+    "public/assets/images/bf_logo_full.svg": {
+        "size": 8475,
+        "mtime": 1778265377,
+        "sha1": "b9476aefcca12f0504854bc3e9a5fe0573e9c1ad"
+    },
+    "public/assets/images/bf_logo_icon.svg": {
+        "size": 38310,
+        "mtime": 1778265377,
+        "sha1": "fb98cb0d7cf14862c9effe50f9ef6db29946bc3e"
+    },
+    "public/assets/images/bitfitter_logo.png": {
+        "size": 18482,
+        "mtime": 1778265377,
+        "sha1": "b54d18700b9fbc11de39dc50aa18e91db2aa9a63"
+    },
+    "public/assets/js/main.js": {
+        "size": 730,
+        "mtime": 1778265377,
+        "sha1": "fe3006744cf513dd57f46127cbd2e2dea463c99c"
+    },
+    "public/assets/js/this-site-nav.js": {
+        "size": 4427,
+        "mtime": 1778265377,
+        "sha1": "a0379886a88bc8c0d51f096d4b7f30a864e7f9ac"
+    },
+    "public/assets/vendor/bootstrap-5.3.6-dist/CSS/bootstrap.min.css": {
+        "size": 232018,
+        "mtime": 1778265377,
+        "sha1": "371e7aed5ab297634a9e062079e449010352bd03"
+    },
+    "public/assets/vendor/bootstrap-5.3.6-dist/JS/bootstrap.min.js": {
+        "size": 60697,
+        "mtime": 1778265377,
+        "sha1": "226acac787ab92666cf581373cf810def338badd"
+    },
+    "public/assets/vendor/bootstrap-icons/bootstrap-icons.css": {
+        "size": 98255,
+        "mtime": 1778265377,
+        "sha1": "9ee496cc9baaae58b98e7fc1eb46e3578daf8143"
+    },
+    "public/assets/vendor/bootstrap-icons/bootstrap-icons.json": {
+        "size": 52358,
+        "mtime": 1778265377,
+        "sha1": "e4adb76a19cc64a1d61125bb997d286254c87be5"
+    },
+    "public/assets/vendor/bootstrap-icons/bootstrap-icons.min.css": {
+        "size": 85875,
+        "mtime": 1778265377,
+        "sha1": "043a332e4f555cc0bfd35e451be955b4b93966a0"
+    },
+    "public/assets/vendor/bootstrap-icons/bootstrap-icons.scss": {
+        "size": 57755,
+        "mtime": 1778265377,
+        "sha1": "34d0a1bd9a178a01751afb8f6704a4927fec07db"
+    },
+    "public/assets/vendor/bootstrap-icons/fonts/bootstrap-icons.woff": {
+        "size": 176032,
+        "mtime": 1778265377,
+        "sha1": "d5831fd39baf13aff7626e483b9a089730f18604"
+    },
+    "public/assets/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2": {
+        "size": 130396,
+        "mtime": 1778265377,
+        "sha1": "020c3c6f9280a315e8425d7f92e15bcd0cdda1b2"
+    },
+    "public/assets/vendor/swiper/swiper-bundle.min.css": {
+        "size": 18458,
+        "mtime": 1778265377,
+        "sha1": "fa5ecc1387228b38fe88ec195997c67c3c020b4a"
+    },
+    "public/assets/vendor/swiper/swiper-bundle.min.js": {
+        "size": 151436,
+        "mtime": 1778265377,
+        "sha1": "a2673c79aaae1ec116240d8bfa48d4b04d21e081"
+    },
+    "public/assets/vendor/swiper/swiper-bundle.min.js.map": {
+        "size": 205059,
+        "mtime": 1778265377,
+        "sha1": "03f381df94fba6572f243f7fd3e59debfc22d5b7"
+    },
+    "public/favicon.ico": {
+        "size": 4286,
+        "mtime": 1778265377,
+        "sha1": "8d07f2b533486cb298855afe0adec8e657e27123"
+    },
+    "public/index.php": {
+        "size": 596,
+        "mtime": 1778751059,
+        "sha1": "f18731c3c1ea4dde0fdeb0d1cf3077bad79e1d6a"
+    },
+    "sql/schema.sql": {
+        "size": 4472,
+        "mtime": 1781041310,
+        "sha1": "572550fcb0d8a07e35ea1a99b730e91621df87e6"
+    },
+    "tools/build_release.php": {
+        "size": 7853,
+        "mtime": 1778097645,
+        "sha1": "b2cfc23baee598060ef5002bee1a9f310687c1ee"
+    }
+}

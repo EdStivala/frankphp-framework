@@ -1,0 +1,170 @@
+/**
+ * app-pages-users.css
+ * FrankPHP v1.4 — User Management Dashboard
+ *
+ * Scope: /tenant/{id}/users and any future user-related pages.
+ * All classes are generic and reusable — not single-use or page-specific.
+ *
+ * Decision order followed (CODEBASE §12):
+ *   Bootstrap 5 utility → app-core.css → this file
+ * No inline styles. No single-use classes.
+ */
+
+/* ------------------------------------------------------------------
+   Stat Cards — KPI summary tiles at the top of a dashboard
+   ------------------------------------------------------------------ */
+
+.stat-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.125rem;
+    transition: box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.stat-card-icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.375rem;
+}
+
+.stat-card-icon--primary {
+    background: var(--brand-primary-glass);
+    color: var(--brand-primary);
+}
+
+.stat-card-icon--success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-success);
+}
+
+.stat-card-icon--warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--color-warning);
+}
+
+.stat-card-icon--danger {
+    background: var(--color-danger-light);
+    color: var(--color-danger);
+}
+
+.stat-card-body {
+    min-width: 0;
+}
+
+.stat-card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-heading);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.stat-card-label {
+    font-size: 0.8rem;
+    color: var(--grey-500);
+    font-weight: 500;
+    margin-top: 0.25rem;
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------
+   Users Table — full-width tenant user list
+   ------------------------------------------------------------------ */
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.users-table thead th {
+    padding: 0.625rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--grey-500);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--grey-200);
+    background: var(--grey-50);
+    white-space: nowrap;
+}
+
+.users-table tbody tr {
+    border-bottom: 1px solid var(--grey-100);
+    transition: background 0.1s ease;
+}
+
+.users-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.users-table tbody tr:hover {
+    background: var(--grey-50);
+}
+
+.users-table tbody td {
+    padding: 0.875rem 1rem;
+    color: var(--text-main);
+    vertical-align: middle;
+}
+
+.users-table .col-email {
+    font-weight: 500;
+    color: var(--text-heading);
+}
+
+.users-table .col-date {
+    color: var(--grey-500);
+    font-size: 0.8125rem;
+}
+
+.users-table .col-never {
+    color: var(--grey-400);
+    font-size: 0.8125rem;
+    font-style: italic;
+}
+
+/* ------------------------------------------------------------------
+   Role Badges — pill labels for user roles
+   ------------------------------------------------------------------ */
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 20px;
+    text-transform: capitalize;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.role-badge--owner {
+    background: var(--brand-primary-glass);
+    color: var(--brand-primary);
+}
+
+.role-badge--admin {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065F46;
+}
+
+.role-badge--user {
+    background: var(--grey-100);
+    color: var(--grey-600);
+}

@@ -1,0 +1,1142 @@
+{
+    "version": "1.2.0",
+    "release_date": "2026-05-14",
+    "file_index": {
+        ".env": {
+            "size": 1859,
+            "mtime": 1778513785,
+            "sha1": "a34c3f2c2790f6a8f0020c99f6a5cfde9b5179e7"
+        },
+        "CHANGELOG.md": {
+            "size": 3567,
+            "mtime": 1778671514,
+            "sha1": "ee7ce0c3bf32907b3c34f0fa1bf3ce4566e1c2dd"
+        },
+        "CODEBASE.md": {
+            "size": 34975,
+            "mtime": 1778751325,
+            "sha1": "86e7bffe21c5c8fb2fa7c6e62c7f8c44555db1a4"
+        },
+        "Config/config.php": {
+            "size": 2763,
+            "mtime": 1778265375,
+            "sha1": "8078022f859a3004c4843f65110dbaff1faa5014"
+        },
+        "Controllers/Api/V1/OrganizationController.php": {
+            "size": 1443,
+            "mtime": 1778265375,
+            "sha1": "b5def7b553ece765d25f22a0eb8e7be4ec41990c"
+        },
+        "Controllers/AuthController.php": {
+            "size": 6994,
+            "mtime": 1778604446,
+            "sha1": "74fb274d2f44e2eb19c47ec7b3dacea6f2bd71f7"
+        },
+        "Controllers/HomeController.php": {
+            "size": 521,
+            "mtime": 1778265377,
+            "sha1": "291105d8c35a06640a7dd9cb81bf493a00ab9768"
+        },
+        "Controllers/SignupController.php": {
+            "size": 3121,
+            "mtime": 1778604479,
+            "sha1": "3f2f68ffa6f19a4631406757a2ef41c9876a14a9"
+        },
+        "Controllers/TenantSettingsController.php": {
+            "size": 3218,
+            "mtime": 1778265377,
+            "sha1": "b9b747af6cdfcbf5b2091bf54b4efbbf84850d8b"
+        },
+        "Controllers/UserController.php": {
+            "size": 314,
+            "mtime": 1778265377,
+            "sha1": "a453b7594a06158d8817ff1ca4e57e5224a82c6b"
+        },
+        "Core/BaseApiController.php": {
+            "size": 3517,
+            "mtime": 1778751170,
+            "sha1": "7514389084249d368a040085cda3a40e2904f4aa"
+        },
+        "Core/BaseController.php": {
+            "size": 461,
+            "mtime": 1778751126,
+            "sha1": "2294dc9b77e2eeac4b8c174edbe3ec2a24d9f316"
+        },
+        "Core/BaseModel.php": {
+            "size": 6920,
+            "mtime": 1778751131,
+            "sha1": "0645bb7fee1dea04dd6d8ddc1d3872c899b93caf"
+        },
+        "Core/BasePresenter.php": {
+            "size": 404,
+            "mtime": 1778751138,
+            "sha1": "85be535848fa84def2974f82fd3336da8b63cf19"
+        },
+        "Core/Container.php": {
+            "size": 2943,
+            "mtime": 1778604317,
+            "sha1": "6e42fa07c22b724770a47e8d28ed07a940a264ca"
+        },
+        "Core/Database.php": {
+            "size": 2463,
+            "mtime": 1778751179,
+            "sha1": "c75f4fc99fb8c821b7fe5ea3a8710663114bba7b"
+        },
+        "Core/Env.php": {
+            "size": 3599,
+            "mtime": 1778751190,
+            "sha1": "aec9ca732313eb090948e709dbf6de821207594b"
+        },
+        "Core/MiddlewareInterface.php": {
+            "size": 252,
+            "mtime": 1778751197,
+            "sha1": "d41af861de2fb29b0305727ddaabaa75ef354fa7"
+        },
+        "Core/Request.php": {
+            "size": 1423,
+            "mtime": 1778751202,
+            "sha1": "0df2ea7ae4007f37fe4f0393b5febc8f31fc2692"
+        },
+        "Core/Response.php": {
+            "size": 669,
+            "mtime": 1778751208,
+            "sha1": "1e91ab11b5be242bcdf0f103bae68d83e28ea473"
+        },
+        "Core/Router.php": {
+            "size": 3401,
+            "mtime": 1778751214,
+            "sha1": "a8656fd326c9676afa9511a2551f3023bd6a6cac"
+        },
+        "FrankPHP Core Framework.clpprj": {
+            "size": 787,
+            "mtime": 1778751413,
+            "sha1": "bc3e2a2be19393f8877376accf461ff6ee5a26ff"
+        },
+        "FrankPHP Core Framework_clcs.csprj": {
+            "size": 159134,
+            "mtime": 1778751413,
+            "sha1": "7f3a077041574cbc26c79adf854899e9e4a34ba7"
+        },
+        "Helpers/media.php": {
+            "size": 2777,
+            "mtime": 1778265377,
+            "sha1": "d17ed4de6b24e3d537b3d0faf9c272363e314336"
+        },
+        "MYAPP.md": {
+            "size": 5892,
+            "mtime": 1778265377,
+            "sha1": "31a324a8609c90a2e3c23ead9af3242773c87681"
+        },
+        "Middleware/ApiAuthMiddleware.php": {
+            "size": 1388,
+            "mtime": 1778751404,
+            "sha1": "18b960723d960dd1796279e7899f4f1d175ce73a"
+        },
+        "Middleware/AuthMiddleware.php": {
+            "size": 1357,
+            "mtime": 1778751397,
+            "sha1": "3b15143668273f5cdb12f21b6790ffb13a2ee6cb"
+        },
+        "Middleware/JsonBodyParserMiddleware.php": {
+            "size": 780,
+            "mtime": 1778751391,
+            "sha1": "846835a01893ed01b5a1fa05b6a7a4ec1267c2ec"
+        },
+        "Middleware/TenantMiddleware.php": {
+            "size": 916,
+            "mtime": 1778751378,
+            "sha1": "7c5bb382c6b5c97b709f05d33e5995f01b2f90b5"
+        },
+        "Models/Tenant.php": {
+            "size": 2850,
+            "mtime": 1778265377,
+            "sha1": "e9ee169c3ebb0d4a65d7701cdf1268c07626a0da"
+        },
+        "Models/User.php": {
+            "size": 11856,
+            "mtime": 1778265377,
+            "sha1": "21c6c1b5bdb972ea89eabaef3a9585726f6fc2d7"
+        },
+        "Presenters/FormPresenter.php": {
+            "size": 1348,
+            "mtime": 1778265377,
+            "sha1": "06c422195746a320d0fac3c2643ffca6a5ab746e"
+        },
+        "RELEASE_MANIFEST.json": {
+            "size": 1322,
+            "mtime": 1778265377,
+            "sha1": "2af382fe2277ac229de0d7c1f8e3c8dc825a7c93"
+        },
+        "Services/Email/EmailMessage.php": {
+            "size": 1562,
+            "mtime": 1778265377,
+            "sha1": "1e44faa53b0f182f41a441c890b37fcf890d781a"
+        },
+        "Services/Email/EmailResult.php": {
+            "size": 1022,
+            "mtime": 1778265377,
+            "sha1": "3f5ee831a8cbe0fc15fe6487261409f529d86c72"
+        },
+        "Services/Email/EmailService.php": {
+            "size": 10638,
+            "mtime": 1778751357,
+            "sha1": "4ff4bf04d9e004c54e21e6f0c260f385cace67ed"
+        },
+        "Services/Email/PHPMailer/Exception.php": {
+            "size": 1224,
+            "mtime": 1778265377,
+            "sha1": "5639ad61465129be32221ad5f2da0743f2df96be"
+        },
+        "Services/Email/PHPMailer/OAuth.php": {
+            "size": 3744,
+            "mtime": 1778265377,
+            "sha1": "48f194830044013e295681dacf142d742e75886a"
+        },
+        "Services/Email/PHPMailer/PHPMailer.php": {
+            "size": 171115,
+            "mtime": 1778265377,
+            "sha1": "56f0134b4abfa9704bf4df1165e577f9f39fbf43"
+        },
+        "Services/Email/PHPMailer/POP3.php": {
+            "size": 11732,
+            "mtime": 1778265377,
+            "sha1": "8e8d097a4a144e47b172c49b4c25c8a0fe9bc552"
+        },
+        "Services/Email/PHPMailer/SMTP.php": {
+            "size": 47295,
+            "mtime": 1778265377,
+            "sha1": "cfc5e1441b8ead10a19200130732508ba28da2a3"
+        },
+        "Services/Email/PHPMailer/validate.js": {
+            "size": 2735,
+            "mtime": 1778265377,
+            "sha1": "02c7c1a3766de6ac39a8f2cfdb8ffb47d63d4281"
+        },
+        "Services/Email/Templates/PasswordResetEmailTemplate.php": {
+            "size": 5514,
+            "mtime": 1778265377,
+            "sha1": "2bc6150223bf7bca40b940fca196d11e86e74d23"
+        },
+        "Services/Email/Templates/SignupVerificationEmailTemplate.php": {
+            "size": 4680,
+            "mtime": 1778265377,
+            "sha1": "c522fbce502e78a5fb740c80d24bcd359ced4779"
+        },
+        "Services/Email/Templates/TaskReminderEmailTemplate.php": {
+            "size": 14591,
+            "mtime": 1778265377,
+            "sha1": "6b0120b6c212891e5baa477463a25e0fa1e5b84b"
+        },
+        "Services/Email/Templates/TenantOwnerAdvisoryTemplate.php": {
+            "size": 2999,
+            "mtime": 1778265377,
+            "sha1": "1ace277e3788c46e35bd22b6ac016c762479d631"
+        },
+        "Services/PasswordResetService.php": {
+            "size": 7370,
+            "mtime": 1778604806,
+            "sha1": "04aba9f73255d2d986d2a484b830411d9755a2e7"
+        },
+        "Services/ServiceResult.php": {
+            "size": 1733,
+            "mtime": 1778265377,
+            "sha1": "2496fe82647c975487ed6795d97a92f323602a7d"
+        },
+        "Services/SignupService.php": {
+            "size": 16099,
+            "mtime": 1778604773,
+            "sha1": "fb8fb3fde2725a67a63cff5c2a77fa20e58cd2cf"
+        },
+        "VERSION": {
+            "size": 5,
+            "mtime": 1778605597,
+            "sha1": "4acc7d8ff2a07c5724b61e524ae1a2782dc80e96"
+        },
+        "Views/auth/forgot-password-sent.php": {
+            "size": 1152,
+            "mtime": 1778265377,
+            "sha1": "8ff7e7d589f33db8ed9205a52df2f1e34ad69ef2"
+        },
+        "Views/auth/forgot-password.php": {
+            "size": 1423,
+            "mtime": 1778265377,
+            "sha1": "f7ff77af108fc01c04dc239e7a0fcf1ac0e8e28e"
+        },
+        "Views/auth/login.php": {
+            "size": 3422,
+            "mtime": 1778265377,
+            "sha1": "b3a33c34bc8705611baa8ffeb4472d7c78e5edb7"
+        },
+        "Views/auth/reset-password-error.php": {
+            "size": 1197,
+            "mtime": 1778265377,
+            "sha1": "95ced236dca6c9728a3eb8cdff1f2d6ec6c83425"
+        },
+        "Views/auth/reset-password.php": {
+            "size": 3363,
+            "mtime": 1778265377,
+            "sha1": "907e31d24fd5378d8879b6208167d355618dd710"
+        },
+        "Views/auth/signup-verify.php": {
+            "size": 2665,
+            "mtime": 1778265377,
+            "sha1": "11f99c2679369de5cfafda128187c65816272ea6"
+        },
+        "Views/auth/signup.php": {
+            "size": 3491,
+            "mtime": 1778265377,
+            "sha1": "a944eeb9b730fb2b2d7787a9dafcdc76d3f8f0b3"
+        },
+        "Views/home/dashboard.php": {
+            "size": 12060,
+            "mtime": 1778265377,
+            "sha1": "74021de5c05200ac6a2b63f5a39c244f52dce649"
+        },
+        "Views/layouts/app-main.php": {
+            "size": 3803,
+            "mtime": 1778751263,
+            "sha1": "7420e997ac7cd3202827815bbad93dfdbd5e8928"
+        },
+        "Views/layouts/authViews.php": {
+            "size": 2924,
+            "mtime": 1778265377,
+            "sha1": "776747332c9d39de917ae73e3d1f6aae09641904"
+        },
+        "Views/layouts/legal.php": {
+            "size": 2771,
+            "mtime": 1778265377,
+            "sha1": "f0b78975f5129ef4c2e23dcf16df4fecc5044a14"
+        },
+        "Views/modals/confirm-delete-modal.php": {
+            "size": 2779,
+            "mtime": 1778265377,
+            "sha1": "3a764a3deb3eb54f74687d887bc39247b43d1e1e"
+        },
+        "Views/modals/rich-text-editor-modal.php": {
+            "size": 7981,
+            "mtime": 1778265377,
+            "sha1": "27dbee7829edb552a26423c07e01e68f24286b05"
+        },
+        "Views/modals/videos/modal-add-bookmark.php": {
+            "size": 2501,
+            "mtime": 1778265377,
+            "sha1": "0a4f06b7a78c45451f9f6edf598f7caf0812b346"
+        },
+        "Views/modals/videos/modal-add-library-video.php": {
+            "size": 3049,
+            "mtime": 1778265377,
+            "sha1": "31cbaf59d52ccc47643d306907cc925d5b3ba047"
+        },
+        "Views/modals/videos/modal-delete-bookmark.php": {
+            "size": 1061,
+            "mtime": 1778265377,
+            "sha1": "230481e24741230eaa4ce2b9f87f33d90c2e8972"
+        },
+        "Views/modals/videos/modal-delete-library-video.php": {
+            "size": 1110,
+            "mtime": 1778265377,
+            "sha1": "d6a4bf5af131fa18d31185040aac9e71f50d0818"
+        },
+        "Views/modals/videos/modal-edit-bookmark.php": {
+            "size": 2110,
+            "mtime": 1778265377,
+            "sha1": "a21e5d6ac670f8ac6105cd884e7648dee6b54855"
+        },
+        "Views/modals/videos/modal-edit-library-video.php": {
+            "size": 2164,
+            "mtime": 1778265377,
+            "sha1": "28a8492deea399a4a427ac118ff8860b02a448a7"
+        },
+        "Views/modals/videos/modal-video-player.php": {
+            "size": 1393,
+            "mtime": 1778265377,
+            "sha1": "fc4b502fb118d5afc701e241980e9abd3bbc7140"
+        },
+        "Views/partials/app-header.php": {
+            "size": 1842,
+            "mtime": 1778265377,
+            "sha1": "7b5d88c04f2497f0691cdeadbcbd7756ef8cb2a6"
+        },
+        "Views/partials/app-nav.php": {
+            "size": 3640,
+            "mtime": 1778265377,
+            "sha1": "d18b7788cd141fa0e2accb8a939b66add508981c"
+        },
+        "Views/partials/gtm_body.html": {
+            "size": 245,
+            "mtime": 1778265377,
+            "sha1": "ef578f4d436785551983f38bdd22b49ab8ed9a52"
+        },
+        "Views/partials/gtm_head.html": {
+            "size": 433,
+            "mtime": 1778265377,
+            "sha1": "21ddfda207538f96070db3d5103b9f378d36affb"
+        },
+        "Views/users/me.php": {
+            "size": 294,
+            "mtime": 1778265377,
+            "sha1": "b84e400ab30acfeae9a8c4011c4fe3a9a446f02e"
+        },
+        "bootstrap.php": {
+            "size": 7450,
+            "mtime": 1778751274,
+            "sha1": "2e77cb4fb536445d3327b01a99bbdc4a43b1c447"
+        },
+        "cron_task_reminders.php": {
+            "size": 6643,
+            "mtime": 1778265377,
+            "sha1": "5df8e10647b9f4bbaaa8ab17bb99411d8f82fe4b"
+        },
+        "dist/frankphp-1.1.1.zip": {
+            "size": 719660,
+            "mtime": 1778265377,
+            "sha1": "1bcd1f0d71b0be39a93bce80d5455618ea32d7c1"
+        },
+        "dist/frankphp-1.1.1/CHANGELOG.md": {
+            "size": 550,
+            "mtime": 1778265375,
+            "sha1": "4236c51f42c5076b8c68f6fb9ef42f974039babe"
+        },
+        "dist/frankphp-1.1.1/CODEBASE.md": {
+            "size": 26619,
+            "mtime": 1778265375,
+            "sha1": "7f7d0610b6c7172b2bfba862b851d69544eae668"
+        },
+        "dist/frankphp-1.1.1/Config/config.php": {
+            "size": 2763,
+            "mtime": 1778265375,
+            "sha1": "8078022f859a3004c4843f65110dbaff1faa5014"
+        },
+        "dist/frankphp-1.1.1/Controllers/Api/V1/OrganizationController.php": {
+            "size": 1443,
+            "mtime": 1778265375,
+            "sha1": "b5def7b553ece765d25f22a0eb8e7be4ec41990c"
+        },
+        "dist/frankphp-1.1.1/Controllers/AuthController.php": {
+            "size": 8753,
+            "mtime": 1778265375,
+            "sha1": "01b5349fec5cacd0ca092b8c1b7bc024459100d8"
+        },
+        "dist/frankphp-1.1.1/Controllers/HomeController.php": {
+            "size": 521,
+            "mtime": 1778265377,
+            "sha1": "291105d8c35a06640a7dd9cb81bf493a00ab9768"
+        },
+        "dist/frankphp-1.1.1/Controllers/SignupController.php": {
+            "size": 5568,
+            "mtime": 1778265377,
+            "sha1": "3c5e83024a8e2ce8cb639dcfd86fdaf651da948a"
+        },
+        "dist/frankphp-1.1.1/Controllers/TenantSettingsController.php": {
+            "size": 3218,
+            "mtime": 1778265377,
+            "sha1": "b9b747af6cdfcbf5b2091bf54b4efbbf84850d8b"
+        },
+        "dist/frankphp-1.1.1/Controllers/UserController.php": {
+            "size": 314,
+            "mtime": 1778265377,
+            "sha1": "a453b7594a06158d8817ff1ca4e57e5224a82c6b"
+        },
+        "dist/frankphp-1.1.1/Core/BaseApiController.php": {
+            "size": 3388,
+            "mtime": 1778265377,
+            "sha1": "586e38336644e7266d5be9d75b50315922e8a41b"
+        },
+        "dist/frankphp-1.1.1/Core/BaseController.php": {
+            "size": 333,
+            "mtime": 1778265377,
+            "sha1": "8dde55e224b68d306e229eb0a0afa4d70436d2ae"
+        },
+        "dist/frankphp-1.1.1/Core/BaseModel.php": {
+            "size": 6793,
+            "mtime": 1778265377,
+            "sha1": "d103f17c09f1dafbcb4e61ddb75ac51c856d15b5"
+        },
+        "dist/frankphp-1.1.1/Core/BasePresenter.php": {
+            "size": 277,
+            "mtime": 1778265377,
+            "sha1": "edeb7cf2ee20ad6b1b1333e38ca3f2af2de8ed9d"
+        },
+        "dist/frankphp-1.1.1/Core/Database.php": {
+            "size": 2334,
+            "mtime": 1778265377,
+            "sha1": "b03cefea8a63d5b51e19bb6a35c0b94f2fb13bc4"
+        },
+        "dist/frankphp-1.1.1/Core/Env.php": {
+            "size": 3471,
+            "mtime": 1778265377,
+            "sha1": "824ed62aa5b8c9835a2f26a299dd46300a276413"
+        },
+        "dist/frankphp-1.1.1/Core/MiddlewareInterface.php": {
+            "size": 123,
+            "mtime": 1778265377,
+            "sha1": "5e21f4b0c029da6bd019fb10ac73c32d6a47e218"
+        },
+        "dist/frankphp-1.1.1/Core/Request.php": {
+            "size": 1294,
+            "mtime": 1778265377,
+            "sha1": "d59164002168e56d39f19e9f578d5c2813924b5a"
+        },
+        "dist/frankphp-1.1.1/Core/Response.php": {
+            "size": 540,
+            "mtime": 1778265377,
+            "sha1": "6217759a4ff99af5cd25fb1721a16ff3b4a701cf"
+        },
+        "dist/frankphp-1.1.1/Core/Router.php": {
+            "size": 3134,
+            "mtime": 1778265377,
+            "sha1": "fdb2237f98c76cb7d2d9eafd68b542b61fd3f30c"
+        },
+        "dist/frankphp-1.1.1/Helpers/media.php": {
+            "size": 2777,
+            "mtime": 1778265377,
+            "sha1": "d17ed4de6b24e3d537b3d0faf9c272363e314336"
+        },
+        "dist/frankphp-1.1.1/MYAPP.md": {
+            "size": 5892,
+            "mtime": 1778265377,
+            "sha1": "31a324a8609c90a2e3c23ead9af3242773c87681"
+        },
+        "dist/frankphp-1.1.1/Middleware/ApiAuthMiddleware.php": {
+            "size": 1259,
+            "mtime": 1778265377,
+            "sha1": "c8a8683619c11ea90334fee32a7b948fae2711e9"
+        },
+        "dist/frankphp-1.1.1/Middleware/AuthMiddleware.php": {
+            "size": 1228,
+            "mtime": 1778265377,
+            "sha1": "70503c588101c04d5f03296f75b97b6055377d9c"
+        },
+        "dist/frankphp-1.1.1/Middleware/JsonBodyParserMiddleware.php": {
+            "size": 651,
+            "mtime": 1778265377,
+            "sha1": "bf52f039760e2d32da4367816f4149cbd12578bd"
+        },
+        "dist/frankphp-1.1.1/Middleware/TenantMiddleware.php": {
+            "size": 787,
+            "mtime": 1778265377,
+            "sha1": "83f5402b5e7cdc6b85f63684a9d6286c8c5d8192"
+        },
+        "dist/frankphp-1.1.1/Models/Tenant.php": {
+            "size": 2850,
+            "mtime": 1778265377,
+            "sha1": "e9ee169c3ebb0d4a65d7701cdf1268c07626a0da"
+        },
+        "dist/frankphp-1.1.1/Models/User.php": {
+            "size": 11856,
+            "mtime": 1778265377,
+            "sha1": "21c6c1b5bdb972ea89eabaef3a9585726f6fc2d7"
+        },
+        "dist/frankphp-1.1.1/Presenters/FormPresenter.php": {
+            "size": 1348,
+            "mtime": 1778265377,
+            "sha1": "06c422195746a320d0fac3c2643ffca6a5ab746e"
+        },
+        "dist/frankphp-1.1.1/RELEASE_MANIFEST.json": {
+            "size": 1322,
+            "mtime": 1778265377,
+            "sha1": "2af382fe2277ac229de0d7c1f8e3c8dc825a7c93"
+        },
+        "dist/frankphp-1.1.1/Services/Email/EmailMessage.php": {
+            "size": 1562,
+            "mtime": 1778265377,
+            "sha1": "1e44faa53b0f182f41a441c890b37fcf890d781a"
+        },
+        "dist/frankphp-1.1.1/Services/Email/EmailResult.php": {
+            "size": 1022,
+            "mtime": 1778265377,
+            "sha1": "3f5ee831a8cbe0fc15fe6487261409f529d86c72"
+        },
+        "dist/frankphp-1.1.1/Services/Email/EmailService.php": {
+            "size": 8281,
+            "mtime": 1778265377,
+            "sha1": "911dd834533fddeb31595a1533de6b3fde75060d"
+        },
+        "dist/frankphp-1.1.1/Services/Email/PHPMailer/Exception.php": {
+            "size": 1224,
+            "mtime": 1778265377,
+            "sha1": "5639ad61465129be32221ad5f2da0743f2df96be"
+        },
+        "dist/frankphp-1.1.1/Services/Email/PHPMailer/OAuth.php": {
+            "size": 3744,
+            "mtime": 1778265377,
+            "sha1": "48f194830044013e295681dacf142d742e75886a"
+        },
+        "dist/frankphp-1.1.1/Services/Email/PHPMailer/PHPMailer.php": {
+            "size": 171115,
+            "mtime": 1778265377,
+            "sha1": "56f0134b4abfa9704bf4df1165e577f9f39fbf43"
+        },
+        "dist/frankphp-1.1.1/Services/Email/PHPMailer/POP3.php": {
+            "size": 11732,
+            "mtime": 1778265377,
+            "sha1": "8e8d097a4a144e47b172c49b4c25c8a0fe9bc552"
+        },
+        "dist/frankphp-1.1.1/Services/Email/PHPMailer/SMTP.php": {
+            "size": 47295,
+            "mtime": 1778265377,
+            "sha1": "cfc5e1441b8ead10a19200130732508ba28da2a3"
+        },
+        "dist/frankphp-1.1.1/Services/Email/PHPMailer/validate.js": {
+            "size": 2735,
+            "mtime": 1778265377,
+            "sha1": "02c7c1a3766de6ac39a8f2cfdb8ffb47d63d4281"
+        },
+        "dist/frankphp-1.1.1/Services/Email/Templates/PasswordResetEmailTemplate.php": {
+            "size": 5514,
+            "mtime": 1778265377,
+            "sha1": "2bc6150223bf7bca40b940fca196d11e86e74d23"
+        },
+        "dist/frankphp-1.1.1/Services/Email/Templates/SignupVerificationEmailTemplate.php": {
+            "size": 4680,
+            "mtime": 1778265377,
+            "sha1": "c522fbce502e78a5fb740c80d24bcd359ced4779"
+        },
+        "dist/frankphp-1.1.1/Services/Email/Templates/TaskReminderEmailTemplate.php": {
+            "size": 14591,
+            "mtime": 1778265377,
+            "sha1": "6b0120b6c212891e5baa477463a25e0fa1e5b84b"
+        },
+        "dist/frankphp-1.1.1/Services/Email/Templates/TenantOwnerAdvisoryTemplate.php": {
+            "size": 2999,
+            "mtime": 1778265377,
+            "sha1": "1ace277e3788c46e35bd22b6ac016c762479d631"
+        },
+        "dist/frankphp-1.1.1/Services/PasswordResetService.php": {
+            "size": 7257,
+            "mtime": 1778265377,
+            "sha1": "6dbac2023a81971dc8279c0093680f26980ae16d"
+        },
+        "dist/frankphp-1.1.1/Services/ServiceResult.php": {
+            "size": 1733,
+            "mtime": 1778265377,
+            "sha1": "2496fe82647c975487ed6795d97a92f323602a7d"
+        },
+        "dist/frankphp-1.1.1/Services/SignupService.php": {
+            "size": 15870,
+            "mtime": 1778265377,
+            "sha1": "4f02e63b27da592b8fe679b116b0a61dc79c3db6"
+        },
+        "dist/frankphp-1.1.1/VERSION": {
+            "size": 6,
+            "mtime": 1778265377,
+            "sha1": "3b1c4a149729cc044e1a39df31b3628cdbf5f895"
+        },
+        "dist/frankphp-1.1.1/Views/auth/forgot-password-sent.php": {
+            "size": 1152,
+            "mtime": 1778265377,
+            "sha1": "8ff7e7d589f33db8ed9205a52df2f1e34ad69ef2"
+        },
+        "dist/frankphp-1.1.1/Views/auth/forgot-password.php": {
+            "size": 1423,
+            "mtime": 1778265377,
+            "sha1": "f7ff77af108fc01c04dc239e7a0fcf1ac0e8e28e"
+        },
+        "dist/frankphp-1.1.1/Views/auth/login.php": {
+            "size": 3422,
+            "mtime": 1778265377,
+            "sha1": "b3a33c34bc8705611baa8ffeb4472d7c78e5edb7"
+        },
+        "dist/frankphp-1.1.1/Views/auth/reset-password-error.php": {
+            "size": 1197,
+            "mtime": 1778265377,
+            "sha1": "95ced236dca6c9728a3eb8cdff1f2d6ec6c83425"
+        },
+        "dist/frankphp-1.1.1/Views/auth/reset-password.php": {
+            "size": 3363,
+            "mtime": 1778265377,
+            "sha1": "907e31d24fd5378d8879b6208167d355618dd710"
+        },
+        "dist/frankphp-1.1.1/Views/auth/signup-verify.php": {
+            "size": 2665,
+            "mtime": 1778265377,
+            "sha1": "11f99c2679369de5cfafda128187c65816272ea6"
+        },
+        "dist/frankphp-1.1.1/Views/auth/signup.php": {
+            "size": 3491,
+            "mtime": 1778265377,
+            "sha1": "a944eeb9b730fb2b2d7787a9dafcdc76d3f8f0b3"
+        },
+        "dist/frankphp-1.1.1/Views/home/dashboard.php": {
+            "size": 12060,
+            "mtime": 1778265377,
+            "sha1": "74021de5c05200ac6a2b63f5a39c244f52dce649"
+        },
+        "dist/frankphp-1.1.1/Views/layouts/app-main.php": {
+            "size": 3664,
+            "mtime": 1778265377,
+            "sha1": "f68f569c2e541b2e352b7ff6788dd27f9fc4c98a"
+        },
+        "dist/frankphp-1.1.1/Views/layouts/authViews.php": {
+            "size": 2924,
+            "mtime": 1778265377,
+            "sha1": "776747332c9d39de917ae73e3d1f6aae09641904"
+        },
+        "dist/frankphp-1.1.1/Views/layouts/legal.php": {
+            "size": 2771,
+            "mtime": 1778265377,
+            "sha1": "f0b78975f5129ef4c2e23dcf16df4fecc5044a14"
+        },
+        "dist/frankphp-1.1.1/Views/modals/confirm-delete-modal.php": {
+            "size": 2779,
+            "mtime": 1778265377,
+            "sha1": "3a764a3deb3eb54f74687d887bc39247b43d1e1e"
+        },
+        "dist/frankphp-1.1.1/Views/modals/rich-text-editor-modal.php": {
+            "size": 7981,
+            "mtime": 1778265377,
+            "sha1": "27dbee7829edb552a26423c07e01e68f24286b05"
+        },
+        "dist/frankphp-1.1.1/Views/modals/videos/modal-add-bookmark.php": {
+            "size": 2501,
+            "mtime": 1778265377,
+            "sha1": "0a4f06b7a78c45451f9f6edf598f7caf0812b346"
+        },
+        "dist/frankphp-1.1.1/Views/modals/videos/modal-add-library-video.php": {
+            "size": 3049,
+            "mtime": 1778265377,
+            "sha1": "31cbaf59d52ccc47643d306907cc925d5b3ba047"
+        },
+        "dist/frankphp-1.1.1/Views/modals/videos/modal-delete-bookmark.php": {
+            "size": 1061,
+            "mtime": 1778265377,
+            "sha1": "230481e24741230eaa4ce2b9f87f33d90c2e8972"
+        },
+        "dist/frankphp-1.1.1/Views/modals/videos/modal-delete-library-video.php": {
+            "size": 1110,
+            "mtime": 1778265377,
+            "sha1": "d6a4bf5af131fa18d31185040aac9e71f50d0818"
+        },
+        "dist/frankphp-1.1.1/Views/modals/videos/modal-edit-bookmark.php": {
+            "size": 2110,
+            "mtime": 1778265377,
+            "sha1": "a21e5d6ac670f8ac6105cd884e7648dee6b54855"
+        },
+        "dist/frankphp-1.1.1/Views/modals/videos/modal-edit-library-video.php": {
+            "size": 2164,
+            "mtime": 1778265377,
+            "sha1": "28a8492deea399a4a427ac118ff8860b02a448a7"
+        },
+        "dist/frankphp-1.1.1/Views/modals/videos/modal-video-player.php": {
+            "size": 1393,
+            "mtime": 1778265377,
+            "sha1": "fc4b502fb118d5afc701e241980e9abd3bbc7140"
+        },
+        "dist/frankphp-1.1.1/Views/partials/app-header.php": {
+            "size": 1842,
+            "mtime": 1778265377,
+            "sha1": "7b5d88c04f2497f0691cdeadbcbd7756ef8cb2a6"
+        },
+        "dist/frankphp-1.1.1/Views/partials/app-nav.php": {
+            "size": 3640,
+            "mtime": 1778265377,
+            "sha1": "d18b7788cd141fa0e2accb8a939b66add508981c"
+        },
+        "dist/frankphp-1.1.1/Views/partials/gtm_body.html": {
+            "size": 245,
+            "mtime": 1778265377,
+            "sha1": "ef578f4d436785551983f38bdd22b49ab8ed9a52"
+        },
+        "dist/frankphp-1.1.1/Views/partials/gtm_head.html": {
+            "size": 433,
+            "mtime": 1778265377,
+            "sha1": "21ddfda207538f96070db3d5103b9f378d36affb"
+        },
+        "dist/frankphp-1.1.1/Views/users/me.php": {
+            "size": 294,
+            "mtime": 1778265377,
+            "sha1": "b84e400ab30acfeae9a8c4011c4fe3a9a446f02e"
+        },
+        "dist/frankphp-1.1.1/bootstrap.php": {
+            "size": 3334,
+            "mtime": 1778265375,
+            "sha1": "8e9ce331d65789ab39628eef9d2cdf050a2328d2"
+        },
+        "dist/frankphp-1.1.1/cron_task_reminders.php": {
+            "size": 6643,
+            "mtime": 1778265377,
+            "sha1": "5df8e10647b9f4bbaaa8ab17bb99411d8f82fe4b"
+        },
+        "dist/frankphp-1.1.1/env.example": {
+            "size": 1922,
+            "mtime": 1778265377,
+            "sha1": "20c1b59d83a9a1499747e047e2549354a3286542"
+        },
+        "dist/frankphp-1.1.1/public/.htaccess": {
+            "size": 350,
+            "mtime": 1778265377,
+            "sha1": "16475e387da77295a71f0be8222dd8104effe3e0"
+        },
+        "dist/frankphp-1.1.1/public/assets/css/app-core.css": {
+            "size": 12722,
+            "mtime": 1778265377,
+            "sha1": "b04481b8831a2ed08060f48e0197c1094b0efd90"
+        },
+        "dist/frankphp-1.1.1/public/assets/css/app-header.css": {
+            "size": 2539,
+            "mtime": 1778265377,
+            "sha1": "964f4a4685e2479c9c93fbe01a33077a52aef8e2"
+        },
+        "dist/frankphp-1.1.1/public/assets/css/app-icons.css": {
+            "size": 1208,
+            "mtime": 1778265377,
+            "sha1": "461b990b838a9319f064dc60fe1451ef4c67638e"
+        },
+        "dist/frankphp-1.1.1/public/assets/css/app-nav.css": {
+            "size": 2862,
+            "mtime": 1778265377,
+            "sha1": "5ced3f07bb9c25f84237163970114dbb2a4a3759"
+        },
+        "dist/frankphp-1.1.1/public/assets/css/authViews.css": {
+            "size": 320,
+            "mtime": 1778265377,
+            "sha1": "b83725bb4bc2b67c88e6cde9673295f24710aa25"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/company.svg": {
+            "size": 10450,
+            "mtime": 1778265377,
+            "sha1": "97355283174ffd697fd2fa145ec8c66188b48702"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/contact.svg": {
+            "size": 2815,
+            "mtime": 1778265377,
+            "sha1": "f0438a2f0dbedabb1a28cd9ad196887902b24fa5"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/discussion-idea.svg": {
+            "size": 2767,
+            "mtime": 1778265377,
+            "sha1": "6037dc35b80408884dcc0307332f4d4040f29f91"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/dumbbell.svg": {
+            "size": 1216,
+            "mtime": 1778265377,
+            "sha1": "b75c53eba1b96b72ae3ebcaa454102cf8ae58320"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/home.svg": {
+            "size": 428,
+            "mtime": 1778265377,
+            "sha1": "822ff913fa4185be74da9b59f31ac3fb85fd3680"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/report.svg": {
+            "size": 890,
+            "mtime": 1778265377,
+            "sha1": "83a83447d067e9c855f743f8421c751f9f79e0bb"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/task-checklist.svg": {
+            "size": 2255,
+            "mtime": 1778265377,
+            "sha1": "a34273355120a2321f850560cd0e54d27e8ddd6c"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/video.svg": {
+            "size": 962,
+            "mtime": 1778265377,
+            "sha1": "00fb1a90a5bc18ed9f0cfae2f25e31432d4fe518"
+        },
+        "dist/frankphp-1.1.1/public/assets/icons/whiteboard.svg": {
+            "size": 3262,
+            "mtime": 1778265377,
+            "sha1": "2f1f3a33854e61a238f8d3694fc012b87f04011e"
+        },
+        "dist/frankphp-1.1.1/public/assets/images/bf_logo_full.svg": {
+            "size": 8475,
+            "mtime": 1778265377,
+            "sha1": "b9476aefcca12f0504854bc3e9a5fe0573e9c1ad"
+        },
+        "dist/frankphp-1.1.1/public/assets/images/bf_logo_icon.svg": {
+            "size": 38310,
+            "mtime": 1778265377,
+            "sha1": "fb98cb0d7cf14862c9effe50f9ef6db29946bc3e"
+        },
+        "dist/frankphp-1.1.1/public/assets/images/bitfitter_logo.png": {
+            "size": 18482,
+            "mtime": 1778265377,
+            "sha1": "b54d18700b9fbc11de39dc50aa18e91db2aa9a63"
+        },
+        "dist/frankphp-1.1.1/public/assets/js/main.js": {
+            "size": 730,
+            "mtime": 1778265377,
+            "sha1": "fe3006744cf513dd57f46127cbd2e2dea463c99c"
+        },
+        "dist/frankphp-1.1.1/public/assets/js/this-site-nav.js": {
+            "size": 4427,
+            "mtime": 1778265377,
+            "sha1": "a0379886a88bc8c0d51f096d4b7f30a864e7f9ac"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/bootstrap-5.3.6-dist/CSS/bootstrap.min.css": {
+            "size": 232018,
+            "mtime": 1778265377,
+            "sha1": "371e7aed5ab297634a9e062079e449010352bd03"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/bootstrap-5.3.6-dist/JS/bootstrap.min.js": {
+            "size": 60697,
+            "mtime": 1778265377,
+            "sha1": "226acac787ab92666cf581373cf810def338badd"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/bootstrap-icons/bootstrap-icons.css": {
+            "size": 98255,
+            "mtime": 1778265377,
+            "sha1": "9ee496cc9baaae58b98e7fc1eb46e3578daf8143"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/bootstrap-icons/bootstrap-icons.json": {
+            "size": 52358,
+            "mtime": 1778265377,
+            "sha1": "e4adb76a19cc64a1d61125bb997d286254c87be5"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/bootstrap-icons/bootstrap-icons.min.css": {
+            "size": 85875,
+            "mtime": 1778265377,
+            "sha1": "043a332e4f555cc0bfd35e451be955b4b93966a0"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/bootstrap-icons/bootstrap-icons.scss": {
+            "size": 57755,
+            "mtime": 1778265377,
+            "sha1": "34d0a1bd9a178a01751afb8f6704a4927fec07db"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/bootstrap-icons/fonts/bootstrap-icons.woff": {
+            "size": 176032,
+            "mtime": 1778265377,
+            "sha1": "d5831fd39baf13aff7626e483b9a089730f18604"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2": {
+            "size": 130396,
+            "mtime": 1778265377,
+            "sha1": "020c3c6f9280a315e8425d7f92e15bcd0cdda1b2"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/swiper/swiper-bundle.min.css": {
+            "size": 18458,
+            "mtime": 1778265377,
+            "sha1": "fa5ecc1387228b38fe88ec195997c67c3c020b4a"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/swiper/swiper-bundle.min.js": {
+            "size": 151436,
+            "mtime": 1778265377,
+            "sha1": "a2673c79aaae1ec116240d8bfa48d4b04d21e081"
+        },
+        "dist/frankphp-1.1.1/public/assets/vendor/swiper/swiper-bundle.min.js.map": {
+            "size": 205059,
+            "mtime": 1778265377,
+            "sha1": "03f381df94fba6572f243f7fd3e59debfc22d5b7"
+        },
+        "dist/frankphp-1.1.1/public/favicon.ico": {
+            "size": 4286,
+            "mtime": 1778265377,
+            "sha1": "8d07f2b533486cb298855afe0adec8e657e27123"
+        },
+        "dist/frankphp-1.1.1/public/index.php": {
+            "size": 468,
+            "mtime": 1778265377,
+            "sha1": "a7ac856c796ce76f072767e24839470c6cb61d0f"
+        },
+        "dist/frankphp-1.1.1/sql/schema.sql": {
+            "size": 4725,
+            "mtime": 1778265377,
+            "sha1": "6dcb180c72a6825abc7bd38fcf5738de6396ff52"
+        },
+        "env.example": {
+            "size": 1922,
+            "mtime": 1778265377,
+            "sha1": "20c1b59d83a9a1499747e047e2549354a3286542"
+        },
+        "public/.htaccess": {
+            "size": 350,
+            "mtime": 1778265377,
+            "sha1": "16475e387da77295a71f0be8222dd8104effe3e0"
+        },
+        "public/assets/css/app-core.css": {
+            "size": 12850,
+            "mtime": 1778751082,
+            "sha1": "a0d9436bd13ffed767cc21ee8d55da206f21ed2c"
+        },
+        "public/assets/css/app-header.css": {
+            "size": 2539,
+            "mtime": 1778265377,
+            "sha1": "964f4a4685e2479c9c93fbe01a33077a52aef8e2"
+        },
+        "public/assets/css/app-icons.css": {
+            "size": 1208,
+            "mtime": 1778265377,
+            "sha1": "461b990b838a9319f064dc60fe1451ef4c67638e"
+        },
+        "public/assets/css/app-nav.css": {
+            "size": 2862,
+            "mtime": 1778265377,
+            "sha1": "5ced3f07bb9c25f84237163970114dbb2a4a3759"
+        },
+        "public/assets/css/authViews.css": {
+            "size": 320,
+            "mtime": 1778265377,
+            "sha1": "b83725bb4bc2b67c88e6cde9673295f24710aa25"
+        },
+        "public/assets/icons/company.svg": {
+            "size": 10450,
+            "mtime": 1778265377,
+            "sha1": "97355283174ffd697fd2fa145ec8c66188b48702"
+        },
+        "public/assets/icons/contact.svg": {
+            "size": 2815,
+            "mtime": 1778265377,
+            "sha1": "f0438a2f0dbedabb1a28cd9ad196887902b24fa5"
+        },
+        "public/assets/icons/discussion-idea.svg": {
+            "size": 2767,
+            "mtime": 1778265377,
+            "sha1": "6037dc35b80408884dcc0307332f4d4040f29f91"
+        },
+        "public/assets/icons/dumbbell.svg": {
+            "size": 1216,
+            "mtime": 1778265377,
+            "sha1": "b75c53eba1b96b72ae3ebcaa454102cf8ae58320"
+        },
+        "public/assets/icons/home.svg": {
+            "size": 428,
+            "mtime": 1778265377,
+            "sha1": "822ff913fa4185be74da9b59f31ac3fb85fd3680"
+        },
+        "public/assets/icons/report.svg": {
+            "size": 890,
+            "mtime": 1778265377,
+            "sha1": "83a83447d067e9c855f743f8421c751f9f79e0bb"
+        },
+        "public/assets/icons/task-checklist.svg": {
+            "size": 2255,
+            "mtime": 1778265377,
+            "sha1": "a34273355120a2321f850560cd0e54d27e8ddd6c"
+        },
+        "public/assets/icons/video.svg": {
+            "size": 962,
+            "mtime": 1778265377,
+            "sha1": "00fb1a90a5bc18ed9f0cfae2f25e31432d4fe518"
+        },
+        "public/assets/icons/whiteboard.svg": {
+            "size": 3262,
+            "mtime": 1778265377,
+            "sha1": "2f1f3a33854e61a238f8d3694fc012b87f04011e"
+        },
+        "public/assets/images/bf_logo_full.svg": {
+            "size": 8475,
+            "mtime": 1778265377,
+            "sha1": "b9476aefcca12f0504854bc3e9a5fe0573e9c1ad"
+        },
+        "public/assets/images/bf_logo_icon.svg": {
+            "size": 38310,
+            "mtime": 1778265377,
+            "sha1": "fb98cb0d7cf14862c9effe50f9ef6db29946bc3e"
+        },
+        "public/assets/images/bitfitter_logo.png": {
+            "size": 18482,
+            "mtime": 1778265377,
+            "sha1": "b54d18700b9fbc11de39dc50aa18e91db2aa9a63"
+        },
+        "public/assets/js/main.js": {
+            "size": 730,
+            "mtime": 1778265377,
+            "sha1": "fe3006744cf513dd57f46127cbd2e2dea463c99c"
+        },
+        "public/assets/js/this-site-nav.js": {
+            "size": 4427,
+            "mtime": 1778265377,
+            "sha1": "a0379886a88bc8c0d51f096d4b7f30a864e7f9ac"
+        },
+        "public/assets/vendor/bootstrap-5.3.6-dist/CSS/bootstrap.min.css": {
+            "size": 232018,
+            "mtime": 1778265377,
+            "sha1": "371e7aed5ab297634a9e062079e449010352bd03"
+        },
+        "public/assets/vendor/bootstrap-5.3.6-dist/JS/bootstrap.min.js": {
+            "size": 60697,
+            "mtime": 1778265377,
+            "sha1": "226acac787ab92666cf581373cf810def338badd"
+        },
+        "public/assets/vendor/bootstrap-icons/bootstrap-icons.css": {
+            "size": 98255,
+            "mtime": 1778265377,
+            "sha1": "9ee496cc9baaae58b98e7fc1eb46e3578daf8143"
+        },
+        "public/assets/vendor/bootstrap-icons/bootstrap-icons.json": {
+            "size": 52358,
+            "mtime": 1778265377,
+            "sha1": "e4adb76a19cc64a1d61125bb997d286254c87be5"
+        },
+        "public/assets/vendor/bootstrap-icons/bootstrap-icons.min.css": {
+            "size": 85875,
+            "mtime": 1778265377,
+            "sha1": "043a332e4f555cc0bfd35e451be955b4b93966a0"
+        },
+        "public/assets/vendor/bootstrap-icons/bootstrap-icons.scss": {
+            "size": 57755,
+            "mtime": 1778265377,
+            "sha1": "34d0a1bd9a178a01751afb8f6704a4927fec07db"
+        },
+        "public/assets/vendor/bootstrap-icons/fonts/bootstrap-icons.woff": {
+            "size": 176032,
+            "mtime": 1778265377,
+            "sha1": "d5831fd39baf13aff7626e483b9a089730f18604"
+        },
+        "public/assets/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2": {
+            "size": 130396,
+            "mtime": 1778265377,
+            "sha1": "020c3c6f9280a315e8425d7f92e15bcd0cdda1b2"
+        },
+        "public/assets/vendor/swiper/swiper-bundle.min.css": {
+            "size": 18458,
+            "mtime": 1778265377,
+            "sha1": "fa5ecc1387228b38fe88ec195997c67c3c020b4a"
+        },
+        "public/assets/vendor/swiper/swiper-bundle.min.js": {
+            "size": 151436,
+            "mtime": 1778265377,
+            "sha1": "a2673c79aaae1ec116240d8bfa48d4b04d21e081"
+        },
+        "public/assets/vendor/swiper/swiper-bundle.min.js.map": {
+            "size": 205059,
+            "mtime": 1778265377,
+            "sha1": "03f381df94fba6572f243f7fd3e59debfc22d5b7"
+        },
+        "public/favicon.ico": {
+            "size": 4286,
+            "mtime": 1778265377,
+            "sha1": "8d07f2b533486cb298855afe0adec8e657e27123"
+        },
+        "public/index.php": {
+            "size": 596,
+            "mtime": 1778751059,
+            "sha1": "f18731c3c1ea4dde0fdeb0d1cf3077bad79e1d6a"
+        },
+        "sql/schema.sql": {
+            "size": 4725,
+            "mtime": 1778265377,
+            "sha1": "6dcb180c72a6825abc7bd38fcf5738de6396ff52"
+        },
+        "tools/build_release.php": {
+            "size": 7853,
+            "mtime": 1778097645,
+            "sha1": "b2cfc23baee598060ef5002bee1a9f310687c1ee"
+        }
+    },
+    "routes": [
+        "GET / => App\\\\Controllers\\\\HomeController@dashboard [$tm, $auth]",
+        "GET /forgot-password => AuthController@showForgotPassword []",
+        "GET /login => App\\\\Controllers\\\\AuthController@showLogin []",
+        "GET /logout => App\\\\Controllers\\\\AuthController@logout []",
+        "GET /reset-password => AuthController@showResetPassword []",
+        "GET /signup => SignupController@showSignup []",
+        "GET /signup/verify => SignupController@showVerify []",
+        "GET /tenant/{tenant_id}/dashboard => App\\\\Controllers\\\\HomeController@dashboard [$tm, $auth]",
+        "POST /api/v1/tenant/{tenant_id}/organizations => App\\\\Controllers\\\\Api\\\\V1\\\\OrganizationController@index [$tm, $apiAuth, $json]",
+        "POST /forgot-password => AuthController@sendPasswordReset []",
+        "POST /login => App\\\\Controllers\\\\AuthController@login [$json]",
+        "POST /reset-password => AuthController@resetPassword []",
+        "POST /signup => SignupController@initiateSignup [$json]",
+        "POST /signup/resend => SignupController@resendCode [$json]",
+        "POST /signup/verify => SignupController@completeSignup [$json]"
+    ],
+    "schema": {
+        "tables": [
+            "password_reset_tokens",
+            "signup_tokens",
+            "tenants",
+            "users"
+        ],
+        "alter_statements": []
+    }
+}

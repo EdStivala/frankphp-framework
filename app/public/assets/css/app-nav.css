@@ -1,0 +1,161 @@
+/******
+*
+* Custom styles for Bootstrap5 Vertical Nav Bar
+*
+******/
+
+/* Sidebar styles */
+
+/* Sidebar */
+.nav-layout{
+	min-height: 100vh;
+	align-items: stretch;
+}
+
+.sidebar{
+	position: fixed;
+	top: var(--topbar-height);
+	left: 0;
+	bottom: 0;
+	width: var(--sidebar-width);
+	background: var(--sidebar-bg);
+	border-right: 1px solid rgba(255,255,255,0.03);
+	padding: 12px;
+	border-radius: 0px 12px 0px 0px;
+	overflow: auto;
+	transition: width .22s ease;
+	z-index: 1020;
+	box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+}
+
+.sidebar-logo img {
+	width: 36px;
+	height: 36px;
+	border-radius: 8px
+}
+
+.sidebar.collapsed{
+	width: var(--sidebar-collapsed)
+}
+
+.sidebar .nav-item{
+	border-radius: 10px;
+	margin: 6px 4px;
+}
+.sidebar .nav-link{
+	color: var(--muted);
+	display: flex;
+	align-items: center;
+	gap: .85rem;
+	padding: .6rem .8rem;
+	border-radius: 8px;
+}
+.sidebar .nav-link:hover, .sidebar .nav-link.active {
+	color: var(--grey-600);
+	background: var(--brand-primary-glass);
+	box-shadow: inset 0 0 0 1px rgba(255,255,255,0.01);
+}
+
+.side-icon{
+	font-size: 1rem;
+	width: 28px;
+	text-align: center;
+	color: var(--grey-400)
+}
+
+.sidebar .nav-link.active i { 
+	color: var(--grey-600);
+}
+
+.side-label-text{
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis
+}
+
+/* Collapse toggle */
+.sidebar-toggle{
+	background: var(--brand-primary);
+	color: #FFFFFF;
+	display: flex;
+	align-items: center;
+	margin-top: auto;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	border-color: var(--brand-primary);
+}
+.sidebar-toggle:hover{
+	background-color: var(--brand-primary-dark);
+	border-color: var(--brand-primary-dark);
+	color: #FFFFFF; 
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
+
+/* Popout submenu (for collapsed sidebar) */
+.popout{
+	position: fixed;
+	left: calc(var(--sidebar-collapsed) + 8px);
+	top: 0;
+	min-width: 220px;
+	background: var(--panel);
+	border-radius: 10px;
+	padding: .5rem;
+	border: 1px solid rgba(255,255,255,0.04);
+	box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+	display: none;
+	z-index: 1050;
+}
+
+.popout.visible{
+	display: block
+}
+
+.submenu-item{
+	padding: .45rem .65rem;
+	border-radius: 8px;
+	color: var(--muted);
+	display: block
+}
+
+.submenu-item:hover{
+	color: #fff;
+	background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))
+}
+
+/* Content area */
+.app-content{
+	margin-left: var(--sidebar-width);
+	padding: 1.5rem;
+	flex: 1;
+	transition: margin-left .22s ease
+}
+
+.sidebar.collapsed + .app-content{
+	margin-left: var(--sidebar-collapsed)
+}
+
+.card-surface{
+	background: var(--card);
+	border: 1px solid rgba(255,255,255,0.02)
+}
+
+/* Responsive small screens */
+@media (max-width: 992px){
+	.sidebar{
+		transform: translateX(-100%);
+		transition: transform .22s ease;
+	}
+
+	.sidebar.open{
+		transform: none
+	}
+
+	.app-content{
+		margin-left: 0;
+		padding: 1rem
+	}
+}

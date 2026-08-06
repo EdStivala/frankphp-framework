@@ -1,0 +1,73 @@
+{
+    "version": "1.4.0",
+    "release_date": "2026-06-09",
+    "summary": "Draft summary: 8 files added; 10 files changed; 15 files removed; 1 routes added. Review and rewrite before release.",
+    "previous_version": "1.3.2",
+    "changes": {
+        "added": [
+            ".claude/settings.local.json",
+            "Controllers/UserManagementController.php",
+            "Services/UserManagementService.php",
+            "Views/users/management-dashboard.php",
+            "codebase.md",
+            "public/assets/css/app-pages-users.css",
+            "public/assets/icons/dashboard.svg",
+            "public/assets/icons/users.svg"
+        ],
+        "changed": [
+            "CHANGELOG.md",
+            "Models/User.php",
+            "RELEASE_MANIFEST.json",
+            "VERSION",
+            "Views/layouts/app-main.php",
+            "Views/partials/app-header.php",
+            "Views/partials/app-nav.php",
+            "bootstrap.php",
+            "public/assets/css/app-icons.css",
+            "sql/schema.sql"
+        ],
+        "removed": [
+            "CODEBASE.md",
+            "Controllers/UserController.php",
+            "FrankPHP Core Framework.clpprj",
+            "FrankPHP Core Framework_clcs.csprj",
+            "Views/users/me.php",
+            "public/assets/icons/company.svg",
+            "public/assets/icons/contact.svg",
+            "public/assets/icons/discussion-idea.svg",
+            "public/assets/icons/dumbbell.svg",
+            "public/assets/icons/home.svg",
+            "public/assets/icons/report.svg",
+            "public/assets/icons/task-checklist.svg",
+            "public/assets/icons/video.svg",
+            "public/assets/icons/whiteboard.svg",
+            "sql/migration_v_1.3.0.sql"
+        ]
+    },
+    "route_changes": {
+        "added": [
+            "GET /tenant/{tenant_id}/users => App\\\\Controllers\\\\UserManagementController@index [$tm, $auth]"
+        ],
+        "removed": []
+    },
+    "database_changes": {
+        "tables_added": [],
+        "tables_removed": [],
+        "alter_statements_added": []
+    },
+    "breaking_changes": [],
+    "ai_notes": [
+        "Review the changed files list for any important behavioural changes not visible from file diffs alone.",
+        "Confirm whether any removed routes, removed tables, or altered schema statements introduce upgrade steps."
+    ],
+    "manual_review_required": [
+        "summary",
+        "breaking_changes",
+        "ai_notes"
+    ],
+    "generator": {
+        "name": "generate_release_manifest.php",
+        "generated_at": "2026-06-09T22:54:10+00:00",
+        "comparison_basis": "Compared against release snapshot 1.3.2"
+    }
+}

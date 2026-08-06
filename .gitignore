@@ -1,0 +1,6 @@
+.DS_Store
+app/.env
+storage/
+dist/
+.idea/
+.claude/
