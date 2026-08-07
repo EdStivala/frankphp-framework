@@ -1,8 +1,8 @@
 # FrankPHP
 
-**A Micro SaaS Business framework — empowering SMEs to focus on the unique parts of their product.**
+**A Micro SaaS Business framework **
 
-Laravel is amazing. You can build *anything* in Laravel — and that's the problem. When what you actually need is a focused skeleton for a typical multi-tenant SaaS business, not a general-purpose toolkit, FrankPHP is built to deliver just that, without the complexity.
+Laravel is amazing. I absolutely love Laravel. You can build *anything* in Laravel — and that's the problem. When what you actually need is a focused skeleton for a typical multi-tenant SaaS business, not a general-purpose toolkit, FrankPHP is built to deliver just that, without the complexity.
 
 No Docker. No Composer. No build step. If you can FTP a file, you can deploy FrankPHP.
 
