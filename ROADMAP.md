@@ -44,8 +44,6 @@ separate pass.
 
 ## Documentation
 
-- Update the documentation site (docs.n3wmedia.com) to reflect the move to
-  GitHub and the framework/app split.
 - Update n3wmedia.com itself to reflect the move to GitHub.
 
 ## Ongoing Maintenance (not version-specific)

@@ -31,7 +31,7 @@ class UserManagementController extends BaseController
         $user   = $request->user;
         $tenant = $request->tenant;
 
-        if (!in_array($user['role'] ?? '', ['admin', 'owner'], true)) {
+        if (!in_array($user['role'] ?? '', ['platform', 'admin', 'owner'], true)) {
             return Response::redirect('/tenant/' . $tenant['id'] . '/dashboard?error=forbidden');
         }
 
