@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.0.1] - 2026-09-29
+
+### Human-readable summary
+
+Update to User Privilages to introduce the idea of Platform as being a user tagged in the User Table as Platform and will be able to work cross tenant. This is a super user above a Tenant Owner and sets the foundation for building the New Tenant Sign up process in the next release
+
+### Added
+
+- ...
+
+### Changed
+
+- ...
+
+### Removed
+
+- ...
+
 ## [2.0.0] - 2026-08-06
 
 ### Human-readable summary
