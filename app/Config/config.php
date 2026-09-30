@@ -71,6 +71,24 @@ return [
     ],
 
     // ----------------------------------------------------------------
+    // Signup — Terms & Conditions acceptance (FrankPHP 2.1+, see
+    // codebase.md §16.9). Opt-in: omit this section (or set require_terms
+    // to false) to leave the feature off.
+    //
+    // require_terms  true = the framework rejects signups that don't post
+    //                terms_accepted=1, and records the acceptance time (UTC)
+    //                and terms_version on the user. Requires the v2.1.0
+    //                migration on existing installs
+    //                (framework/sql/migrations/v2.1.0_signup_terms.sql).
+    // terms_version  Your current terms version, stored with each acceptance.
+    //                Change it when your terms change.
+    // ----------------------------------------------------------------
+    'signup' => [
+        'require_terms' => true,
+        'terms_version' => '2026-10',
+    ],
+
+    // ----------------------------------------------------------------
     // Cron
     // ----------------------------------------------------------------
     'cron' => [

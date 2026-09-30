@@ -82,8 +82,27 @@ ob_start();
 					</div>
 				</div>
 
+				<!-- Terms & Conditions (FrankPHP 2.1+). The server enforces this when
+				     $config['signup']['require_terms'] is on — the required attribute
+				     and disabled button below are UX only. Must post terms_accepted=1. -->
+				<div class="form-check mb-4">
+					<input
+						type="checkbox"
+						class="form-check-input"
+						id="terms_accepted"
+						name="terms_accepted"
+						value="1"
+						required
+						<?= (($terms_accepted ?? null) === '1' || ($terms_accepted ?? null) === true) ? 'checked' : '' ?>
+					>
+					<label class="form-check-label small" for="terms_accepted">
+						I have read and agree to the
+						<a href="/terms" target="_blank" rel="noopener" class="text-decoration-none">Terms &amp; Conditions</a>.
+					</label>
+				</div>
+
 				<!-- Submit -->
-				<button type="submit" class="btn btn-primary w-100 mb-3">Send Verification Code</button>
+				<button type="submit" id="signupSubmit" class="btn btn-primary w-100 mb-3">Send Verification Code</button>
 
 				<!-- Back to login -->
 				<div class="text-center pt-3 border-top">
@@ -109,6 +128,15 @@ ob_start();
 				icon.classList.replace('bi-eye', 'bi-eye-slash');
 			}
 		}
+
+		// Progressive enhancement: submit stays disabled until terms are ticked.
+		(function () {
+			const terms  = document.getElementById('terms_accepted');
+			const submit = document.getElementById('signupSubmit');
+			const sync   = () => { submit.disabled = !terms.checked; };
+			terms.addEventListener('change', sync);
+			sync();
+		})();
 
 		// Client-side password match check before submission
 		document.getElementById('signupForm').addEventListener('submit', function (e) {

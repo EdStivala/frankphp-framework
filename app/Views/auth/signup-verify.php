@@ -62,7 +62,7 @@ ob_start();
 				</div>
 
 				<!-- Submit -->
-				<button type="submit" class="btn btn-primary w-100 mb-3">Verify &amp; Create Account</button>
+				<button type="submit" id="verifySubmit" class="btn btn-primary w-100 mb-3">Verify &amp; Create Account</button>
 
 				<!-- Resend -->
 				<div class="text-center mb-2">
@@ -83,14 +83,39 @@ ob_start();
 	</div>
 
 	<script>
-		// Auto-advance: submit when 6 digits are entered
+		// Digits only — the user submits explicitly with the button (or Enter).
+		// No auto-submit: a second in-flight POST after a successful verify
+		// lands on the destroyed pre-login session and bounces to /signup.
 		document.getElementById('code').addEventListener('input', function () {
-			const val = this.value.replace(/\D/g, '');
-			this.value = val;
-			if (val.length === 6) {
-				document.getElementById('verifyForm').submit();
-			}
+			this.value = this.value.replace(/\D/g, '');
 		});
+
+		// Submit-once guard — blocks Enter + click / double-click / autofill
+		// submitting the form twice.
+		(function () {
+			const form   = document.getElementById('verifyForm');
+			const button = document.getElementById('verifySubmit');
+			let submitted = false;
+
+			form.addEventListener('submit', function (e) {
+				if (submitted) {
+					e.preventDefault();
+					return;
+				}
+				submitted = true;
+				button.disabled = true;
+				button.textContent = 'Verifying…';
+			});
+
+			// Re-enable if the page is restored from the back/forward cache.
+			window.addEventListener('pageshow', function (e) {
+				if (e.persisted) {
+					submitted = false;
+					button.disabled = false;
+					button.textContent = 'Verify & Create Account';
+				}
+			});
+		})();
 	</script>
 
 </section>

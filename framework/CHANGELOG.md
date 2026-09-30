@@ -1,5 +1,68 @@
 # Changelog
 
+## [2.1.0] - 2026-09-30
+
+### Human-readable summary
+
+FrankPHP 2.1.0 changes what a new signup means. **Every verified signup now creates its own tenant, and the person signing up becomes that tenant's `owner`.** Before this release every signup was dropped into tenant 1 as a plain `user`, which blocked real self-service signups on live apps. The tenant is named automatically from the signup email, with no extra form field: a business address like `jane@acme-corp.com` becomes "Acme Corp", and a free-mail address like `jane@gmail.com` becomes "Jane's Workspace". The owner can rename it in Tenant Settings. Tenant, user and token are written in one database transaction, so a failure never leaves an orphan tenant. The rule is a swappable policy point (`SignupTenantResolver`), so apps with a different business model (for example invite-into-existing-tenant) can replace it in `app/bootstrap.php`.
+
+It also adds **opt-in Terms & Conditions acceptance at signup**. When an app sets `$config['signup']['require_terms']`, the framework rejects signups that haven't accepted the terms (server-side, not just a disabled button) and records the UTC time of acceptance and the terms version on the user. With the flag absent, behaviour is exactly as v2.0. This release adds four columns, so **existing installs must run a one-off, idempotent migration script before enabling the flag** (see Upgrade notes).
+
+Smaller fixes: the auto-login after signup now records the login (`accessed_at` was left NULL before), and the starter verify page no longer auto-submits on the 6th digit, which could fire a second request that logged the new user straight back out.
+
+### Added
+
+- `Services/SignupTenantResolver.php` — interface and policy point: `resolve(email, name): array{tenant_id, role, tenant_name?}`, called inside the signup transaction. Container singleton; replace with `$container->override()`.
+- `Services/CreateTenantForSignup.php` — default resolver: new tenant per signup, role `owner`.
+- `Services/TenantNameGenerator.php` — pure helper: default tenant name + slug from an email (business domain → organisation name, two-part suffixes like `co.uk` handled; free-mail → "<Name>'s Workspace"; ASCII-transliterated slugs).
+- `TenantService::create(name, baseSlug, companyEmail): int` — owns slug uniqueness (`-2`, `-3`… suffixes; UNIQUE index as final guard with retry on collision).
+- `Tenant::slugExists(slug)`, `Tenant::insertTenant(name, slug, companyEmail, createdAt)`.
+- `Database::transaction(callable)` — commit on return, rollback and rethrow on any Throwable.
+- Opt-in config `$config['signup']['require_terms']` (bool, missing = off) and `$config['signup']['terms_version']` (string, optional).
+- Columns `terms_accepted_at DATETIME NULL` and `terms_version VARCHAR(50) NULL` on `users` and `signup_tokens`.
+- `sql/migrations/v2.1.0_signup_terms.sql` — idempotent migration for existing installs (each `ALTER` guarded by an `information_schema` check).
+- `Versions/FrankPHP_v2.1.0_migration_notes.md`.
+- `ServiceResult` failure type `terms_required` from `SignupService::initiateSignup()`.
+- Signup-route check: with `require_terms` on and the columns missing, `SignupService`'s container factory throws a `LogicException` naming the migration script. It runs only on signup routes and only when the flag is on.
+- `codebase.md` §16.9 "Signup: Tenant Creation and Terms Acceptance".
+
+### Changed
+
+- `SignupService`:
+  - The constructor adds trailing `tenantResolver`, `requireTerms` (default false) and `termsVersion`.
+  - `initiateSignup()` adds a trailing `$termsAccepted`. It enforces acceptance when the flag is on and stamps it with `Clock::nowUtcString()` at step 1.
+  - `completeSignup()` runs resolver, user insert and token update in `Database::transaction()`, copies terms acceptance from the token to the user, and puts the tenant name and role in the platform-owner alert. The hardcoded `$defaultTenantId = 1` / role `user` is gone.
+  - `resendCode()` carries terms acceptance onto the replacement token.
+- `SignupController`:
+  - Now injects `UserService`, and `completeSignup()` calls `recordLogin()` after auto-login. A failure there is logged, not fatal.
+  - `initiateSignup()` passes `terms_accepted` to the service, and passes it back to the view on error so the box stays ticked.
+- `User::insertUser()` and `User::insertSignupToken()` take optional trailing `termsAcceptedAt, termsVersion`. The columns are only written when `termsAcceptedAt` is non-null, so un-migrated installs keep working while the flag is off. They are deliberately not public properties (`BaseModel::save()` would otherwise be able to overwrite consent).
+- `bootstrap.php`:
+  - `SignupTenantResolver` binding.
+  - `SignupService` factory reads `$config['signup'] ?? []`.
+  - `SignupController` receives `UserService`.
+- `sql/schema.core.sql` — new columns for fresh installs.
+- `tools/build_release.php` — `Versions` added to `required_files`, so migration notes ship in the release zip alongside `sql/migrations/`.
+- `codebase.md` — §2, §7, §8.2, §9, §11, §13, §16.1–16.7 updated for all of the above. Header version brought up to date (it still said 2.0.0).
+
+### Upgrade notes
+
+1. Replace `framework/` as usual.
+2. **Signup behaviour change:** new signups now create their own tenant as `owner`. If your app needs signups to join an existing tenant, override `SignupTenantResolver` in `app/bootstrap.php` before deploying. `codebase.md` §16.9 has a pre-2.1 behaviour example.
+3. Run `framework/sql/migrations/v2.1.0_signup_terms.sql` against each environment's database. It is safe to run more than once, and existing users keep NULL (do not backfill).
+4. Only then, optionally, add `'signup' => ['require_terms' => true, 'terms_version' => '…']` to `app/Config/config.php`. Make sure your signup view posts `terms_accepted=1`, renders `$error`, and re-ticks the box from `$terms_accepted`.
+5. Upgraded apps don't receive new starter views. Copy `app/Views/auth/terms.php`, `App\Controllers\LegalController` and the `/terms` route from the starter if wanted, and **replace the placeholder terms text**.
+
+### Note on this release's scope
+
+This entry covers `framework/` only, per §15.3. The starter `app/` also changed, as application-owned content:
+
+- `Config/config.php` has a `signup` section (enabled).
+- `Views/auth/signup.php` has the Terms checkbox.
+- `Views/auth/signup-verify.php` no longer auto-submits and has a submit-once guard.
+- New `Views/auth/terms.php` placeholder, `Controllers/LegalController.php` and `GET /terms` route.
+- The broken, unused `Views/layouts/legal.php` (a leftover from another site, referencing non-existent includes) was removed.
+
 ## [2.0.1] - 2026-09-29
 
 ### Human-readable summary
@@ -8,15 +71,19 @@ Update to User Privilages to introduce the idea of Platform as being a user tagg
 
 ### Added
 
-- ...
+- None in `framework/`. (Project-root `README.md` and `LICENSE` were added alongside this release.)
 
 ### Changed
 
-- ...
+- `Controllers/UserManagementController.php` — the role check now admits `platform` as well as `admin` and `owner`.
 
 ### Removed
 
-- ...
+- None.
+
+### Note on `platform`
+
+`platform` is not yet cross-tenant: `AuthMiddleware` still returns 403 when the user's `tenant_id` differs from the route's, and `TenantSettingsController` still checks only `admin`/`owner`.
 
 ## [2.0.0] - 2026-08-06
 

@@ -1,64 +1,30 @@
 {
-    "version": "2.0.1",
-    "release_date": "2026-09-29",
-    "summary": "Minor update to add Platform to the list of recognised User Authorities.",
-    "previous_version": "2.0.0",
+    "version": "2.1.0",
+    "release_date": "2026-09-30",
+    "summary": "Signup now creates a new tenant per verified signup, with the user as owner (tenant named from the email domain, or \"<Name>'s Workspace\" for free-mail), written atomically via Database::transaction() and swappable via the SignupTenantResolver policy point. Adds opt-in, server-side Terms & Conditions acceptance at signup ($config['signup']['require_terms']), recording UTC acceptance time + terms version on users (new columns; existing installs run sql/migrations/v2.1.0_signup_terms.sql before enabling). Signup auto-login now records the login. Full detail in CHANGELOG.md [2.1.0].",
+    "previous_version": "2.0.1",
     "changes": {
         "added": [
-            "dist/frankphp-2.0.0.zip",
-            "dist/frankphp-2.0.0/CHANGELOG.md",
-            "dist/frankphp-2.0.0/Controllers/AccountSettingsController.php",
-            "dist/frankphp-2.0.0/Controllers/AuthController.php",
-            "dist/frankphp-2.0.0/Controllers/SignupController.php",
-            "dist/frankphp-2.0.0/Controllers/TenantSettingsController.php",
-            "dist/frankphp-2.0.0/Controllers/UserManagementController.php",
-            "dist/frankphp-2.0.0/Core/BaseApiController.php",
-            "dist/frankphp-2.0.0/Core/BaseController.php",
-            "dist/frankphp-2.0.0/Core/BaseModel.php",
-            "dist/frankphp-2.0.0/Core/BasePresenter.php",
-            "dist/frankphp-2.0.0/Core/Clock.php",
-            "dist/frankphp-2.0.0/Core/Container.php",
-            "dist/frankphp-2.0.0/Core/Database.php",
-            "dist/frankphp-2.0.0/Core/Env.php",
-            "dist/frankphp-2.0.0/Core/MiddlewareInterface.php",
-            "dist/frankphp-2.0.0/Core/Request.php",
-            "dist/frankphp-2.0.0/Core/Response.php",
-            "dist/frankphp-2.0.0/Core/Router.php",
-            "dist/frankphp-2.0.0/Middleware/ApiAuthMiddleware.php",
-            "dist/frankphp-2.0.0/Middleware/AuthMiddleware.php",
-            "dist/frankphp-2.0.0/Middleware/JsonBodyParserMiddleware.php",
-            "dist/frankphp-2.0.0/Middleware/TenantMiddleware.php",
-            "dist/frankphp-2.0.0/Models/Tenant.php",
-            "dist/frankphp-2.0.0/Models/User.php",
-            "dist/frankphp-2.0.0/RELEASE_MANIFEST.json",
-            "dist/frankphp-2.0.0/Services/Email/EmailMessage.php",
-            "dist/frankphp-2.0.0/Services/Email/EmailResult.php",
-            "dist/frankphp-2.0.0/Services/Email/EmailService.php",
-            "dist/frankphp-2.0.0/Services/Email/PHPMailer/Exception.php",
-            "dist/frankphp-2.0.0/Services/Email/PHPMailer/OAuth.php",
-            "dist/frankphp-2.0.0/Services/Email/PHPMailer/PHPMailer.php",
-            "dist/frankphp-2.0.0/Services/Email/PHPMailer/POP3.php",
-            "dist/frankphp-2.0.0/Services/Email/PHPMailer/SMTP.php",
-            "dist/frankphp-2.0.0/Services/Email/PHPMailer/validate.js",
-            "dist/frankphp-2.0.0/Services/Email/Templates/PasswordResetEmailTemplate.php",
-            "dist/frankphp-2.0.0/Services/Email/Templates/PlatformOwnerSignupAlertTemplate.php",
-            "dist/frankphp-2.0.0/Services/Email/Templates/SignupVerificationEmailTemplate.php",
-            "dist/frankphp-2.0.0/Services/PasswordResetService.php",
-            "dist/frankphp-2.0.0/Services/ServiceResult.php",
-            "dist/frankphp-2.0.0/Services/SignupService.php",
-            "dist/frankphp-2.0.0/Services/TenantService.php",
-            "dist/frankphp-2.0.0/Services/UserManagementService.php",
-            "dist/frankphp-2.0.0/Services/UserService.php",
-            "dist/frankphp-2.0.0/VERSION",
-            "dist/frankphp-2.0.0/bootstrap.php",
-            "dist/frankphp-2.0.0/codebase.md",
-            "dist/frankphp-2.0.0/sql/schema.core.sql"
+            "Services/CreateTenantForSignup.php",
+            "Services/SignupTenantResolver.php",
+            "Services/TenantNameGenerator.php",
+            "Versions/FrankPHP_v2.1.0_migration_notes.md",
+            "sql/migrations/v2.1.0_signup_terms.sql"
         ],
         "changed": [
             "CHANGELOG.md",
-            "Controllers/UserManagementController.php",
+            "Controllers/SignupController.php",
+            "Core/Database.php",
+            "Models/Tenant.php",
+            "Models/User.php",
             "RELEASE_MANIFEST.json",
-            "VERSION"
+            "Services/SignupService.php",
+            "Services/TenantService.php",
+            "VERSION",
+            "bootstrap.php",
+            "codebase.md",
+            "sql/schema.core.sql",
+            "tools/build_release.php"
         ],
         "removed": []
     },
@@ -69,12 +35,22 @@
     "database_changes": {
         "tables_added": [],
         "tables_removed": [],
-        "alter_statements_added": []
+        "alter_statements_added": [],
+        "columns_added": [
+            "users.terms_accepted_at DATETIME NULL",
+            "users.terms_version VARCHAR(50) NULL",
+            "signup_tokens.terms_accepted_at DATETIME NULL",
+            "signup_tokens.terms_version VARCHAR(50) NULL"
+        ],
+        "migration": "sql/migrations/v2.1.0_signup_terms.sql (idempotent; existing installs only; notes in Versions/FrankPHP_v2.1.0_migration_notes.md)"
     },
-    "breaking_changes": [],
+    "breaking_changes": [
+        "Behaviour: every new signup now creates its own tenant and becomes its owner (previously joined tenant 1 as user). Apps needing another model must override SignupTenantResolver in app/bootstrap.php before deploying."
+    ],
     "ai_notes": [
-        "Review the changed files list for any important behavioural changes not visible from file diffs alone.",
-        "Confirm whether any removed routes, removed tables, or altered schema statements introduce upgrade steps."
+        "schema-signals.json tracks tables and ALTER statements in schema.core.sql only, so the four new columns appear under database_changes.columns_added, not in the generated signals.",
+        "Code is safe on un-migrated installs while signup.require_terms is off; with the flag on and columns missing, signup routes throw a LogicException naming the migration.",
+        "Starter app/ changes (signup view checkbox, verify view no auto-submit, /terms placeholder, legal.php removed) are application-owned and not in this framework manifest."
     ],
     "manual_review_required": [
         "summary",
@@ -83,7 +59,7 @@
     ],
     "generator": {
         "name": "generate_release_manifest.php",
-        "generated_at": "2026-09-29T21:30:44+00:00",
-        "comparison_basis": "Compared against release snapshot 2.0.0"
+        "generated_at": "2026-09-30T20:47:07+00:00",
+        "comparison_basis": "Compared against release snapshot 2.0.1"
     }
 }

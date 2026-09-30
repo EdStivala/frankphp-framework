@@ -169,7 +169,16 @@ class User extends BaseModel
      * @param string $passwordHash bcrypt hash
      * @param string $role
      * @param string $createdAt    UTC DATETIME string from SignupService
+     * @param string|null $termsAcceptedAt  v2.1.0 — UTC DATETIME of T&C acceptance
+     * @param string|null $termsVersion     v2.1.0 — app's terms version string
      * @return int|null  New user id, or null on failure
+     *
+     * Migration safety (v2.1.0): the terms columns are only written when
+     * $termsAcceptedAt is non-null, so installs that have not yet run
+     * sql/migrations/v2.1.0_signup_terms.sql keep working while the
+     * signup.require_terms flag is off. For the same reason the terms
+     * columns are deliberately NOT public properties (BaseModel::save()
+     * persists every public property).
      */
     public function insertUser(
         int    $tenantId,
@@ -177,25 +186,43 @@ class User extends BaseModel
         string $name,
         string $passwordHash,
         string $role,
-        string $createdAt
+        string $createdAt,
+        ?string $termsAcceptedAt = null,
+        ?string $termsVersion = null
     ): ?int {
-        $stmt = $this->db->prepare('
-            INSERT INTO users
-                (tenant_id, email, name, password_hash, role, created_at)
-            VALUES
-                (:tenant_id, :email, :name, :password_hash, :role, :created_at)
-        ');
-
-        $ok = $stmt->execute([
+        $params = [
             'tenant_id'     => $tenantId,
             'email'         => $email,
             'name'          => $name,
             'password_hash' => $passwordHash,
             'role'          => $role,
             'created_at'    => $createdAt,
-        ]);
+        ];
+
+        if ($termsAcceptedAt !== null) {
+            $params['terms_accepted_at'] = $termsAcceptedAt;
+            $params['terms_version']     = $termsVersion;
+        }
+
+        $stmt = $this->db->prepare($this->buildInsert('users', array_keys($params)));
+        $ok   = $stmt->execute($params);
 
         return $ok ? (int) $this->db->lastInsertId() : null;
+    }
+
+    /**
+     * INSERT statement for a fixed, code-defined column list (never user input).
+     *
+     * @param string[] $columns
+     */
+    private function buildInsert(string $table, array $columns): string
+    {
+        return sprintf(
+            'INSERT INTO %s (%s) VALUES (%s)',
+            $table,
+            implode(', ', $columns),
+            implode(', ', array_map(static fn (string $c): string => ':' . $c, $columns))
+        );
     }
 
     // ----------------------------------------------------------------
@@ -365,6 +392,10 @@ class User extends BaseModel
      * Insert a new signup token.
      *
      * $expiresAt and $createdAt are computed by SignupService via Clock.
+     *
+     * v2.1.0: optional $termsAcceptedAt / $termsVersion carry T&C acceptance
+     * from step 1 to account creation. Written only when $termsAcceptedAt is
+     * non-null (migration safety — see insertUser()).
      */
     public function insertSignupToken(
         string $email,
@@ -373,16 +404,11 @@ class User extends BaseModel
         string $expiresAt,
         string $createdAt,
         string $ipAddress,
-        string $userAgent
+        string $userAgent,
+        ?string $termsAcceptedAt = null,
+        ?string $termsVersion = null
     ): bool {
-        $stmt = $this->db->prepare('
-            INSERT INTO signup_tokens
-                (email, code_hash, password_hash, expires_at, created_at, ip_address, user_agent)
-            VALUES
-                (:email, :code_hash, :password_hash, :expires_at, :created_at, :ip_address, :user_agent)
-        ');
-
-        return $stmt->execute([
+        $params = [
             'email'         => $email,
             'code_hash'     => $codeHash,
             'password_hash' => $passwordHash,
@@ -390,7 +416,15 @@ class User extends BaseModel
             'created_at'    => $createdAt,
             'ip_address'    => substr($ipAddress, 0, 45),
             'user_agent'    => substr($userAgent, 0, 512),
-        ]);
+        ];
+
+        if ($termsAcceptedAt !== null) {
+            $params['terms_accepted_at'] = $termsAcceptedAt;
+            $params['terms_version']     = $termsVersion;
+        }
+
+        $stmt = $this->db->prepare($this->buildInsert('signup_tokens', array_keys($params)));
+        return $stmt->execute($params);
     }
 
     /**

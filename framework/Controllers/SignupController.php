@@ -5,12 +5,15 @@ use Frank\Core\BaseController;
 use Frank\Core\Request;
 use Frank\Core\Response;
 use Frank\Services\SignupService;
+use Frank\Services\UserService;
 
 class SignupController extends BaseController
 {
-	// ★ Service is injected by the container via bootstrap.php
+	// ★ Services are injected by the container via bootstrap.php
+	// v2.1.0: UserService added so auto-login records the login (accessed_at).
 	public function __construct(
-	private SignupService $signupService
+	private SignupService $signupService,
+	private UserService $userService
 	)
 	{
 	}
@@ -35,16 +38,21 @@ class SignupController extends BaseController
 		$confirmPassword = $data['password_confirm'] ?? '';
 		$ipAddress       = $_SERVER['REMOTE_ADDR'] ?? '';
 		$userAgent       = $_SERVER['HTTP_USER_AGENT'] ?? '';
+		// v2.1.0: passed through as-is — SignupService decides whether it is
+		// required (signup.require_terms). The controller never reads the flag.
+		$termsAccepted   = $data['terms_accepted'] ?? null;
+		$termsAccepted   = is_bool($termsAccepted) ? $termsAccepted : ($termsAccepted !== null ? (string) $termsAccepted : null);
 
 		// ★ Use injected service
 		$result = $this->signupService->initiateSignup(
-		$email, $password, $confirmPassword, $ipAddress, $userAgent
+		$email, $password, $confirmPassword, $ipAddress, $userAgent, $termsAccepted
 		);
 
 		if (!$result->success) {
 			return $this->view('auth/signup', [
-				'error' => $result->message,
-				'email' => $email,
+				'error'          => $result->message,
+				'email'          => $email,
+				'terms_accepted' => $termsAccepted,
 			]);
 		}
 
@@ -91,6 +99,14 @@ class SignupController extends BaseController
 		$data = $result->data;
 		$_SESSION['user_id'] = $data['user_id'];
 		$tenantId = (int) $data['tenant_id'];
+
+		// Auto-login is a login — record it, as AuthController::login() does.
+		// Unlike a normal login, the account already exists, so a failure here
+		// is logged and never blocks the user.
+		if (!$this->userService->recordLogin((int) $data['user_id'], $tenantId)) {
+			error_log('[SignupController] recordLogin failed for new user_id ' . $data['user_id']);
+		}
+
 		Response::redirect("/tenant/{$tenantId}/dashboard");
 	}
 

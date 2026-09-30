@@ -81,4 +81,69 @@ class TenantService
             Clock::nowUtcString()
         );
     }
+
+    /**
+     * Create a new tenant and return its id.
+     *
+     * Owns slug uniqueness: $baseSlug is suffixed -2, -3, ... until free.
+     * The UNIQUE index on tenants.slug is the final guard — a concurrent
+     * insert that wins the race triggers a retry with the next suffix.
+     *
+     * Safe to call inside a Database::transaction() — a duplicate-key
+     * failure rolls back only the failed statement in InnoDB.
+     *
+     * Introduced in FrankPHP v2.1.0 (tenant-on-signup).
+     *
+     * @param string      $name          Display name (max 150 chars)
+     * @param string      $baseSlug      Slug candidate, e.g. from TenantNameGenerator
+     * @param string|null $companyEmail
+     * @return int  New tenant id
+     * @throws \RuntimeException when no unique slug could be claimed
+     */
+    public function create(string $name, string $baseSlug, ?string $companyEmail = null): int
+    {
+        $name     = mb_substr(trim($name), 0, 150);
+        $baseSlug = TenantNameGenerator::slugify($baseSlug) ?: 'workspace';
+        $now      = Clock::nowUtcString();
+
+        $suffix = 1;
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $slug = $this->nextFreeSlug($baseSlug, $suffix);
+
+            try {
+                $id = $this->tenantModel->insertTenant($name, $slug, $companyEmail, $now);
+                if ($id) {
+                    return $id;
+                }
+            } catch (\PDOException $e) {
+                if ($e->getCode() !== '23000') {
+                    throw $e;
+                }
+                // Lost a race for this slug — try the next suffix.
+            }
+
+            $suffix = $this->suffixOf($slug, $baseSlug) + 1;
+        }
+
+        throw new \RuntimeException('Unable to allocate a unique tenant slug for: ' . $baseSlug);
+    }
+
+    /**
+     * First free slug at or after $suffix. Suffix 1 means the bare base slug.
+     */
+    private function nextFreeSlug(string $baseSlug, int $suffix): string
+    {
+        while (true) {
+            $slug = $suffix <= 1 ? $baseSlug : "{$baseSlug}-{$suffix}";
+            if (!$this->tenantModel->slugExists($slug)) {
+                return $slug;
+            }
+            $suffix++;
+        }
+    }
+
+    private function suffixOf(string $slug, string $baseSlug): int
+    {
+        return $slug === $baseSlug ? 1 : (int) substr($slug, strlen($baseSlug) + 1);
+    }
 }

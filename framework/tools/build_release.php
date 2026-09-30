@@ -48,6 +48,7 @@ $config = [
 		'Models',
 		'Services',
 		'sql',
+		'Versions',
 	],
 
 	'exclude_paths' => [
@@ -61,7 +62,6 @@ $config = [
 		'releases',
 		'tools',
 		'tests',
-		'Versions',
 		'storage/logs',
 		'storage/cache',
 	],

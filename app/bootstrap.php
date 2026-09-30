@@ -25,6 +25,13 @@ if (file_exists($appSchemaPath)) {
 $router->add('GET', '/',                              'App\\Controllers\\HomeController@dashboard', [$tm, $auth]);
 $router->add('GET', '/tenant/{tenant_id}/dashboard',   'App\\Controllers\\HomeController@dashboard', [$tm, $auth]);
 
+// Public legal pages — Terms & Conditions placeholder linked from the signup
+// form (FrankPHP 2.1+). Replace Views/auth/terms.php with your real terms.
+$container->bind(\App\Controllers\LegalController::class, function ($c) use ($config) {
+    return new \App\Controllers\LegalController($config);
+});
+$router->add('GET', '/terms', 'App\\Controllers\\LegalController@terms', []);
+
 // Example:
 // $container->bind(\App\Controllers\InvoiceController::class, function ($c) {
 //     return new \App\Controllers\InvoiceController();

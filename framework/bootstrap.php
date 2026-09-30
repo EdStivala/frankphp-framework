@@ -103,14 +103,51 @@ $container->singleton(
     }
 );
 
-// SignupService — depends on User model and EmailService.
+// SignupTenantResolver — v2.1.0 policy point: which tenant + role a new
+// signup gets. Default creates a new tenant with the user as owner. Apps
+// replace it via $container->override() in app/bootstrap.php.
+$container->singleton(
+    \Frank\Services\SignupTenantResolver::class,
+    function ($c) {
+        return new \Frank\Services\CreateTenantForSignup(
+            $c->make(\Frank\Services\TenantService::class),
+        );
+    }
+);
+
+// SignupService — depends on User model, EmailService and SignupTenantResolver.
 // v1.3.2: accepts User model (not raw PDO) — all DB access via model methods.
+// v2.1.0: opt-in terms acceptance from $config['signup'] (missing = off, so
+// upgraded apps without the config section behave exactly like v2.0). When
+// the flag is on, verify once — lazily, only on signup routes — that the
+// v2.1.0 migration has been applied, and fail with a clear message if not.
 $container->singleton(
     \Frank\Services\SignupService::class,
-    function ($c) {
+    function ($c) use ($config) {
+        $signup       = $config['signup'] ?? [];
+        $requireTerms = (bool) ($signup['require_terms'] ?? false);
+
+        if ($requireTerms) {
+            $check = \Frank\Core\Database::getPdo()->query(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME IN ('users', 'signup_tokens')
+                    AND COLUMN_NAME IN ('terms_accepted_at', 'terms_version')"
+            );
+            if ((int) $check->fetchColumn() < 4) {
+                throw new \LogicException(
+                    'signup.require_terms is enabled but the v2.1.0 migration has not been applied — ' .
+                    'run framework/sql/migrations/v2.1.0_signup_terms.sql against the app database.'
+                );
+            }
+        }
+
         return new \Frank\Services\SignupService(
-            userModel:    new \Frank\Models\User(),
-            emailService: $c->make(\Frank\Services\Email\EmailService::class),
+            userModel:      new \Frank\Models\User(),
+            emailService:   $c->make(\Frank\Services\Email\EmailService::class),
+            tenantResolver: $c->make(\Frank\Services\SignupTenantResolver::class),
+            requireTerms:   $requireTerms,
+            termsVersion:   isset($signup['terms_version']) ? (string) $signup['terms_version'] : null,
         );
     }
 );
@@ -150,12 +187,14 @@ $container->bind(
     }
 );
 
-// SignupController — needs SignupService injected
+// SignupController — needs SignupService and UserService injected.
+// v2.1.0: UserService added (auto-login after signup calls recordLogin).
 $container->bind(
     \Frank\Controllers\SignupController::class,
     function ($c) {
         return new \Frank\Controllers\SignupController(
-            $c->make(\Frank\Services\SignupService::class)
+            $c->make(\Frank\Services\SignupService::class),
+            $c->make(\Frank\Services\UserService::class),
         );
     }
 );

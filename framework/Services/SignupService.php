@@ -5,20 +5,25 @@ declare(strict_types=1);
 namespace Frank\Services;
 
 use Frank\Core\Clock;
+use Frank\Core\Database;
 use Frank\Models\User;
-use Frank\Models\Tenant;
 use Frank\Services\Email\EmailService;
 
 /**
  * SignupService
  *
  * Framework-owned service. Handles all new-account signup business logic:
- *   1. Validate email + password
+ *   1. Validate email + password (+ Terms & Conditions acceptance when the
+ *      app enables $config['signup']['require_terms'] — v2.1.0, opt-in)
  *   2. Rate-limit by IP to deter bots
  *   3. Generate a 6-digit verification code, store hashed in signup_tokens
- *   4. Email the plain code to the user
+ *   4. Email the plain code to the user. When terms were accepted in step 1,
+ *      the acceptance time (UTC) + terms version are stored on the token and
+ *      carried through resend
  *   5. Verify the code on submission
- *   6. Create the user account
+ *   6. Place the user in a tenant via SignupTenantResolver (v2.1.0 default:
+ *      create a new tenant, user becomes owner) and create the user account
+ *      — tenant, user and token update run in one transaction
  *
  * SoC contract (FrankPHP v1.3.2):
  * - Clock is called HERE (Service layer) to produce timestamp strings.
@@ -40,13 +45,25 @@ class SignupService
     private int $codeExpiryMinutes;
     private int $rateLimitAttempts;
     private int $rateLimitMinutes;
+    private SignupTenantResolver $tenantResolver;
+    private bool $requireTerms;
+    private ?string $termsVersion;
 
+    /**
+     * @param bool        $requireTerms  v2.1.0 — $config['signup']['require_terms'].
+     *                                   Off by default: behaviour identical to v2.0.
+     * @param string|null $termsVersion  v2.1.0 — $config['signup']['terms_version'],
+     *                                   stored alongside the acceptance timestamp.
+     */
     public function __construct(
         ?User         $userModel     = null,
         ?EmailService $emailService  = null,
         int $codeExpiryMinutes = 15,
         int $rateLimitAttempts = 5,
-        int $rateLimitMinutes  = 60
+        int $rateLimitMinutes  = 60,
+        ?SignupTenantResolver $tenantResolver = null,
+        bool $requireTerms = false,
+        ?string $termsVersion = null
     ) {
         $this->userModel       = $userModel ?? new User();
         $this->emailService    = $emailService ?? throw new \LogicException(
@@ -55,6 +72,11 @@ class SignupService
         $this->codeExpiryMinutes = $codeExpiryMinutes;
         $this->rateLimitAttempts = $rateLimitAttempts;
         $this->rateLimitMinutes  = $rateLimitMinutes;
+        $this->tenantResolver    = $tenantResolver ?? new CreateTenantForSignup(new TenantService());
+        $this->requireTerms      = $requireTerms;
+        $this->termsVersion      = ($termsVersion !== null && trim($termsVersion) !== '')
+            ? substr(trim($termsVersion), 0, 50)
+            : null;
     }
 
     // ----------------------------------------------------------------
@@ -74,16 +96,30 @@ class SignupService
      * @param string $confirmPassword
      * @param string $ipAddress  $_SERVER['REMOTE_ADDR'] from controller
      * @param string $userAgent  $_SERVER['HTTP_USER_AGENT'] from controller
+     * @param bool|string|null $termsAccepted  v2.1.0 — posted `terms_accepted`
+     *        field. Accepted means exactly '1' (or true). Enforced only when
+     *        require_terms is on; recorded only when require_terms is on
+     *        (so un-migrated installs with the flag off never write the
+     *        terms columns).
      */
     public function initiateSignup(
         string $email,
         string $password,
         string $confirmPassword,
         string $ipAddress = '',
-        string $userAgent = ''
+        string $userAgent = '',
+        bool|string|null $termsAccepted = null
     ): ServiceResult {
 
-        $email = strtolower(trim($email));
+        $email    = strtolower(trim($email));
+        $accepted = $termsAccepted === true || $termsAccepted === '1';
+
+        if ($this->requireTerms && !$accepted) {
+            return ServiceResult::failure(
+                'You must accept the Terms & Conditions to continue.',
+                'terms_required'
+            );
+        }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return ServiceResult::failure(
@@ -122,6 +158,9 @@ class SignupService
         $now          = Clock::nowUtcString();
         $expiresAt    = Clock::utcOffsetString("+{$this->codeExpiryMinutes} minutes");
 
+        // Terms acceptance is timestamped NOW (step 1 submit), not at verify.
+        $termsAcceptedAt = ($this->requireTerms && $accepted) ? $now : null;
+
         // Invalidate any previous unused tokens for this email, then insert fresh.
         $this->userModel->invalidatePendingSignupTokens($email, $now);
 
@@ -132,7 +171,9 @@ class SignupService
             $expiresAt,
             $now,
             $ipAddress,
-            $userAgent
+            $userAgent,
+            $termsAcceptedAt,
+            $termsAcceptedAt !== null ? $this->termsVersion : null
         );
 
         $this->emailService->sendSignupVerification($email, $code, $this->codeExpiryMinutes);
@@ -152,8 +193,11 @@ class SignupService
     /**
      * Complete signup by verifying the code and creating the user record.
      *
-     * Looks up pending tokens, verifies the code hash (business logic —
-     * stays in service), marks the token used, then inserts the new user.
+     * Looks up pending tokens and verifies the code hash (business logic —
+     * stays in service). Then, in ONE transaction: asks the
+     * SignupTenantResolver for a tenant + role (default: new tenant, owner),
+     * inserts the user, and marks the token used. Any failure rolls back
+     * all three — no orphan tenants.
      *
      * @param string $email
      * @param string $code  Plain 6-digit code from the form
@@ -190,36 +234,58 @@ class SignupService
         }
 
         // Name derivation is business logic — computed here, passed to model.
-        $name            = $this->deriveNameFromEmail($email);
-        $defaultTenantId = 1; // Adjust to your tenant-assignment logic.
+        $name = $this->deriveNameFromEmail($email);
 
-        $userId = $this->userModel->insertUser(
-            $defaultTenantId,
-            $email,
-            $name,
-            $token['password_hash'],
-            'user',
-            $now
-        );
+        try {
+            $account = Database::transaction(function () use ($email, $name, $token, $now): array {
+                $placement = $this->tenantResolver->resolve($email, $name);
+                $tenantId  = (int) $placement['tenant_id'];
 
-        if (!$userId) {
+                $userId = $this->userModel->insertUser(
+                    $tenantId,
+                    $email,
+                    $name,
+                    $token['password_hash'],
+                    $placement['role'],
+                    $now,
+                    $token['terms_accepted_at'] ?? null,
+                    $token['terms_version'] ?? null
+                );
+
+                if (!$userId) {
+                    throw new \RuntimeException('User insert returned no id.');
+                }
+
+                $this->userModel->markSignupTokenUsed($token['id'], $now);
+
+                return [
+                    'user_id'     => $userId,
+                    'tenant_id'   => $tenantId,
+                    'role'        => $placement['role'],
+                    'tenant_name' => $placement['tenant_name'] ?? null,
+                ];
+            });
+        } catch (\Throwable $e) {
+            error_log('[SignupService] Account creation failed for ' . $email . ': ' . $e->getMessage());
             return ServiceResult::failure(
                 'Account creation failed. Please try again.',
                 'system'
             );
         }
 
-        $this->userModel->markSignupTokenUsed($token['id'], $now);
+        $tenantLabel = $account['tenant_name'] !== null
+            ? "\"{$account['tenant_name']}\" (tenant_id: {$account['tenant_id']})"
+            : "tenant_id: {$account['tenant_id']}";
 
         $this->emailService->sendPlatformOwnerSignupAlert(
             $email,
-            "A new account was created via signup (tenant_id: {$defaultTenantId})."
+            "A new account was created via signup. Tenant: {$tenantLabel}, role: {$account['role']}."
         );
 
         return ServiceResult::success('Account created successfully.', [
-            'user_id'   => $userId,
+            'user_id'   => $account['user_id'],
             'email'     => $email,
-            'tenant_id' => $defaultTenantId,
+            'tenant_id' => $account['tenant_id'],
             'redirect'  => '/login?signup=success',
         ]);
     }
@@ -259,6 +325,7 @@ class SignupService
 
         $this->userModel->invalidatePendingSignupTokens($email, $now);
 
+        // Carry step-1 terms acceptance onto the replacement token (v2.1.0).
         $this->userModel->insertSignupToken(
             $email,
             $codeHash,
@@ -266,7 +333,9 @@ class SignupService
             $expiresAt,
             $now,
             $ipAddress,
-            ''
+            '',
+            $existing['terms_accepted_at'] ?? null,
+            $existing['terms_version'] ?? null
         );
 
         $this->emailService->sendSignupVerification($email, $code, $this->codeExpiryMinutes);

@@ -53,6 +53,29 @@ class Database
     }
 
     /**
+     * Run $fn inside a single transaction on the shared connection.
+     * Commits on return, rolls back and rethrows on any Throwable.
+     * Introduced in v2.1.0 for tenant-on-signup (tenant + owner user +
+     * token update must succeed or fail together).
+     */
+    public static function transaction(callable $fn): mixed
+    {
+        $pdo = self::getPdo();
+        $pdo->beginTransaction();
+
+        try {
+            $result = $fn();
+            $pdo->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
      * Runs a schema file exactly once, guarded by the absence of a
      * sentinel table — the framework's own reusable "create schema on
      * first boot" primitive. Framework bootstrap uses this for

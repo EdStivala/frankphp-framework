@@ -9,8 +9,8 @@
 > 
 > *"I am using FrankPHP. Based on this CODEBASE.md, help me scaffold a new Controller for [Your Feature] that handles [X] and uses the [Y] middleware. Ensure it follows the hydration and response patterns defined in the core."*
 
-> Framework version: 2.0.0
-> Last updated: 2026/08/06
+> Framework version: 2.1.0
+> Last updated: 2026/09/30
 > 
 > **How to use this file:** Paste it at the start of any Claude conversation before describing your task.
 > Add your application-specific section at the bottom as you build. Keep it accurate — Claude trusts this document.
@@ -58,7 +58,7 @@ framework/
 │   ├── BasePresenter.php      # Thin wrapper around a model — __get() falls back to the wrapped model's properties
 │   ├── Clock.php              # UTC timestamp generation, UTC/local conversion, timezone validation, timezone resolution
 │   ├── Container.php          # DI container — singleton(), bind(), override(), make(), has()
-│   ├── Database.php           # PDO singleton — connect(), getPdo(), runSchemaFileIfMissingTable()
+│   ├── Database.php           # PDO singleton — connect(), getPdo(), transaction() (v2.1.0), runSchemaFileIfMissingTable()
 │   ├── Env.php                # .env file loader — populates $_ENV before config.php is required
 │   ├── MiddlewareInterface.php  # handle(Request, callable $next)
 │   ├── Request.php            # Wraps $_GET, $_POST, $_SERVER, rawBody, bodyParams, user, tenant
@@ -66,7 +66,7 @@ framework/
 │   └── Router.php             # add(), override(), dispatch(), middleware pipeline builder — accepts Container
 ├── Controllers/                        # Framework-owned only — no application controllers live here
 │   ├── AuthController.php              # Login, logout, forgot/reset password — injects PasswordResetService + UserService
-│   ├── SignupController.php            # Two-step email-verified signup — injects SignupService
+│   ├── SignupController.php            # Two-step email-verified signup — injects SignupService + UserService (v2.1.0: auto-login calls recordLogin)
 │   ├── TenantSettingsController.php    # Tenant settings read/write — admin/owner only
 │   ├── AccountSettingsController.php   # Per-user account settings read/write
 │   └── UserManagementController.php    # Admin/owner user management dashboard — injects UserManagementService + config (v1.4)
@@ -77,7 +77,7 @@ framework/
 │   └── ApiAuthMiddleware.php        # API key auth — validates api_key_hash, loads $request->user
 ├── Models/                  # Framework-owned only — User and Tenant, nothing else. See §16.7 for extending these.
 │   ├── User.php              # Extends BaseModel — DB access only. Covers users, password_reset_tokens, signup_tokens tables. Never calls Clock.
-│   └── Tenant.php            # Standalone (does not extend BaseModel) — DB access only. findById, findAll, saveSettings. Never calls Clock.
+│   └── Tenant.php            # Standalone (does not extend BaseModel) — DB access only. findById, findAll, slugExists, insertTenant, saveSettings. Never calls Clock.
 ├── Services/                 # Framework-owned business logic — return ServiceResult objects. Own all Clock calls.
 │   ├── Email/
 │   │   ├── EmailService.php        # SMTP dispatch via vendored PHPMailer — fromConfig(), the three framework send*() methods
@@ -86,18 +86,23 @@ framework/
 │   │   ├── Templates/               # Default templates for the three framework email flows — overridable per-app, see §16.8
 │   │   └── PHPMailer/               # Vendored PHPMailer (no Composer) — see §16.8 for the version-maintenance note
 │   ├── PasswordResetService.php    # requestPasswordReset(), validateToken(), resetPassword()
-│   ├── SignupService.php           # initiateSignup(), completeSignup(), resendCode()
+│   ├── SignupService.php           # initiateSignup(), completeSignup(), resendCode() — opt-in terms acceptance (v2.1.0, §16.9)
+│   ├── SignupTenantResolver.php    # Interface — policy point: which tenant + role a new signup gets (v2.1.0, §16.9)
+│   ├── CreateTenantForSignup.php   # Default SignupTenantResolver — new tenant per signup, user becomes owner (v2.1.0)
+│   ├── TenantNameGenerator.php     # Pure helper — default tenant name + slug from a signup email (v2.1.0)
 │   ├── UserService.php             # recordLogin(), saveSettings() — framework user business logic
-│   ├── TenantService.php           # saveSettings() — framework tenant business logic
+│   ├── TenantService.php           # saveSettings(), create() (v2.1.0) — framework tenant business logic
 │   ├── UserManagementService.php   # getUserDashboard() — admin user dashboard KPIs and user list (v1.4)
 │   └── ServiceResult.php           # Standardised result object for all services
 ├── sql/
-│   └── schema.core.sql      # Auto-executed on first boot if users table missing. Contains seed data.
+│   ├── schema.core.sql      # Auto-executed on first boot if users table missing. Contains seed data.
+│   └── migrations/          # Hand-run, idempotent SQL for EXISTING installs when a release changes framework tables (v2.1.0+). Shipped in release zips. See §16.6.
+│       └── v2.1.0_signup_terms.sql
 ├── tools/
 │   ├── build_release.php              # Builds a clean, framework-only dist/ zip for a GitHub Release update asset
 │   └── generate_release_manifest.php  # Diffs this release against the last one — file/route/schema changes — drafts RELEASE_MANIFEST.json
 ├── releases/                # Historical per-version snapshots, used by generate_release_manifest.php for diffing. Excluded from release zips.
-└── Versions/                 # Old migration notes. Excluded from release zips.
+└── Versions/                 # Per-release migration notes (e.g. FrankPHP_v2.1.0_migration_notes.md). Shipped in release zips from v2.1.0 so upgraders receive the notes with the SQL.
 ```
 
 ### app/
@@ -109,18 +114,18 @@ app/
 ├── MYAPP.md                  # Application-owned record — see §15.1, the Two-File Contract
 ├── bootstrap.php             # Application routes and container bindings. $container, $router, $config already in scope. Returns $router.
 ├── Config/
-│   └── config.php            # Non-secret app options, reads from $_ENV populated by .env — returns array, including mail.templates overrides (§16.8)
+│   └── config.php            # Non-secret app options, reads from $_ENV populated by .env — returns array, including mail.templates overrides (§16.8) and the signup terms section (§16.9)
 ├── Controllers/
-│   └── HomeController.php    # App-owned starter dashboard controller — replace with real application controllers
+│   ├── HomeController.php    # App-owned starter dashboard controller — replace with real application controllers
+│   └── LegalController.php   # App-owned starter — GET /terms placeholder page (v2.1.0, §16.9)
 ├── Models/                   # Empty — application's own models. See §16.7 to extend Tenant/User via composition.
 ├── Services/                  # Empty — application's own business logic.
 ├── Presenters/                 # Empty — application's own presenters, if used. See Core/BasePresenter.php.
 ├── Views/
 │   ├── layouts/
 │   │   ├── app-main.php    # Authenticated app shell — topbar, sidebar nav, page-content-area. All authenticated views require this layout.
-│   │   ├── authViews.php   # Unauthenticated shell. Used for login, signup, password reset.
-│   │   └── legal.php       # Minimal shell for legal/static pages
-│   ├── auth/               # login.php, forgot-password.php, forgot-password-sent.php, reset-password.php, reset-password-error.php, signup.php, signup-verify.php
+│   │   └── authViews.php   # Unauthenticated shell. Used for login, signup, password reset, terms.
+│   ├── auth/               # login.php, forgot-password.php, forgot-password-sent.php, reset-password.php, reset-password-error.php, signup.php, signup-verify.php, terms.php (placeholder — replace, §16.9)
 │   ├── home/
 │   │   └── dashboard.php   # Default tenant dashboard — replace with application-specific content
 │   ├── users/
@@ -391,7 +396,7 @@ class Thing extends BaseModel
 
 `Tenant` does **not** extend `BaseModel`. It is a standalone class with its own PDO instance.
 
-Key methods: `findById(int $id)`, `findAll()`, `saveSettings(int $tenantId, array $data, string $updatedAt)`.
+Key methods: `findById(int $id)`, `findAll()`, `slugExists(string $slug)`, `insertTenant(name, slug, companyEmail, createdAt)` *(v2.1.0)*, `saveSettings(int $tenantId, array $data, string $updatedAt)`.
 
 `saveSettings()` has an internal allowlist of writable columns — only those columns can be updated via settings forms. The `$updatedAt` UTC string is computed by the calling Service and passed in — `Tenant` never calls Clock.
 
@@ -477,12 +482,13 @@ Each renders a default template shipped in `Services/Email/Templates/`. The temp
 |---|---|---|
 | `EmailService::class` | singleton | Config-driven SMTP credentials; shared across all services |
 | `PasswordResetService::class` | singleton | Depends on EmailService |
-| `SignupService::class` | singleton | Depends on User model + EmailService |
+| `SignupTenantResolver::class` | singleton | Signup tenant-placement policy — default `CreateTenantForSignup`. Replace with `override()` (§16.9). v2.1.0 |
+| `SignupService::class` | singleton | Depends on User model + EmailService + SignupTenantResolver + `$config['signup']` (§16.9) |
 | `UserService::class` | singleton | Framework user business logic — recordLogin, saveSettings |
 | `TenantService::class` | singleton | Framework tenant business logic — saveSettings allowlist and null-coercion |
 | `UserManagementService::class` | singleton | Admin user dashboard data service — introduced v1.4 |
 | `AuthController::class` | bind | Needs PasswordResetService + UserService injected |
-| `SignupController::class` | bind | Needs SignupService injected |
+| `SignupController::class` | bind | Needs SignupService + UserService injected (UserService added v2.1.0) |
 | `UserManagementController::class` | bind | Needs UserManagementService + $config injected — introduced v1.4 |
 
 Controllers are registered with `bind()` (not `singleton()`) because a fresh controller instance per request is the correct behaviour.
@@ -561,6 +567,8 @@ class NotificationService
 **On first boot:** if the `users` table does not exist, `schema.core.sql` is executed automatically via `Database::runSchemaFileIfMissingTable()` and seed data is inserted (one tenant, two seed users with password `password`).
 
 `Database::runSchemaFileIfMissingTable(path, sentinelTable)` is a general-purpose primitive, not specific to the core schema — application code may call it a second time for its own `app/sql/schema.app.sql`, guarded by an application-chosen sentinel table. See §16.7 for the full pattern and why this exists.
+
+`Database::transaction(callable $fn)` *(v2.1.0)* runs `$fn` in one transaction on the shared connection — commits on return, rolls back and rethrows on any `Throwable`. Every model defaults to the same `getPdo()` connection, so writes across `User` and `Tenant` inside the callable are atomic. Called from Services (e.g. `SignupService::completeSignup()`), never from Models.
 
 **PDO settings:** `ERRMODE_EXCEPTION`, `FETCH_ASSOC`.
 
@@ -820,8 +828,10 @@ When building or reviewing FrankPHP code:
 **Login flow:** `AuthController@login` → verifies email + `password_verify()` → sets `$_SESSION['user_id']` → calls `UserService::recordLogin()` which records the UTC login timestamp via Clock → redirects to `/tenant/{tenant_id}/dashboard`.
 
 **Signup flow (two-step):**
-1. `POST /signup` → `SignupController@initiateSignup` → validates, creates pending record, sends verification code via `EmailService::sendSignupVerification()`, stores `signup_email` in session
-2. `POST /signup/verify` → `SignupController@completeSignup` → verifies code, creates user + tenant, logs user in
+1. `POST /signup` → `SignupController@initiateSignup` → validates (including Terms & Conditions acceptance when `signup.require_terms` is on — §16.9), creates pending record, sends verification code via `EmailService::sendSignupVerification()`, stores `signup_email` in session
+2. `POST /signup/verify` → `SignupController@completeSignup` → verifies code; then, in one transaction, `SignupTenantResolver` places the user (framework default v2.1.0: **creates a new tenant and the user becomes its `owner`**), the user row is inserted and the token marked used → logs user in and calls `UserService::recordLogin()` (a failure there is logged, never blocks the new user) → redirects to `/tenant/{new tenant_id}/dashboard`
+
+Before v2.1.0 every signup joined tenant 1 as `user`. Apps that need the old or another model (e.g. invite into an existing tenant) replace the resolver — see §16.9.
 
 **Role checking** is done in controllers, not middleware. Pattern used in `TenantSettingsController`:
 ```php
@@ -922,6 +932,8 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - Multi-statement PDO mode is disabled after schema import
 - SMTP credentials live exclusively in `.env` and flow through `config['mail']` → `EmailService::fromConfig()` → the container singleton. They are never present in any service or controller file.
 - Persisted timestamps are stored as UTC `DATETIME` values and generated through `Frank\Core\Clock` in the Service layer; models receive pre-computed UTC strings as parameters and never call Clock directly.
+- Signup Terms & Conditions acceptance (v2.1.0, §16.9) is enforced **server-side** in `SignupService::initiateSignup()` when `signup.require_terms` is on. A view's `required` checkbox or disabled submit button is UX only and can be bypassed — never rely on it.
+- Consent columns (`users.terms_accepted_at`, `terms_version`) are deliberately not public properties on `User`, so `BaseModel::save()` can never overwrite recorded consent (§16.2).
 
 ---
 
@@ -1107,12 +1119,14 @@ MYAPP.md exists precisely to eliminate guessing. If it is incomplete, the right 
 | email | varchar(255) NOT NULL | unique per tenant (uq_users_tenant_email) |
 | name | varchar(255) NOT NULL | |
 | password_hash | varchar(255) | nullable |
-| role | varchar(50) NOT NULL | `owner`, `admin`, `user` — default `user` |
+| role | varchar(50) NOT NULL | `owner`, `admin`, `user`, `platform` — default `user`. From v2.1.0 a self-service signup creates its own tenant and is its `owner` (§16.9) |
 | api_key_hash | char(64) | nullable — hashed API key for apiAuth middleware |
 | timezone | varchar(100) | nullable — inherits from tenant if null |
 | created_at | datetime NOT NULL | UTC |
 | updated_at | datetime | nullable UTC |
-| accessed_at | datetime | nullable UTC — last successful login, written by UserService::recordLogin() |
+| accessed_at | datetime | nullable UTC — last successful login, written by UserService::recordLogin() (login and, from v2.1.0, signup auto-login) |
+| terms_accepted_at | datetime | nullable UTC — *v2.1.0.* When the user ticked Terms & Conditions and submitted signup step 1 (`Clock::nowUtcString()`), not when they verified. NULL = not recorded (feature off, or pre-2.1 user). Never backfilled. §16.9 |
+| terms_version | varchar(50) | nullable — *v2.1.0.* `signup.terms_version` in force at acceptance. §16.9 |
 
 #### `password_reset_tokens`
 
@@ -1140,10 +1154,14 @@ MYAPP.md exists precisely to eliminate guessing. If it is incomplete, the right 
 | created_at | datetime NOT NULL | UTC |
 | ip_address | varchar(45) | nullable — for rate limiting in SignupService |
 | user_agent | varchar(512) | nullable |
+| terms_accepted_at | datetime | nullable UTC — *v2.1.0.* Step-1 acceptance time, carried through `resendCode()` and copied to `users` on completion. §16.9 |
+| terms_version | varchar(50) | nullable — *v2.1.0.* Copied to `users` on completion. §16.9 |
 
 > **Note:** `signup_tokens.tenant_id` is NULL for the entire lifetime of an unverified token because no tenant exists until signup completes. This makes per-tenant scoping of unverified signup tokens structurally impossible — any query on this table that needs tenant context must join through `users` after completion.
 
 **Schema initialisation:** If the `users` table does not exist on first boot, `sql/schema.core.sql` is executed automatically and seed data is inserted (one tenant, two seed users with password `password`). Change seed passwords before sharing any URL.
+
+**Existing installs** do not re-run `schema.core.sql`. Columns added in a later release arrive via the hand-run script in `sql/migrations/` for that release (v2.1.0: `v2.1.0_signup_terms.sql`) — see §16.6.
 
 ---
 
@@ -1151,8 +1169,8 @@ MYAPP.md exists precisely to eliminate guessing. If it is incomplete, the right 
 
 | Model | File | Notes |
 |-------|------|-------|
-| `User` | `Models/User.php` | Extends BaseModel. DB access only — never calls Clock. Methods accept pre-computed UTC timestamp strings from Services. Public methods: `findById()`, `findByEmail()`, `findApiKeyHash(hash)`, `allByTenant(tenantId)` *(v1.4)*, `updateLastAccessed(userId, tenantId, accessedAt)`, `saveSettings(userId, tenantId, data, updatedAt)`, `updatePasswordHash(userId, hash, updatedAt)`, `insertUser(...)`, `insertPasswordResetToken(...)`, `findValidPasswordResetTokens(now)`, `markPasswordResetTokenAsUsed(id, usedAt)`, `invalidateAllUserPasswordResetTokens(userId, usedAt)`, `countRecentPasswordResetTokens(userId, threshold)`, `deleteExpiredPasswordResetTokens(cutoff)`, `insertSignupToken(...)`, `invalidatePendingSignupTokens(email, usedAt)`, `markSignupTokenUsed(id, usedAt)`, `findPendingSignupTokens(email, now)`, `findMostRecentPendingSignupToken(email, now)`, `countRecentSignupTokensByIp(ip, threshold)`, `deleteExpiredSignupTokens(cutoff)`. |
-| `Tenant` | `Models/Tenant.php` | Does **not** extend BaseModel. Standalone PDO class. DB access only — never calls Clock, applies no allowlist. Methods: `findById()`, `findAll()`, `saveSettings(tenantId, columns, updatedAt)`. `$columns` is a pre-validated map from `TenantService`; `$updatedAt` is a UTC string from `TenantService`. |
+| `User` | `Models/User.php` | Extends BaseModel. DB access only — never calls Clock. Methods accept pre-computed UTC timestamp strings from Services. Public methods: `findById()`, `findByEmail()`, `findApiKeyHash(hash)`, `allByTenant(tenantId)` *(v1.4)*, `updateLastAccessed(userId, tenantId, accessedAt)`, `saveSettings(userId, tenantId, data, updatedAt)`, `updatePasswordHash(userId, hash, updatedAt)`, `insertUser(...)`, `insertPasswordResetToken(...)`, `findValidPasswordResetTokens(now)`, `markPasswordResetTokenAsUsed(id, usedAt)`, `invalidateAllUserPasswordResetTokens(userId, usedAt)`, `countRecentPasswordResetTokens(userId, threshold)`, `deleteExpiredPasswordResetTokens(cutoff)`, `insertSignupToken(...)`, `invalidatePendingSignupTokens(email, usedAt)`, `markSignupTokenUsed(id, usedAt)`, `findPendingSignupTokens(email, now)`, `findMostRecentPendingSignupToken(email, now)`, `countRecentSignupTokensByIp(ip, threshold)`, `deleteExpiredSignupTokens(cutoff)`. *v2.1.0:* `insertUser()` and `insertSignupToken()` take optional trailing `termsAcceptedAt, termsVersion`; the terms columns are included in the INSERT **only when `termsAcceptedAt` is non-null**, so an install that has not run the v2.1.0 migration keeps working while the feature is off. The terms columns are deliberately **not** public properties — `BaseModel::save()` persists every public property and would overwrite recorded consent with NULL from a partially-filled object. Token finders use `SELECT *`, so the columns are returned once they exist. |
+| `Tenant` | `Models/Tenant.php` | Does **not** extend BaseModel. Standalone PDO class. DB access only — never calls Clock, applies no allowlist. Methods: `findById()`, `findAll()`, `slugExists(slug)` *(v2.1.0)*, `insertTenant(name, slug, companyEmail, createdAt)` *(v2.1.0 — throws PDOException 23000 on slug collision; `TenantService` owns the retry)*, `saveSettings(tenantId, columns, updatedAt)`. `$columns` is a pre-validated map from `TenantService`; `$updatedAt` is a UTC string from `TenantService`. |
 
 ---
 
@@ -1161,6 +1179,7 @@ MYAPP.md exists precisely to eliminate guessing. If it is incomplete, the right 
 | Utility | File | Notes |
 |---------|------|-------|
 | `Clock` | `Core/Clock.php` | Stateless static date/time utility introduced in v1.3.0. Owns UTC timestamp generation, UTC/local conversion, timezone validation, timezone resolution, and UTC query boundary calculation. Loaded by PSR-4; no container binding required. Called from Services only — never from Models, Controllers, or Views. |
+| `Database::transaction()` | `Core/Database.php` | *v2.1.0.* Runs a callable in one transaction on the shared PDO connection; commit on return, rollback + rethrow on any Throwable. Called from Services. See §9. |
 
 ---
 
@@ -1188,7 +1207,7 @@ These routes are registered in `framework/bootstrap.php` and are part of the fra
 | POST | /tenant/{tenant_id}/account/save | AccountSettingsController@save | tm, auth, json |
 | GET | /tenant/{tenant_id}/users | UserManagementController@index | tm, auth |
 
-`GET /` and `GET /tenant/{tenant_id}/dashboard` are deliberately not in this table — they're registered in `app/bootstrap.php` against `App\Controllers\HomeController`, not here. `HomeController` ships as app-owned starter content specifically so an application can replace it freely; see `app/bootstrap.php`'s own comments.
+`GET /` and `GET /tenant/{tenant_id}/dashboard` are deliberately not in this table — they're registered in `app/bootstrap.php` against `App\Controllers\HomeController`, not here. `HomeController` ships as app-owned starter content specifically so an application can replace it freely; see `app/bootstrap.php`'s own comments. Likewise `GET /terms` (v2.1.0, `App\Controllers\LegalController@terms`) is registered in the starter's `app/bootstrap.php`, not here — see §16.9.
 
 ---
 
@@ -1200,9 +1219,11 @@ These services are framework-owned and registered in the container by `framework
 |---------|---------------|--------------|-------|
 | `EmailService` | singleton | `$config['mail']` | SMTP gateway. All application email flows call `EmailService` send methods — never PHPMailer directly |
 | `PasswordResetService` | singleton | `User` model, `EmailService` | Password reset token lifecycle. Owns Clock calls for all reset token timestamps. |
-| `SignupService` | singleton | `User` model, `EmailService` | Two-step email-verified signup. Owns Clock calls for all signup token timestamps. Delegates all DB access to User model — no raw PDO. |
+| `SignupService` | singleton | `User` model, `EmailService`, `SignupTenantResolver`, `$config['signup']` | Two-step email-verified signup. Owns Clock calls for all signup token timestamps. Delegates all DB access to User model — no raw PDO. *v2.1.0:* constructor adds trailing `tenantResolver`, `requireTerms` (default false), `termsVersion`; `initiateSignup()` adds trailing `$termsAccepted` and returns failure type `terms_required` when the flag is on and it isn't `'1'`; `completeSignup()` runs resolver + user insert + token update in `Database::transaction()`. The container factory reads `$config['signup'] ?? []` and, only when `require_terms` is on, verifies the v2.1.0 columns exist (throws `LogicException` naming the migration if not). §16.9 |
+| `SignupTenantResolver` | singleton | `TenantService` (default impl) | *v2.1.0.* Interface: `resolve(email, name): array{tenant_id, role, tenant_name?}`, called inside the signup transaction. Default `CreateTenantForSignup` — creates a tenant via `TenantNameGenerator` + `TenantService::create()` and returns role `owner`. Apps replace via `$container->override()`. §16.9 |
 | `UserService` | singleton | `User` model | Introduced v1.3.2. Owns business logic for the user record: `recordLogin(userId, tenantId)`, `saveSettings(userId, tenantId, data)`. Owns allowlist and null-coercion for user preferences. Computes timestamps via Clock and passes them to the User model. |
-| `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
+| `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`, `create(name, baseSlug, companyEmail): int` *(v2.1.0 — owns slug uniqueness: suffixes `-2`, `-3`… with the UNIQUE index as final guard and retry on collision; safe inside a transaction)*. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
+| `TenantNameGenerator` | not in container | none | *v2.1.0.* Pure helper (no DB, no Clock), constructed by `CreateTenantForSignup`. `fromEmail(email): array{name, slug}` — business domain → organisation name (`jane@acme-corp.com` → `Acme Corp` / `acme-corp`; two-part suffixes like `co.uk` handled); free-mail domain (`FREE_MAIL_DOMAINS`, extendable via constructor) → `"<Name>'s Workspace"`. `slugify()` is public static. Slug uniqueness is not its job. |
 | `UserManagementService` | singleton | `User` model | Introduced v1.4. Provides the full data payload for the admin/owner user management dashboard: `getUserDashboard(tenantId, user, tenant, config)`. Owns all Clock calls for the feature (timezone resolution, 30-day inactivity cutoff via `Clock::utcOffsetString`, display-value formatting). All four KPI stats (`totalUsers`, `activePercent`, `neverLoggedIn`, `inactiveThirtyDays`) are derived from the single `allByTenant()` query — no additional DB round-trips. |
 
 ---
@@ -1212,8 +1233,10 @@ These services are framework-owned and registered in the container by `framework
 FrankPHP may add or modify framework-owned tables, models, and routes in future versions (for example, adding OAuth2 or SSO support). When this happens:
 
 - CODEBASE.md Section 16 will be updated to reflect the new schema
-- A migration note will be included in the release
+- `schema.core.sql` is updated for fresh installs, and an idempotent, hand-run script ships in `sql/migrations/` for existing installs, with notes in `Versions/` (both in the release zip)
 - MYAPP.md will not be affected unless the application has deviated from framework defaults (which should already be recorded in the MYAPP.md Known Deviations section)
+
+**Worked example — v2.1.0.** Signup terms acceptance added `terms_accepted_at` / `terms_version` to `users` and `signup_tokens`. Shipped as: `schema.core.sql` (fresh installs), `sql/migrations/v2.1.0_signup_terms.sql` (existing installs — each `ALTER` guarded by an `information_schema` check, safe to re-run), `Versions/FrankPHP_v2.1.0_migration_notes.md`. The code stays safe on an un-migrated install (columns written only when the opt-in feature is on) and the feature fails fast with a clear message if enabled before the migration runs. There is no migration runner yet — a structured migration/upgrade tool is on the ROADMAP.
 
 This separation is what makes framework upgrades safe — application-layer documentation and framework-layer documentation do not overlap.
 
@@ -1230,6 +1253,8 @@ Almost every application built on FrankPHP needs to store more about a tenant or
 - Do not edit any framework-owned Service to add application-specific fields or logic.
 
 Any of the above is technically possible but explicitly unsupported: the next time `framework/` is replaced by a newer release, those edits are silently gone. There is no merge step — a framework update is a folder replacement.
+
+This rule is addressed to **applications**. Columns the framework itself adds in a release (e.g. v2.1.0's `terms_accepted_at` / `terms_version`) are framework changes shipped with a migration (§16.6), not app extensions — they don't contradict the rule.
 
 **The supported pattern: a satellite table with a foreign key.**
 
@@ -1289,3 +1314,70 @@ An override class must implement the same static methods, with the same argument
 The override class can live anywhere under `App\`; it does not need to sit in any particular folder.
 
 **Vendored PHPMailer:** `Services/Email/PHPMailer/` is a vendored copy (no Composer), currently version 6.4.1. Because nothing watches it automatically, checking the upstream repo (github.com/PHPMailer/PHPMailer) for security releases is a manual step that should happen as part of cutting each framework release, not something either the framework or an application does at runtime.
+
+---
+
+### 16.9 Signup: Tenant Creation and Terms Acceptance (v2.1.0)
+
+#### Tenant-on-signup
+
+Every verified signup creates a **new tenant** and the user becomes its **`owner`** (before v2.1.0: tenant 1, role `user`).
+
+- **Tenant name** — derived from the email by `TenantNameGenerator`, no extra form field: business domain → organisation name (`jane@acme-corp.com` → "Acme Corp"); free-mail domain (gmail, outlook, icloud…) → "Jane's Workspace". The owner can rename it in Tenant Settings.
+- **Slug** — from the name, made unique by `TenantService::create()` (`acme-corp`, `acme-corp-2`, …).
+- **`company_email`** — set to the signup email.
+- **Atomic** — tenant insert, user insert and token update run in one `Database::transaction()`. Any failure rolls back all three and the user sees "Account creation failed".
+- Two people from the same company signing up separately get **two tenants** — joining an existing tenant needs an invite flow (not in the framework yet).
+
+**Changing the policy** — replace the `SignupTenantResolver` binding in `app/bootstrap.php`:
+
+```php
+// Example: every signup joins tenant 1 as 'user' (the pre-2.1 behaviour)
+$container->override(\Frank\Services\SignupTenantResolver::class, fn ($c) =>
+    new class implements \Frank\Services\SignupTenantResolver {
+        public function resolve(string $email, string $name): array {
+            return ['tenant_id' => 1, 'role' => 'user'];
+        }
+    }
+);
+```
+
+`resolve()` runs inside the signup transaction — any rows it writes roll back with the rest.
+
+#### Terms & Conditions acceptance (opt-in)
+
+When enabled, the framework enforces acceptance **server-side** and records **when** and **which version**. Off by default — an app that upgrades without touching config behaves exactly like v2.0.
+
+**Config** (`app/Config/config.php` — a literal, not `.env`):
+
+```php
+'signup' => [
+    'require_terms' => true,       // missing / false = feature off
+    'terms_version' => '2026-10',  // optional; stored with each acceptance
+],
+```
+
+**Protocol contract (for app-owned signup views):**
+
+- Post a field named `terms_accepted` with value `1` from the step-1 form (`POST /signup`).
+- Render `$error` (shown on rejection: "You must accept the Terms & Conditions to continue.").
+- Re-tick the checkbox from `$terms_accepted` after any step-1 error.
+- A `required` attribute / disabled submit button is UX only — the server check is the enforcement.
+
+**Behaviour matrix:**
+
+| `require_terms` | `terms_accepted=1` posted? | Result |
+|---|---|---|
+| off / missing | either | Signup proceeds; **nothing recorded** (terms columns stay NULL and are not written — safe on un-migrated installs) |
+| on | no | Rejected — `ServiceResult` failure type `terms_required`; no token created, no email sent |
+| on | yes | Signup proceeds; acceptance recorded |
+
+**What is recorded:** `terms_accepted_at` = the UTC moment step 1 was submitted (`Clock::nowUtcString()`, same value as the token's `created_at`), and `terms_version`. Written to `signup_tokens` at step 1, carried across `resendCode()`, copied to `users` on completion. Users created before v2.1.0 or with the feature off stay NULL — never backfill. Age confirmation or any other statement in the checkbox label is covered by the same timestamp; there is no separate column.
+
+**Reading consent:** the columns come back from `User::findById()` / `findByEmail()` (`SELECT *`). They are not public properties on `User` (see §16.2). A dedicated read accessor is on the ROADMAP.
+
+**Migration requirement:** existing installs must run `framework/sql/migrations/v2.1.0_signup_terms.sql` (idempotent) **before** enabling `require_terms`. If the flag is on and the columns are missing, the signup routes throw a `LogicException` naming the script. Order: deploy code → run migration → enable flag.
+
+**Starter app reference implementation:** `app/Views/auth/signup.php` (checkbox, re-tick, disabled-until-ticked button), `app/Views/auth/terms.php` + `App\Controllers\LegalController` + `GET /terms` in `app/bootstrap.php` (placeholder — **replace the content before going live**; the route is app-owned because upgraded apps don't receive new starter views).
+
+**Not yet included (future work):** re-acceptance when `terms_version` changes (e.g. a login-time gate), a consent audit log / IP + user-agent on `users`, config-driven terms URLs.

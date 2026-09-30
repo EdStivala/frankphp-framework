@@ -49,6 +49,7 @@ $config = [
 		'node_modules',
 		'vendor',
 		'releases',
+		'dist', // build output — v2.1.0 fix: 2.0.1's manifest wrongly listed dist/ files as added
 	],
 
 	// Ignore common generated/junk files
@@ -81,8 +82,17 @@ function main(array $config): void
 
 	[$previousVersion, $previousSnapshot] = loadPreviousSnapshot($config['releases_dir'], $version);
 
-	$diff = diffFileIndexes(
+	// Apply today's exclusions to the previous snapshot too, so paths that
+	// older snapshots indexed by mistake (e.g. dist/ in 2.0.1) don't show up
+	// as "removed".
+	$previousIndex = array_filter(
 	$previousSnapshot['file_index'] ?? [],
+	fn (string $path): bool => !isExcludedPath($path, $config['exclude_paths']),
+	ARRAY_FILTER_USE_KEY
+	);
+
+	$diff = diffFileIndexes(
+	$previousIndex,
 	$currentIndex
 	);
 
@@ -308,6 +318,20 @@ function loadPreviousSnapshot(string $releasesDir, string $currentVersion): arra
 	}
 
 	return [$previousVersion, $data];
+}
+
+/**
+* True when a relative path sits under one of the excluded directories.
+*/
+function isExcludedPath(string $relative, array $excludePaths): bool
+{
+	foreach ($excludePaths as $excluded) {
+		$excluded = trim($excluded, '/\\');
+		if ($relative === $excluded || str_starts_with($relative . '/', $excluded . '/')) {
+			return true;
+		}
+	}
+	return false;
 }
 
 /**

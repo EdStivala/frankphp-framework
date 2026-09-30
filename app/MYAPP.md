@@ -20,13 +20,13 @@
 
 ## Roles
 
-The framework provides `role` on the `users` table with values `admin`, `owner`, `user`.
+The framework provides `role` on the `users` table with values `platform`, `owner`, `admin`, `user`. From FrankPHP 2.1, a self-service signup creates its own tenant and that user is its `owner` (CODEBASE.md §16.9). If this app places signups differently, record the `SignupTenantResolver` override under Known Deviations.
 
 This app uses roles as follows:
 
 | Role | Permissions |
 |------|-------------|
-| `owner` | [Describe what an owner can do in this application] |
+| `owner` | [Describe what an owner can do in this application. By default, the person who signed up and created the tenant] |
 | `admin` | [Same as owner, or describe any difference] |
 | `user` | [Describe what a standard user can do] |
 
@@ -155,6 +155,7 @@ class [ModelName] extends BaseModel
 
 - [Rule 1]
 - [Rule 2]
+- Signup terms acceptance: [Does this app set `signup.require_terms` in `Config/config.php`? If so, give the current `terms_version`, where the terms/privacy pages live, and anything the checkbox also confirms, e.g. age. See CODEBASE.md §16.9]
 
 ---
 

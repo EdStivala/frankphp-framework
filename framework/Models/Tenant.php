@@ -44,6 +44,47 @@ class Tenant
         return $stmt->fetchAll();
     }
 
+    public function slugExists(string $slug): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM tenants WHERE slug = :slug LIMIT 1');
+        $stmt->execute(['slug' => $slug]);
+        return $stmt->fetchColumn() !== false;
+    }
+
+    /**
+     * Insert a new tenant row and return its id.
+     *
+     * $slug must already be resolved to a unique value by TenantService.
+     * A PDOException (SQLSTATE 23000) is thrown if it collides — the service
+     * owns the retry decision.
+     *
+     * $createdAt is a UTC DATETIME string computed by TenantService via Clock.
+     *
+     * @return int|null  New tenant id, or null on failure
+     */
+    public function insertTenant(
+        string  $name,
+        string  $slug,
+        ?string $companyEmail,
+        string  $createdAt
+    ): ?int {
+        $stmt = $this->db->prepare('
+            INSERT INTO tenants
+                (name, slug, company_email, created_at)
+            VALUES
+                (:name, :slug, :company_email, :created_at)
+        ');
+
+        $ok = $stmt->execute([
+            'name'          => $name,
+            'slug'          => $slug,
+            'company_email' => $companyEmail,
+            'created_at'    => $createdAt,
+        ]);
+
+        return $ok ? (int) $this->db->lastInsertId() : null;
+    }
+
     /**
      * Persist a pre-filtered, pre-validated set of tenant settings columns.
      *

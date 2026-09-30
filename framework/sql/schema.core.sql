@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at            DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
   updated_at            DATETIME NULL DEFAULT NULL,
   accessed_at           DATETIME NULL DEFAULT NULL,
+  terms_accepted_at     DATETIME NULL DEFAULT NULL,
+  terms_version         VARCHAR(50) NULL DEFAULT NULL,
 
   UNIQUE KEY uq_users_tenant_email (tenant_id, email),
   UNIQUE KEY uq_users_api_key_hash (api_key_hash),
@@ -84,6 +86,8 @@ CREATE TABLE IF NOT EXISTS signup_tokens (
   created_at    DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
   ip_address    VARCHAR(45) NULL DEFAULT NULL,
   user_agent    VARCHAR(512) NULL DEFAULT NULL,
+  terms_accepted_at DATETIME NULL DEFAULT NULL,
+  terms_version     VARCHAR(50) NULL DEFAULT NULL,
 
   INDEX idx_signup_tokens_email (email),
   INDEX idx_signup_tokens_expires_at (expires_at),
