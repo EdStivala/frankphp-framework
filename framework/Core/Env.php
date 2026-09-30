@@ -23,7 +23,7 @@ namespace Frank\Core;
  *    .env serves as a dev-only convenience file.
  *
  * Usage (in bootstrap.php, before anything else):
- *   \Frank\Core\Env::load(APP_BASE_DIR . '/.env');
+ *   \Frank\Core\Env::load(APP_BASE_DIR . '/app/.env');
  *
  * Retrieval:
  *   Env::get('DB_HOST');

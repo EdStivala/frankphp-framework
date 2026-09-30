@@ -1,0 +1,19 @@
+[
+    "GET /forgot-password => Frank\\\\Controllers\\\\AuthController@showForgotPassword []",
+    "GET /login => Frank\\\\Controllers\\\\AuthController@showLogin []",
+    "GET /logout => Frank\\\\Controllers\\\\AuthController@logout []",
+    "GET /reset-password => Frank\\\\Controllers\\\\AuthController@showResetPassword []",
+    "GET /signup => Frank\\\\Controllers\\\\SignupController@showSignup []",
+    "GET /signup/verify => Frank\\\\Controllers\\\\SignupController@showVerify []",
+    "GET /tenant/{tenant_id}/account => Frank\\\\Controllers\\\\AccountSettingsController@index [$tm, $auth]",
+    "GET /tenant/{tenant_id}/tenant-settings => Frank\\\\Controllers\\\\TenantSettingsController@index [$tm, $auth]",
+    "GET /tenant/{tenant_id}/users => Frank\\\\Controllers\\\\UserManagementController@index [$tm, $auth]",
+    "POST /forgot-password => Frank\\\\Controllers\\\\AuthController@sendPasswordReset []",
+    "POST /login => Frank\\\\Controllers\\\\AuthController@login [$json]",
+    "POST /reset-password => Frank\\\\Controllers\\\\AuthController@resetPassword []",
+    "POST /signup => Frank\\\\Controllers\\\\SignupController@initiateSignup [$json]",
+    "POST /signup/resend => Frank\\\\Controllers\\\\SignupController@resendCode [$json]",
+    "POST /signup/verify => Frank\\\\Controllers\\\\SignupController@completeSignup [$json]",
+    "POST /tenant/{tenant_id}/account/save => Frank\\\\Controllers\\\\AccountSettingsController@save [$tm, $auth, $json]",
+    "POST /tenant/{tenant_id}/tenant-settings/save => Frank\\\\Controllers\\\\TenantSettingsController@save [$tm, $auth, $json]"
+]

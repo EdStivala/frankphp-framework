@@ -12,6 +12,12 @@
  * application container bindings — those belong in app/bootstrap.php,
  * which this file hard-requires as its final step.
  *
+ * Path contract (unchanged since v2.0.0): APP_BASE_DIR is the project root —
+ * the folder containing both framework/ and app/. app/public/index.php sets it
+ * with dirname(__DIR__, 2). It is NOT the app/ folder (that was the pre-2.0
+ * single-folder layout); section 1b below fails fast with a clear message if
+ * an app still defines it that way.
+ *
  * Namespace contract: framework classes live under Frank\ (this file's own
  * directory tree); application classes live under App\ (APP_BASE_DIR/app).
  * Two independent, single-path PSR-4 mappings — see the autoloader below.
@@ -48,6 +54,30 @@ spl_autoload_register(function ($class) {
         return;
     }
 });
+
+// ----------------------------------------------------------------
+// 1b. Layout guard (v2.1.1). APP_BASE_DIR must be the project root, so
+//     the app's own bootstrap lives at APP_BASE_DIR/app/bootstrap.php.
+//     Checked here, before Env::load, so a misconfigured index.php gets
+//     an actionable message instead of ".env file not found at .../app/app/.env".
+// ----------------------------------------------------------------
+if (!is_file(APP_BASE_DIR . '/app/bootstrap.php')) {
+    if (is_file(APP_BASE_DIR . '/bootstrap.php') && is_dir(APP_BASE_DIR . '/Config')) {
+        throw new \RuntimeException(
+            "APP_BASE_DIR points at the app/ folder (" . APP_BASE_DIR . ").\n" .
+            "Since v2.0.0 it must be the project root (the folder containing framework/ and app/).\n" .
+            "In app/public/index.php use:\n" .
+            "    define('APP_BASE_DIR', dirname(__DIR__, 2));\n" .
+            "    \$router = require_once APP_BASE_DIR . '/framework/bootstrap.php';\n" .
+            "and in app code refer to app files as APP_BASE_DIR . '/app/...'."
+        );
+    }
+
+    throw new \RuntimeException(
+        "Application bootstrap not found at: " . APP_BASE_DIR . "/app/bootstrap.php\n" .
+        "APP_BASE_DIR must be the project root (the folder containing framework/ and app/)."
+    );
+}
 
 // ----------------------------------------------------------------
 // 2. Load .env — must happen before config.php is required

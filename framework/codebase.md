@@ -101,6 +101,7 @@ framework/
 ├── tools/
 │   ├── build_release.php              # Builds a clean, framework-only dist/ zip for a GitHub Release update asset
 │   └── generate_release_manifest.php  # Diffs this release against the last one — file/route/schema changes — drafts RELEASE_MANIFEST.json
+├── tests/                   # Pre-release checks (plain PHP CLI). boot_layout_test.php verifies the APP_BASE_DIR contract. Excluded from release zips.
 ├── releases/                # Historical per-version snapshots, used by generate_release_manifest.php for diffing. Excluded from release zips.
 └── Versions/                 # Per-release migration notes (e.g. FrankPHP_v2.1.0_migration_notes.md). Shipped in release zips from v2.1.0 so upgraders receive the notes with the SQL.
 ```
@@ -163,9 +164,10 @@ app/
 
 ```
 app/public/index.php (entry point)
-  └── sets APP_BASE_DIR constant (two levels up from public/)
+  └── sets APP_BASE_DIR constant (two levels up from public/ — the project root, containing framework/ and app/)
   └── requires framework/bootstrap.php → gets $router
         └── namespace-partitioned autoloader registered — Frank\ → framework/, App\ → app/
+        └── layout guard — throws a clear RuntimeException if APP_BASE_DIR/app/bootstrap.php is missing
         └── Env::load() reads app/.env → populates $_ENV (must run before config.php)
         └── app/Config/config.php required → reads from $_ENV
         └── Database::connect() called with config values
@@ -183,6 +185,15 @@ app/public/index.php (entry point)
         └── controller method receives (Request $request, array $params)
         └── returns Response::view() / Response::json() / Response::redirect()
 ```
+
+**`APP_BASE_DIR` contract (since v2.0.0).** `APP_BASE_DIR` is the **project root** — the folder that contains both `framework/` and `app/` — never the `app/` folder itself. `app/public/index.php` must set it with exactly:
+
+```php
+define('APP_BASE_DIR', dirname(__DIR__, 2));
+$router = require_once APP_BASE_DIR . '/framework/bootstrap.php';
+```
+
+Application code refers to its own files as `APP_BASE_DIR . '/app/...'` (or `APP_VIEWS_DIR` for views). The pre-2.0 form `dirname(__DIR__, 1)` is wrong. Since v2.1.1 `framework/bootstrap.php` detects it before loading `.env` and throws a `RuntimeException` that quotes the two correct lines. `tests/boot_layout_test.php` covers both layouts. Run it before every release.
 
 A missing `app/bootstrap.php` is a fatal boot error by design — there is no shared file left for an application route to accidentally land in the wrong half of.
 

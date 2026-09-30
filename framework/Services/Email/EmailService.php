@@ -25,7 +25,7 @@ use Frank\Services\Email\Templates\PlatformOwnerSignupAlertTemplate;
  *
  * Usage — inject config in a controller or service provider:
  *
- *   $config       = require APP_BASE_DIR . '/Config/config.php';
+ *   $config       = require APP_BASE_DIR . '/app/Config/config.php';
  *   $emailService = EmailService::fromConfig($config['mail']);
  *
  * Or construct manually (e.g. in tests):

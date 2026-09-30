@@ -1,0 +1,319 @@
+{
+    "version": "2.1.1",
+    "release_date": "2026-09-30",
+    "file_index": {
+        "CHANGELOG.md": {
+            "size": 48453,
+            "mtime": 1790806255,
+            "sha1": "0eb40f7a36a5b2402a186737da70553c6b2b6ad4"
+        },
+        "Controllers/AccountSettingsController.php": {
+            "size": 2187,
+            "mtime": 1785940999,
+            "sha1": "2b3d743e17b02f2e00f2778db6f6433c924f3838"
+        },
+        "Controllers/AuthController.php": {
+            "size": 7956,
+            "mtime": 1785940999,
+            "sha1": "74b2ebec126cc9f6fce0785189868f1d8780555b"
+        },
+        "Controllers/SignupController.php": {
+            "size": 4043,
+            "mtime": 1790802139,
+            "sha1": "181fa2c04bdde08ec56bc0f11402a95ebe8c560c"
+        },
+        "Controllers/TenantSettingsController.php": {
+            "size": 2540,
+            "mtime": 1786027998,
+            "sha1": "ba8d8800fb68ed5d2a6a9fbbc1c24b11ebef3b48"
+        },
+        "Controllers/UserManagementController.php": {
+            "size": 1792,
+            "mtime": 1790681736,
+            "sha1": "7acf3ceadfe159d4b67ee5c0684356bed3b52de3"
+        },
+        "Core/BaseApiController.php": {
+            "size": 3519,
+            "mtime": 1785940999,
+            "sha1": "28d00bb184cee6cdfcd29bc68cfc51d92a036be3"
+        },
+        "Core/BaseController.php": {
+            "size": 1081,
+            "mtime": 1785943305,
+            "sha1": "3916a3fb1ad342fcc205814f011d1c9beda76666"
+        },
+        "Core/BaseModel.php": {
+            "size": 6922,
+            "mtime": 1785940999,
+            "sha1": "1fb1b63accd828661b10239c948a29e0802aba33"
+        },
+        "Core/BasePresenter.php": {
+            "size": 406,
+            "mtime": 1785940999,
+            "sha1": "1f60bdcd3e8f009d522b58eda51342956548db12"
+        },
+        "Core/Clock.php": {
+            "size": 15219,
+            "mtime": 1785940999,
+            "sha1": "224b8c22a217ef3c3dab585d649b2227d5442083"
+        },
+        "Core/Container.php": {
+            "size": 5221,
+            "mtime": 1785940999,
+            "sha1": "94ae004880a641f00bd7479777eb2b7c6fe206d4"
+        },
+        "Core/Database.php": {
+            "size": 3686,
+            "mtime": 1790802139,
+            "sha1": "443d2594c6a16378884b0f4ba610eca6fdc398bb"
+        },
+        "Core/Env.php": {
+            "size": 3607,
+            "mtime": 1790806227,
+            "sha1": "6811236020ab1de3206199ae4ac0a30d027f4399"
+        },
+        "Core/MiddlewareInterface.php": {
+            "size": 254,
+            "mtime": 1785940999,
+            "sha1": "294938b16b775e8e35ba1df68c02bf111de4d8d7"
+        },
+        "Core/Request.php": {
+            "size": 1425,
+            "mtime": 1785940999,
+            "sha1": "8b5b888b29f603452eba7a89f187da15fe48f442"
+        },
+        "Core/Response.php": {
+            "size": 671,
+            "mtime": 1785940999,
+            "sha1": "b5f2a1f8bb83e6f77ca91a383d78264101ea2470"
+        },
+        "Core/Router.php": {
+            "size": 5069,
+            "mtime": 1785941015,
+            "sha1": "33ac8f5cbcdc0adcf83f2be459ac8601096c9cc6"
+        },
+        "Middleware/ApiAuthMiddleware.php": {
+            "size": 1394,
+            "mtime": 1785940999,
+            "sha1": "9632dee5f4f46471abe7085df22aa946c81a2690"
+        },
+        "Middleware/AuthMiddleware.php": {
+            "size": 1367,
+            "mtime": 1785940999,
+            "sha1": "fd2fee6024b068e43ac79a21927721e66cd98871"
+        },
+        "Middleware/JsonBodyParserMiddleware.php": {
+            "size": 786,
+            "mtime": 1785940999,
+            "sha1": "97ee5e5f9863c5b317b07088b250839e19b32763"
+        },
+        "Middleware/TenantMiddleware.php": {
+            "size": 926,
+            "mtime": 1785940999,
+            "sha1": "12d609c8224074a3abb4c8a3898d6235dd942202"
+        },
+        "Models/Tenant.php": {
+            "size": 4271,
+            "mtime": 1790802139,
+            "sha1": "85922f0ff92fff2ab6efe81adf52a597e6fed1ab"
+        },
+        "Models/User.php": {
+            "size": 18395,
+            "mtime": 1790802139,
+            "sha1": "e69089cd242f2d047628f280f4ea1cb737673ad5"
+        },
+        "RELEASE_MANIFEST.json": {
+            "size": 3267,
+            "mtime": 1790802139,
+            "sha1": "cc4e7d45bb18d94182c824cbc75d59b7d0d92b61"
+        },
+        "Services/CreateTenantForSignup.php": {
+            "size": 930,
+            "mtime": 1790802139,
+            "sha1": "6899540570d76c443156db6d58ce80d909661771"
+        },
+        "Services/Email/EmailMessage.php": {
+            "size": 1509,
+            "mtime": 1786025060,
+            "sha1": "f4cae2247d627887a1f1d8ce5980470a52fc0e5a"
+        },
+        "Services/Email/EmailResult.php": {
+            "size": 1024,
+            "mtime": 1785940999,
+            "sha1": "643fb9c89997daa82fc5867d464ddf4290ad871b"
+        },
+        "Services/Email/EmailService.php": {
+            "size": 9222,
+            "mtime": 1790806227,
+            "sha1": "fa361e7fd331ea0290ac34dcd82b872a7cec267f"
+        },
+        "Services/Email/PHPMailer/Exception.php": {
+            "size": 1226,
+            "mtime": 1785940999,
+            "sha1": "4f629f8786fbb7f067274f07e41addf445669447"
+        },
+        "Services/Email/PHPMailer/OAuth.php": {
+            "size": 3744,
+            "mtime": 1778265377,
+            "sha1": "48f194830044013e295681dacf142d742e75886a"
+        },
+        "Services/Email/PHPMailer/PHPMailer.php": {
+            "size": 171117,
+            "mtime": 1785940999,
+            "sha1": "7c99c29fc604c97c8dfc529fd432f84591c91861"
+        },
+        "Services/Email/PHPMailer/POP3.php": {
+            "size": 11732,
+            "mtime": 1778265377,
+            "sha1": "8e8d097a4a144e47b172c49b4c25c8a0fe9bc552"
+        },
+        "Services/Email/PHPMailer/SMTP.php": {
+            "size": 47297,
+            "mtime": 1785940999,
+            "sha1": "2cfe17aacc40fb28dce1ac49993d4dcb4c0e38f4"
+        },
+        "Services/Email/PHPMailer/validate.js": {
+            "size": 2735,
+            "mtime": 1778265377,
+            "sha1": "02c7c1a3766de6ac39a8f2cfdb8ffb47d63d4281"
+        },
+        "Services/Email/Templates/PasswordResetEmailTemplate.php": {
+            "size": 5388,
+            "mtime": 1785940999,
+            "sha1": "b32906b8b02517362eec5921577048ebb51c7019"
+        },
+        "Services/Email/Templates/PlatformOwnerSignupAlertTemplate.php": {
+            "size": 3039,
+            "mtime": 1785940999,
+            "sha1": "50ac9303fdb9008ade93c43edde7c745788d4386"
+        },
+        "Services/Email/Templates/SignupVerificationEmailTemplate.php": {
+            "size": 4592,
+            "mtime": 1785940999,
+            "sha1": "8ba14ab036bea67d294659efc5d3c2fbffa6d966"
+        },
+        "Services/PasswordResetService.php": {
+            "size": 8665,
+            "mtime": 1785940999,
+            "sha1": "863ee2662bb7f5f5723399e10ac905cbf474fa4a"
+        },
+        "Services/ServiceResult.php": {
+            "size": 1735,
+            "mtime": 1785940999,
+            "sha1": "e4b8f49e9d841e7d482c13b5010cb32064d331cf"
+        },
+        "Services/SignupService.php": {
+            "size": 15870,
+            "mtime": 1790802139,
+            "sha1": "94a3ced7539e95744f3e97ea0ca7d8727ff7b254"
+        },
+        "Services/SignupTenantResolver.php": {
+            "size": 1007,
+            "mtime": 1790802139,
+            "sha1": "247a40a57de237deb49671419601b2fce0094372"
+        },
+        "Services/TenantNameGenerator.php": {
+            "size": 4688,
+            "mtime": 1790802139,
+            "sha1": "930308ab00ea5b1e637db9a043c0664765f660bf"
+        },
+        "Services/TenantService.php": {
+            "size": 5031,
+            "mtime": 1790802139,
+            "sha1": "7bf4b6021561c923548e9346660436d9447fba31"
+        },
+        "Services/UserManagementService.php": {
+            "size": 3379,
+            "mtime": 1785940999,
+            "sha1": "150187736a0e46f2ccead6a9fa35651d5172e835"
+        },
+        "Services/UserService.php": {
+            "size": 3569,
+            "mtime": 1785940999,
+            "sha1": "b0755006f3405d527c342ebb30b663f8e18a29a1"
+        },
+        "VERSION": {
+            "size": 6,
+            "mtime": 1790806255,
+            "sha1": "d9c9ad4098db7cbc9f2ecb3ad59fdfb337996198"
+        },
+        "Versions/FrankPHP_v1.3.0_base_install_migration_review.md": {
+            "size": 3008,
+            "mtime": 1780739244,
+            "sha1": "775292c6286ea4d744839cb2d12f2a7e6f479285"
+        },
+        "Versions/FrankPHP_v1.3.0_existing_data_migration_notes.md": {
+            "size": 2414,
+            "mtime": 1780739209,
+            "sha1": "7800a7bcf769a308009994b7b507af3327d0ad92"
+        },
+        "Versions/FrankPHP_v2.1.0_migration_notes.md": {
+            "size": 2704,
+            "mtime": 1790802139,
+            "sha1": "3d22d0fb913d41939c8b6fb745da07c6decf1bba"
+        },
+        "Versions/FrankPHP_v2.1.1_upgrade_notes.md": {
+            "size": 2035,
+            "mtime": 1790806255,
+            "sha1": "8db79aa32e709d06f7de60e3a398c919708b4e46"
+        },
+        "bootstrap.php": {
+            "size": 14192,
+            "mtime": 1790806227,
+            "sha1": "d9faade28ac56e0fc0680be86c022949ea706823"
+        },
+        "codebase.md": {
+            "size": 83929,
+            "mtime": 1790806227,
+            "sha1": "7c3b0cf40dfefcced8e97b1dc3d6e4b0204aa397"
+        },
+        "sql/migrations/v2.1.0_signup_terms.sql": {
+            "size": 2534,
+            "mtime": 1790802139,
+            "sha1": "2a9910875df639a61ac11442a719343420e90c6b"
+        },
+        "sql/schema.core.sql": {
+            "size": 5087,
+            "mtime": 1790802139,
+            "sha1": "dcf9bf4e72ae975f2a85c2a8d50af8302f48a0fe"
+        },
+        "tests/boot_layout_test.php": {
+            "size": 4425,
+            "mtime": 1790806225,
+            "sha1": "f86808583eee1d868c3e3578bc9a3b664fcf9b4a"
+        },
+        "tools/build_release.php": {
+            "size": 7795,
+            "mtime": 1790802139,
+            "sha1": "3a120330dad6a395ea45070c7f9ad585da31a3c4"
+        }
+    },
+    "routes": [
+        "GET /forgot-password => Frank\\\\Controllers\\\\AuthController@showForgotPassword []",
+        "GET /login => Frank\\\\Controllers\\\\AuthController@showLogin []",
+        "GET /logout => Frank\\\\Controllers\\\\AuthController@logout []",
+        "GET /reset-password => Frank\\\\Controllers\\\\AuthController@showResetPassword []",
+        "GET /signup => Frank\\\\Controllers\\\\SignupController@showSignup []",
+        "GET /signup/verify => Frank\\\\Controllers\\\\SignupController@showVerify []",
+        "GET /tenant/{tenant_id}/account => Frank\\\\Controllers\\\\AccountSettingsController@index [$tm, $auth]",
+        "GET /tenant/{tenant_id}/tenant-settings => Frank\\\\Controllers\\\\TenantSettingsController@index [$tm, $auth]",
+        "GET /tenant/{tenant_id}/users => Frank\\\\Controllers\\\\UserManagementController@index [$tm, $auth]",
+        "POST /forgot-password => Frank\\\\Controllers\\\\AuthController@sendPasswordReset []",
+        "POST /login => Frank\\\\Controllers\\\\AuthController@login [$json]",
+        "POST /reset-password => Frank\\\\Controllers\\\\AuthController@resetPassword []",
+        "POST /signup => Frank\\\\Controllers\\\\SignupController@initiateSignup [$json]",
+        "POST /signup/resend => Frank\\\\Controllers\\\\SignupController@resendCode [$json]",
+        "POST /signup/verify => Frank\\\\Controllers\\\\SignupController@completeSignup [$json]",
+        "POST /tenant/{tenant_id}/account/save => Frank\\\\Controllers\\\\AccountSettingsController@save [$tm, $auth, $json]",
+        "POST /tenant/{tenant_id}/tenant-settings/save => Frank\\\\Controllers\\\\TenantSettingsController@save [$tm, $auth, $json]"
+    ],
+    "schema": {
+        "tables": [
+            "password_reset_tokens",
+            "signup_tokens",
+            "tenants",
+            "users"
+        ],
+        "alter_statements": []
+    }
+}

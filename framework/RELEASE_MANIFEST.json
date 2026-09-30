@@ -1,30 +1,21 @@
 {
-    "version": "2.1.0",
+    "version": "2.1.1",
     "release_date": "2026-09-30",
-    "summary": "Signup now creates a new tenant per verified signup, with the user as owner (tenant named from the email domain, or \"<Name>'s Workspace\" for free-mail), written atomically via Database::transaction() and swappable via the SignupTenantResolver policy point. Adds opt-in, server-side Terms & Conditions acceptance at signup ($config['signup']['require_terms']), recording UTC acceptance time + terms version on users (new columns; existing installs run sql/migrations/v2.1.0_signup_terms.sql before enabling). Signup auto-login now records the login. Full detail in CHANGELOG.md [2.1.0].",
-    "previous_version": "2.0.1",
+    "summary": "Hardening patch. bootstrap.php now fails fast with an actionable message when APP_BASE_DIR points at the app/ folder (the pre-2.0 dirname(__DIR__, 1) form), instead of the misleading '.env file not found at .../app/app/.env'. The APP_BASE_DIR contract (the project root) is unchanged since v2.0.0 and is now documented in the bootstrap header, codebase.md section 3 and Versions/FrankPHP_v2.1.1_upgrade_notes.md. Adds tests/boot_layout_test.php as a pre-release check. No schema, route or behaviour changes for correctly configured installs. Full detail in CHANGELOG.md [2.1.1].",
+    "previous_version": "2.1.0",
     "changes": {
         "added": [
-            "Services/CreateTenantForSignup.php",
-            "Services/SignupTenantResolver.php",
-            "Services/TenantNameGenerator.php",
-            "Versions/FrankPHP_v2.1.0_migration_notes.md",
-            "sql/migrations/v2.1.0_signup_terms.sql"
+            "Versions/FrankPHP_v2.1.1_upgrade_notes.md",
+            "tests/boot_layout_test.php"
         ],
         "changed": [
             "CHANGELOG.md",
-            "Controllers/SignupController.php",
-            "Core/Database.php",
-            "Models/Tenant.php",
-            "Models/User.php",
+            "Core/Env.php",
             "RELEASE_MANIFEST.json",
-            "Services/SignupService.php",
-            "Services/TenantService.php",
+            "Services/Email/EmailService.php",
             "VERSION",
             "bootstrap.php",
-            "codebase.md",
-            "sql/schema.core.sql",
-            "tools/build_release.php"
+            "codebase.md"
         ],
         "removed": []
     },
@@ -35,22 +26,13 @@
     "database_changes": {
         "tables_added": [],
         "tables_removed": [],
-        "alter_statements_added": [],
-        "columns_added": [
-            "users.terms_accepted_at DATETIME NULL",
-            "users.terms_version VARCHAR(50) NULL",
-            "signup_tokens.terms_accepted_at DATETIME NULL",
-            "signup_tokens.terms_version VARCHAR(50) NULL"
-        ],
-        "migration": "sql/migrations/v2.1.0_signup_terms.sql (idempotent; existing installs only; notes in Versions/FrankPHP_v2.1.0_migration_notes.md)"
+        "alter_statements_added": []
     },
-    "breaking_changes": [
-        "Behaviour: every new signup now creates its own tenant and becomes its owner (previously joined tenant 1 as user). Apps needing another model must override SignupTenantResolver in app/bootstrap.php before deploying."
-    ],
+    "breaking_changes": [],
     "ai_notes": [
-        "schema-signals.json tracks tables and ALTER statements in schema.core.sql only, so the four new columns appear under database_changes.columns_added, not in the generated signals.",
-        "Code is safe on un-migrated installs while signup.require_terms is off; with the flag on and columns missing, signup routes throw a LogicException naming the migration.",
-        "Starter app/ changes (signup view checkbox, verify view no auto-submit, /terms placeholder, legal.php removed) are application-owned and not in this framework manifest."
+        "No paths in bootstrap.php changed. APP_BASE_DIR has been the project root since v2.0.0. The only runtime change is the layout guard (bootstrap.php section 1b), which runs before Env::load.",
+        "tests/boot_layout_test.php is listed as added here but is excluded from release zips by build_release.php (exclude_paths: tests).",
+        "Env.php and EmailService.php changed in doc comments only."
     ],
     "manual_review_required": [
         "summary",
@@ -59,7 +41,7 @@
     ],
     "generator": {
         "name": "generate_release_manifest.php",
-        "generated_at": "2026-09-30T20:47:07+00:00",
-        "comparison_basis": "Compared against release snapshot 2.0.1"
+        "generated_at": "2026-09-30T22:11:00+00:00",
+        "comparison_basis": "Compared against release snapshot 2.1.0"
     }
 }

@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.1.1] - 2026-09-30
+
+### Human-readable summary
+
+FrankPHP 2.1.1 is a small hardening release. **v2.1.0 did not change how the framework finds the app.** Since v2.0.0, `APP_BASE_DIR` has been the project root, the folder that contains both `framework/` and `app/`. An install whose `app/public/index.php` still used the pre-2.0 form, `define('APP_BASE_DIR', dirname(__DIR__, 1))`, usually kept running only because of local edits to its `framework/` copy. Replacing `framework/` on upgrade removed those edits. Boot then failed with a misleading `.env file not found at: <project>/app/app/.env`.
+
+`framework/bootstrap.php` now checks the layout before loading `.env`. If `APP_BASE_DIR` points at `app/`, it stops with a message that quotes the two correct `index.php` lines. The stale doc comments that showed the pre-2.0 form have been corrected. A new pre-release test covers both layouts. There are no schema or behaviour changes for correctly configured installs.
+
+### Added
+
+- `bootstrap.php` section 1b, the layout guard. It throws a `RuntimeException` when `APP_BASE_DIR/app/bootstrap.php` is missing. It gives an actionable message when `APP_BASE_DIR` is the `app/` folder and a generic one otherwise.
+- `tests/boot_layout_test.php`, a plain PHP CLI check that boots throwaway project trees in both layouts. Run it before every release. It is excluded from release zips.
+- `Versions/FrankPHP_v2.1.1_upgrade_notes.md`.
+
+### Changed
+
+- `bootstrap.php`: the header comment now states the `APP_BASE_DIR` contract. No paths changed.
+- `Core/Env.php` and `Services/Email/EmailService.php`: the usage doc comments now show `APP_BASE_DIR . '/app/...'` instead of the pre-2.0 form.
+- `codebase.md` §2 lists `tests/`. §3 states the `APP_BASE_DIR` contract and the layout guard.
+
+### Fixed
+
+- A misconfigured `APP_BASE_DIR` failed with the misleading `.env file not found at .../app/app/.env`. It now fails with an actionable message.
+
+### Upgrade notes
+
+1. Check that `app/public/index.php` uses `define('APP_BASE_DIR', dirname(__DIR__, 2));` and `require_once APP_BASE_DIR . '/framework/bootstrap.php';`.
+2. Replace `framework/` as usual. If you are coming from 2.0.x, also run the 2.1.0 migration (`Versions/FrankPHP_v2.1.0_migration_notes.md`).
+3. See `Versions/FrankPHP_v2.1.1_upgrade_notes.md` if the site fails to boot.
+
 ## [2.1.0] - 2026-09-30
 
 ### Human-readable summary
