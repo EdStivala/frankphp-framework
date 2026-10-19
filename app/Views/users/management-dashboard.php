@@ -6,7 +6,7 @@ ob_start();
 <div class="page-header d-flex align-items-center justify-content-between">
     <div>
         <h4 class="mb-0">Users</h4>
-        <p class="text-muted mb-0" style="font-size:0.8125rem;"><?= htmlspecialchars($tenant['name'] ?? '') ?></p>
+        <p class="text-muted mb-0" style="font-size:0.8125rem;"><?= $crossTenant ? 'All tenants' : htmlspecialchars($tenant['name'] ?? '') ?></p>
     </div>
 </div>
 
@@ -72,7 +72,7 @@ ob_start();
         <?php if (empty($users)) : ?>
             <div class="text-center py-5 text-muted" style="font-size:0.875rem;">
                 <i class="bi bi-people" style="font-size:2rem;display:block;margin-bottom:0.75rem;opacity:0.35;"></i>
-                No users found for this tenant.
+                <?= $crossTenant ? 'No users found.' : 'No users found for this tenant.' ?>
             </div>
         <?php else : ?>
         <div class="table-responsive">
@@ -81,6 +81,7 @@ ob_start();
                     <tr>
                         <th>Email</th>
                         <th>Name</th>
+                        <?php if ($crossTenant) : ?><th>Tenant</th><?php endif; ?>
                         <th>Role</th>
                         <th>Joined</th>
                         <th>Last Login</th>
@@ -91,6 +92,7 @@ ob_start();
                     <tr>
                         <td class="col-email"><?= htmlspecialchars($row['email']) ?></td>
                         <td><?= htmlspecialchars($row['name']) ?></td>
+                        <?php if ($crossTenant) : ?><td><?= htmlspecialchars($row['tenantName']) ?></td><?php endif; ?>
                         <td>
                             <span class="role-badge role-badge--<?= htmlspecialchars($row['role']) ?>">
                                 <?= htmlspecialchars($row['role']) ?>

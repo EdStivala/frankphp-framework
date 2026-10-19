@@ -1,18 +1,17 @@
 {
-    "version": "2.1.1",
-    "release_date": "2026-09-30",
-    "summary": "Hardening patch. bootstrap.php now fails fast with an actionable message when APP_BASE_DIR points at the app/ folder (the pre-2.0 dirname(__DIR__, 1) form), instead of the misleading '.env file not found at .../app/app/.env'. The APP_BASE_DIR contract (the project root) is unchanged since v2.0.0 and is now documented in the bootstrap header, codebase.md section 3 and Versions/FrankPHP_v2.1.1_upgrade_notes.md. Adds tests/boot_layout_test.php as a pre-release check. No schema, route or behaviour changes for correctly configured installs. Full detail in CHANGELOG.md [2.1.1].",
-    "previous_version": "2.1.0",
+    "version": "2.2.0",
+    "release_date": "2026-10-19",
+    "summary": "Platform cross-tenant Users dashboard. A user with role 'platform' now sees users from every tenant on GET /tenant/{tenant_id}/users, with a Tenant column. 'owner' and 'admin' remain limited to their own tenant, and role 'user' is still refused. UserManagementService reuses Tenant::findAll() and User::allByTenant(), so no new model method and no unscoped User query exist. The app template views hide the Users links from role 'user'. codebase.md gains the 'Reuse Before You Add' principle. No schema or route changes. Full detail in CHANGELOG.md [2.2.0].",
+    "previous_version": "2.1.1",
     "changes": {
         "added": [
-            "Versions/FrankPHP_v2.1.1_upgrade_notes.md",
-            "tests/boot_layout_test.php"
+            "Versions/FrankPHP_v2.2.0_upgrade_notes.md"
         ],
         "changed": [
             "CHANGELOG.md",
-            "Core/Env.php",
+            "Controllers/UserManagementController.php",
             "RELEASE_MANIFEST.json",
-            "Services/Email/EmailService.php",
+            "Services/UserManagementService.php",
             "VERSION",
             "bootstrap.php",
             "codebase.md"
@@ -28,11 +27,14 @@
         "tables_removed": [],
         "alter_statements_added": []
     },
-    "breaking_changes": [],
+    "breaking_changes": [
+        "UserManagementService::__construct() now requires a second argument, tenantModel (Frank\\Models\\Tenant). The framework's own container binding passes it. Only apps that construct the service themselves must add the argument."
+    ],
     "ai_notes": [
-        "No paths in bootstrap.php changed. APP_BASE_DIR has been the project root since v2.0.0. The only runtime change is the layout guard (bootstrap.php section 1b), which runs before Env::load.",
-        "tests/boot_layout_test.php is listed as added here but is excluded from release zips by build_release.php (exclude_paths: tests).",
-        "Env.php and EmailService.php changed in doc comments only."
+        "The cross-tenant scope is decided in UserManagementService::getUserDashboard() from the authenticated user's role ('platform'), never from request input. It loops Tenant::findAll() and calls the tenant-scoped User::allByTenant() once per tenant.",
+        "The service result gains crossTenant (bool), and each user row gains tenantName. UserManagementController passes crossTenant to the view.",
+        "App template changes (app/Views/users/management-dashboard.php, app/Views/partials/app-nav.php, app/Views/partials/app-header.php) are not in the release zip. Versions/FrankPHP_v2.2.0_upgrade_notes.md has the snippets to copy.",
+        "The UserManagementController access gate is unchanged: platform, admin and owner are allowed, and role user is redirected with ?error=forbidden."
     ],
     "manual_review_required": [
         "summary",
@@ -41,7 +43,7 @@
     ],
     "generator": {
         "name": "generate_release_manifest.php",
-        "generated_at": "2026-09-30T22:11:00+00:00",
-        "comparison_basis": "Compared against release snapshot 2.1.0"
+        "generated_at": "2026-10-19T12:22:22+00:00",
+        "comparison_basis": "Compared against release snapshot 2.1.1"
     }
 }

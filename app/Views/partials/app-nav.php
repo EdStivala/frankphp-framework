@@ -19,7 +19,8 @@
 			
 			
 			<hr>
-			
+
+			<?php if (in_array($user['role'] ?? '', ['platform', 'admin', 'owner'], true)) : ?>
 			<li class="nav-item" data-menu="users" role="none">
 				<a
 					href="/tenant/<?= $tenant['id'] ?>/users"
@@ -33,6 +34,7 @@
 						</span>
 				</a>
 			</li>
+			<?php endif; ?>
 
 			<li class="nav-item" data-menu="tenant-settings" role="none">
 				<a

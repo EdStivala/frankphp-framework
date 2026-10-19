@@ -9,8 +9,8 @@
 > 
 > *"I am using FrankPHP. Based on this CODEBASE.md, help me scaffold a new Controller for [Your Feature] that handles [X] and uses the [Y] middleware. Ensure it follows the hydration and response patterns defined in the core."*
 
-> Framework version: 2.1.0
-> Last updated: 2026/09/30
+> Framework version: 2.2.0
+> Last updated: 2026/10/19
 > 
 > **How to use this file:** Paste it at the start of any Claude conversation before describing your task.
 > Add your application-specific section at the bottom as you build. Keep it accurate — Claude trusts this document.
@@ -29,6 +29,32 @@ A lightweight, multi-tenant PHP MVC framework. No Laravel, no Symfony, no Compos
 - Business logic lives exclusively in Services — including all timestamp generation via Clock
 - Views use output buffering into a layout file — no templating engine
 - A minimal explicit DI container wires services and controllers — framework bindings in `framework/bootstrap.php`, application bindings in `app/bootstrap.php`
+
+### Foundational Principle: Reuse Before You Add
+
+Code reusability is fundamental to building maintainable software, and FrankPHP treats it as a core rule for framework code and for every application built on it. It applies equally to Controllers, Services, Models, Middleware and every other class. A codebase full of near-duplicate and single-use methods turns into rambling code that nobody can safely change.
+
+**Write for reuse.** Reusability is a priority from the moment code is written, not something cleaned up later.
+
+- **Reuse an existing method before adding a new one**, even if the call is shaped slightly differently: a different argument, a loop around the call, or a filter on the result.
+- **Write every new method as a general operation** that other callers can use, not as a helper for the one place that needs it today. No single-use methods, in any layer.
+- **Every proposed code change states which existing methods it reuses.**
+- **Every new method is justified:** the proposal says why no existing method can do the job.
+
+**Remove redundant code immediately.**
+
+- **Methods left unused when a design changes are removed** in the same change. Code from a discarded approach is not kept "in case".
+- **A method that duplicates an existing one is removed** and its callers are pointed to the existing method.
+
+**Example.** A service needs to remove loaded dates one at a time. Two existing Model methods already do the job, so no new method is added at any layer:
+
+```php
+// Reuses Ranking::findFetchDatesFrom() and Ranking::deleteBefore()
+$dates = $this->rankingModel->findFetchDatesFrom('1000-01-01'); // every loaded date
+foreach ($dates as $date) {
+    $this->rankingModel->deleteBefore($date); // one date per statement
+}
+```
 
 ---
 
@@ -69,7 +95,7 @@ framework/
 │   ├── SignupController.php            # Two-step email-verified signup — injects SignupService + UserService (v2.1.0: auto-login calls recordLogin)
 │   ├── TenantSettingsController.php    # Tenant settings read/write — admin/owner only
 │   ├── AccountSettingsController.php   # Per-user account settings read/write
-│   └── UserManagementController.php    # Admin/owner user management dashboard — injects UserManagementService + config (v1.4)
+│   └── UserManagementController.php    # User management dashboard (platform/admin/owner) — injects UserManagementService + config (v1.4; platform cross-tenant v2.2.0)
 ├── Middleware/
 │   ├── AuthMiddleware.php           # Session check, loads $request->user
 │   ├── TenantMiddleware.php         # Resolves tenant_id param, loads $request->tenant
@@ -92,7 +118,7 @@ framework/
 │   ├── TenantNameGenerator.php     # Pure helper — default tenant name + slug from a signup email (v2.1.0)
 │   ├── UserService.php             # recordLogin(), saveSettings() — framework user business logic
 │   ├── TenantService.php           # saveSettings(), create() (v2.1.0) — framework tenant business logic
-│   ├── UserManagementService.php   # getUserDashboard() — admin user dashboard KPIs and user list (v1.4)
+│   ├── UserManagementService.php   # getUserDashboard() — user dashboard KPIs and user list; platform role spans all tenants (v1.4, v2.2.0)
 │   └── ServiceResult.php           # Standardised result object for all services
 ├── sql/
 │   ├── schema.core.sql      # Auto-executed on first boot if users table missing. Contains seed data.
@@ -939,6 +965,7 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - `password_hash()` / `password_verify()` for passwords
 - `htmlspecialchars()` on all user-supplied output in views
 - Tenant isolation enforced at middleware level (route param vs session user) and at model level (tenant_id in all queries)
+- The single sanctioned cross-tenant read is the Users dashboard for role `platform` (v2.2.0). It is decided in `UserManagementService` from the authenticated user's role, never from request input, and it is still built from tenant-scoped `User::allByTenant()` calls. `admin` and `owner` stay tenant-scoped. Role `user` is refused by the controller, and the app nav hides the link from it.
 - `saveSettings()` methods in both `User` and `Tenant` maintain explicit column allowlists — arbitrary columns cannot be written via settings forms
 - Multi-statement PDO mode is disabled after schema import
 - SMTP credentials live exclusively in `.env` and flow through `config['mail']` → `EmailService::fromConfig()` → the container singleton. They are never present in any service or controller file.
@@ -1235,7 +1262,7 @@ These services are framework-owned and registered in the container by `framework
 | `UserService` | singleton | `User` model | Introduced v1.3.2. Owns business logic for the user record: `recordLogin(userId, tenantId)`, `saveSettings(userId, tenantId, data)`. Owns allowlist and null-coercion for user preferences. Computes timestamps via Clock and passes them to the User model. |
 | `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`, `create(name, baseSlug, companyEmail): int` *(v2.1.0 — owns slug uniqueness: suffixes `-2`, `-3`… with the UNIQUE index as final guard and retry on collision; safe inside a transaction)*. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
 | `TenantNameGenerator` | not in container | none | *v2.1.0.* Pure helper (no DB, no Clock), constructed by `CreateTenantForSignup`. `fromEmail(email): array{name, slug}` — business domain → organisation name (`jane@acme-corp.com` → `Acme Corp` / `acme-corp`; two-part suffixes like `co.uk` handled); free-mail domain (`FREE_MAIL_DOMAINS`, extendable via constructor) → `"<Name>'s Workspace"`. `slugify()` is public static. Slug uniqueness is not its job. |
-| `UserManagementService` | singleton | `User` model | Introduced v1.4. Provides the full data payload for the admin/owner user management dashboard: `getUserDashboard(tenantId, user, tenant, config)`. Owns all Clock calls for the feature (timezone resolution, 30-day inactivity cutoff via `Clock::utcOffsetString`, display-value formatting). All four KPI stats (`totalUsers`, `activePercent`, `neverLoggedIn`, `inactiveThirtyDays`) are derived from the single `allByTenant()` query — no additional DB round-trips. |
+| `UserManagementService` | singleton | `User` model, `Tenant` model | Introduced v1.4. Provides the full data payload for the user management dashboard: `getUserDashboard(tenantId, user, tenant, config)`. Owns all Clock calls for the feature (timezone resolution, 30-day inactivity cutoff via `Clock::utcOffsetString`, display-value formatting). All four KPI stats (`totalUsers`, `activePercent`, `neverLoggedIn`, `inactiveThirtyDays`) are derived from the `allByTenant()` rows already fetched — no extra queries. *v2.2.0:* scope follows the viewer's role. `admin`/`owner` get their own tenant only. `platform` gets every tenant: the service reuses `Tenant::findAll()` and calls `allByTenant()` once per tenant, so no unscoped User query exists. Each row carries `tenantName`, and the result carries `crossTenant` (bool). |
 
 ---
 

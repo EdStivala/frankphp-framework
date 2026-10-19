@@ -1,0 +1,9 @@
+{
+    "tables": [
+        "password_reset_tokens",
+        "signup_tokens",
+        "tenants",
+        "users"
+    ],
+    "alter_statements": []
+}

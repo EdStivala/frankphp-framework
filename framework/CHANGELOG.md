@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.2.0] - 2026-10-19
+
+### Human-readable summary
+
+FrankPHP 2.2.0 lets the platform operator see every user on the site. On the Users dashboard, a `platform` user now sees users from all tenants, with a Tenant column. `owner` and `admin` still see only their own tenant. The app template now hides the Users links from the `user` role, which could previously see them but was refused on click.
+
+Tenant isolation is unchanged. The all-tenants view is decided only by the logged-in user's role, and it is built from the existing single-tenant queries, so the framework has no query across the whole users table. There are no schema or route changes. `codebase.md` also gains the foundational principle "Reuse Before You Add".
+
+### Added
+
+- `Versions/FrankPHP_v2.2.0_upgrade_notes.md`.
+- Users dashboard (`GET /tenant/{tenant_id}/users`): a `platform` user now sees users from **every** tenant, with a Tenant column. `admin` and `owner` still see their own tenant only. `UserManagementService` takes the existing `Tenant` model and reuses `Tenant::findAll()` and `User::allByTenant()`, so no new model method and no unscoped User query were added. The result carries `crossTenant` (bool), and each row carries `tenantName`.
+
+### Changed
+
+- `UserManagementController`: the docblock now states the real access rule (`platform`, `admin`, `owner`) and the per-role scope. The controller passes `crossTenant` to the view.
+- `bootstrap.php`: the `UserManagementService` binding injects `tenantModel: new \Frank\Models\Tenant()`. Apps that construct the service themselves must pass it.
+- `codebase.md` §2, §13 and §16 (service table) describe the platform cross-tenant scope.
+- App template (`app/Views/`, not shipped in the framework zip): `users/management-dashboard.php` shows the Tenant column and an "All tenants" subtitle when `crossTenant` is true. `partials/app-nav.php` and `partials/app-header.php` hide the Users link from role `user`. Before this change, users saw the link and were redirected with `?error=forbidden`.
+- `codebase.md` §1 adds the foundational principle "Reuse Before You Add". It applies to every layer of framework and application code: reuse existing methods before adding new ones, write new methods as general operations, state which existing methods a change reuses, justify every new method, and remove unused or duplicate methods immediately.
+
+### Upgrade notes
+
+1. Replace `framework/` as usual. No database migration is needed.
+2. Copy the app view changes (the Tenant column and the role check on the Users links) into your `app/Views/`. See `Versions/FrankPHP_v2.2.0_upgrade_notes.md`. If you skip this, the dashboard still works, without the Tenant column.
+3. Only if your app constructs `UserManagementService` itself: also pass `tenantModel: new \Frank\Models\Tenant()`.
+
 ## [2.1.1] - 2026-09-30
 
 ### Human-readable summary

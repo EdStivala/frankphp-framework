@@ -255,6 +255,7 @@ $container->singleton(
     function ($c) {
         return new \Frank\Services\UserManagementService(
             userModel: new \Frank\Models\User(),
+            tenantModel: new \Frank\Models\Tenant(),
         );
     }
 );

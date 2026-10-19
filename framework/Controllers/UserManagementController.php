@@ -13,10 +13,12 @@ use Frank\Services\UserManagementService;
  * UserManagementController
  *
  * Framework controller introduced in v1.4.
- * Serves the admin/owner user management dashboard at
+ * Serves the user management dashboard at
  * GET /tenant/{tenant_id}/users
  *
- * Access is restricted to users with role 'admin' or 'owner'.
+ * Access is restricted to users with role 'platform', 'admin' or 'owner'.
+ * 'admin' and 'owner' see their own tenant only; 'platform' sees all
+ * tenants (v2.2.0). Role 'user' is redirected with ?error=forbidden.
  * All data preparation is delegated to UserManagementService.
  */
 class UserManagementController extends BaseController
@@ -52,6 +54,7 @@ class UserManagementController extends BaseController
             'activePercent'      => $result->get('activePercent', 0),
             'neverLoggedIn'      => $result->get('neverLoggedIn', 0),
             'inactiveThirtyDays' => $result->get('inactiveThirtyDays', 0),
+            'crossTenant'        => $result->get('crossTenant', false),
         ]);
     }
 }

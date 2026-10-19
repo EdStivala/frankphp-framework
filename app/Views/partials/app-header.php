@@ -26,11 +26,13 @@
 				<a class="dropdown-item" href="#">
 					<i class="bi bi-credit-card"></i> Subscription &amp; Billing</a>
 			</li>
+			<?php if (in_array($user['role'] ?? '', ['platform', 'admin', 'owner'], true)) : ?>
 			<li><hr class="dropdown-divider"></li>
 			<li>
 				<a class="dropdown-item" href="/tenant/<?= $tenant['id'] ?>/users">
 					<i class="bi bi-people"></i> Manage Users</a>
 			</li>
+			<?php endif; ?>
 		</ul>
 	</div>
 
