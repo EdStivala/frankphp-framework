@@ -44,6 +44,8 @@ The all-tenants view depends only on the logged-in user's role. It is built from
 
    If you skip this step, the dashboard still works. Platform users get every tenant's users but no Tenant column, and the `user` role still sees the links but is refused on click.
 
+   If you copy in the `management-dashboard.php` change and your app overrides `UserManagementController`, also do step 4. Otherwise the page gives undefined-variable warnings.
+
 3. **Custom service wiring (rare).** If your `app/bootstrap.php` builds `UserManagementService` itself, add the new argument:
 
    ```php
@@ -52,6 +54,14 @@ The all-tenants view depends only on the logged-in user's role. It is built from
        tenantModel: new \Frank\Models\Tenant(),
    );
    ```
+
+4. **Controller override.** If your `app/bootstrap.php` replaces `UserManagementController` using `$container->override()`, and your subclass defines its own `index()`, the framework's `index()` no longer runs, so `crossTenant` never reaches the view. Add this line to your `index()` view params. It's copied from `framework/Controllers/UserManagementController.php` line 57, where `$result` is what `getUserDashboard()` returns:
+
+   ```php
+   'crossTenant'        => $result->get('crossTenant', false),
+   ```
+
+   This is the only view param added in 2.2.0. Without it, the updated `management-dashboard.php` reads an undefined `$crossTenant`. PHP gives undefined-variable warnings, and platform users see the current tenant's name instead of "All tenants", with no Tenant column.
 
 ## Check
 
