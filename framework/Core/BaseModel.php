@@ -139,7 +139,7 @@ public function fill(array $data): void
 		$placeholders = array_map(fn($col) => ":$col", $columns);
 		
 		// Build the UPDATE part, but exclude immutable columns like 'id', 'tenant' or 'created_at'
-		$updateCols = array_filter($columns, fn($col) => !in_array($col, ['id', 'created_at', 'updated_at', 'tenant_id']));
+		$updateCols = array_filter($columns, fn($col) => !in_array($col, ['id', 'created_at', 'tenant_id']));
 		// SQL using "ON DUPLICATE KEY UPDATE" handles both insert and update
 		$updateStatement = implode(', ', array_map(fn($col) => "$col = VALUES($col)", $updateCols));
 

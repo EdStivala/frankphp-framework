@@ -83,6 +83,35 @@ class TenantService
     }
 
     /**
+     * Delete a tenant and, through the users foreign key's ON DELETE CASCADE,
+     * every user in it. Cannot be undone.
+     *
+     * Refuses unless the acting user is the owner of that same tenant:
+     * $actingUser['role'] must be 'owner' and $actingUser['tenant_id'] must
+     * equal $tenantId. Nothing else is checked here — confirmation, friction
+     * and clean-up of app data belong to the app.
+     *
+     * Failure types: 'forbidden', 'not_found', 'system'.
+     */
+    public function deleteTenant(array $actingUser, int $tenantId): ServiceResult
+    {
+        if (($actingUser['role'] ?? null) !== 'owner'
+            || (int) ($actingUser['tenant_id'] ?? 0) !== $tenantId) {
+            return ServiceResult::failure('Only the owner can delete the tenant.', 'forbidden');
+        }
+
+        if ($this->tenantModel->findById($tenantId) === null) {
+            return ServiceResult::failure('Tenant not found.', 'not_found');
+        }
+
+        if (!$this->tenantModel->deleteTenant($tenantId)) {
+            return ServiceResult::failure('The tenant could not be deleted.', 'system');
+        }
+
+        return ServiceResult::success('Tenant deleted.');
+    }
+
+    /**
      * Create a new tenant and return its id.
      *
      * Owns slug uniqueness: $baseSlug is suffixed -2, -3, ... until free.

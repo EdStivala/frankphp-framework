@@ -119,6 +119,22 @@ class Tenant
     }
 
     /**
+     * Delete a tenant row. The foreign key fk_users_tenant (ON DELETE CASCADE)
+     * removes every user in the tenant, so no separate user delete is made.
+     * DB access only — who may delete a tenant is decided by
+     * TenantService::deleteTenant().
+     *
+     * @return bool  True when exactly one tenant row was deleted
+     */
+    public function deleteTenant(int $tenantId): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM tenants WHERE id = :id');
+        $stmt->execute(['id' => $tenantId]);
+
+        return $stmt->rowCount() === 1;
+    }
+
+    /**
      * Backwards-compatible wrapper for legacy call sites.
      * Prefer Clock::resolveTimezone($user, $tenant, $config) in new code.
      */

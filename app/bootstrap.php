@@ -22,7 +22,10 @@ if (file_exists($appSchemaPath)) {
 
 // Starter dashboard — HomeController ships as app-owned demo content.
 // Replace with application-specific content (see Views/home/dashboard.php).
-$router->add('GET', '/',                              'App\\Controllers\\HomeController@dashboard', [$tm, $auth]);
+// The root address: a logged-in person goes straight to their own dashboard
+// (v3.0.0 — people stay logged in for 28 days); anyone else is sent to /login
+// by the auth check.
+$router->add('GET', '/',                              'App\\Controllers\\HomeController@root',      [$auth]);
 $router->add('GET', '/tenant/{tenant_id}/dashboard',   'App\\Controllers\\HomeController@dashboard', [$tm, $auth]);
 
 // Public legal pages — Terms & Conditions placeholder linked from the terms
@@ -31,6 +34,22 @@ $container->bind(\App\Controllers\LegalController::class, function ($c) use ($co
     return new \App\Controllers\LegalController($config);
 });
 $router->add('GET', '/terms', 'App\\Controllers\\LegalController@terms', []);
+
+// User and tenant administration — a worked example of the framework's user and
+// tenant operations (delete a user, change a role, delete my account, delete the
+// tenant). App-owned: change the rules, screens and friction freely. See
+// Controllers/UserAdminController.php.
+$container->bind(\App\Controllers\UserAdminController::class, function ($c) {
+    return new \App\Controllers\UserAdminController(
+        $c->make(\Frank\Services\UserService::class),
+        $c->make(\Frank\Services\TenantService::class),
+    );
+});
+$router->add('POST', '/tenant/{tenant_id}/users/delete',    'App\\Controllers\\UserAdminController@deleteUser',       [$tm, $auth, $json]);
+$router->add('POST', '/tenant/{tenant_id}/users/role',      'App\\Controllers\\UserAdminController@changeRole',       [$tm, $auth, $json]);
+$router->add('POST', '/tenant/{tenant_id}/account/delete',  'App\\Controllers\\UserAdminController@deleteMyAccount',  [$tm, $auth, $json]);
+$router->add('GET',  '/tenant/{tenant_id}/tenant-delete',   'App\\Controllers\\UserAdminController@showTenantDelete', [$tm, $auth]);
+$router->add('POST', '/tenant/{tenant_id}/tenant-delete',   'App\\Controllers\\UserAdminController@deleteTenant',     [$tm, $auth, $json]);
 
 // Example:
 // $container->bind(\App\Controllers\InvoiceController::class, function ($c) {

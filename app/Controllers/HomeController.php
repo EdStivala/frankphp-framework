@@ -13,6 +13,12 @@ use Frank\Core\Response;
 class HomeController extends BaseController
 {
 
+    /** GET / — a logged-in person goes straight to their own dashboard. */
+    public function root(Request $request, array $params)
+    {
+        return Response::redirect('/tenant/' . (int) $request->user['tenant_id'] . '/dashboard');
+    }
+
     public function dashboard(Request $request, array $params)
     {
 		$tenant = $request->tenant;

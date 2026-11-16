@@ -17,18 +17,17 @@ use Frank\Models\User;
  * Owns all Clock calls for this feature. Formats all display values so the
  * view receives flat, named scalars and performs no computation.
  *
- * All four KPI stats are derived from the allByTenant() rows already
- * fetched — no additional DB round-trips are made.
+ * All four KPI stats are derived from the User objects already fetched —
+ * no additional DB round-trips are made.
  *
  * Scope (v2.2.0): a 'platform' user sees every tenant's users; every other
  * role sees only its own tenant. The platform view reuses Tenant::findAll()
- * and User::allByTenant() — one tenant-scoped query per tenant — so no
- * unscoped User query exists.
+ * and the inherited User::all() — one tenant-scoped query per tenant — so
+ * no unscoped User query exists.
  */
 class UserManagementService
 {
     public function __construct(
-        private User $userModel,
         private Tenant $tenantModel
     ) {}
 
@@ -61,42 +60,44 @@ class UserManagementService
             ? $this->tenantModel->findAll()
             : [['id' => $tenantId, 'name' => $tenant['name'] ?? '']];
 
-        // Reuses Tenant::findAll() and User::allByTenant() — every query stays tenant-scoped
-        $rawUsers = [];
+        // Inherited User::all() — one tenant-scoped query per tenant. The tenant
+        // name is carried alongside each User object (User has no such property).
+        $members = [];
         foreach ($tenants as $t) {
-            foreach ($this->userModel->allByTenant((int) $t['id']) as $row) {
-                $row['tenant_name'] = $t['name'] ?? '';
-                $rawUsers[]         = $row;
+            foreach (User::all((int) $t['id']) as $member) {
+                $members[] = ['user' => $member, 'tenantName' => $t['name'] ?? ''];
             }
         }
 
-        $totalUsers         = count($rawUsers);
+        $totalUsers         = count($members);
         $activeCount        = 0;
         $neverLoggedIn      = 0;
         $inactiveThirtyDays = 0;
         $users              = [];
 
-        foreach ($rawUsers as $row) {
-            $hasLoggedIn = $row['accessed_at'] !== null;
+        foreach ($members as $m) {
+            $member      = $m['user'];
+            $hasLoggedIn = $member->accessed_at !== null;
 
             if (!$hasLoggedIn) {
                 $neverLoggedIn++;
             } else {
                 $activeCount++;
-                if ($row['accessed_at'] < $inactiveCutoff) {
+                if ($member->accessed_at < $inactiveCutoff) {
                     $inactiveThirtyDays++;
                 }
             }
 
             $users[] = [
-                'id'             => $row['id'],
-                'email'          => $row['email'],
-                'name'           => $row['name'],
-                'role'           => $row['role'] ?? 'user',
-                'tenantName'     => $row['tenant_name'],
-                'joinedLabel'    => Clock::formatUtcForTimezone($row['created_at'], $timezone, 'j M Y'),
+                'id'             => $member->id,
+                'email'          => $member->email,
+                'name'           => $member->name,
+                'role'           => $member->role ?? 'user',
+                'tenantName'     => $m['tenantName'],
+                'tenantId'       => $member->tenant_id,
+                'joinedLabel'    => Clock::formatUtcForTimezone($member->created_at, $timezone, 'j M Y'),
                 'lastLoginLabel' => $hasLoggedIn
-                    ? Clock::formatUtcForTimezone($row['accessed_at'], $timezone, 'j M Y, H:i')
+                    ? Clock::formatUtcForTimezone($member->accessed_at, $timezone, 'j M Y, H:i')
                     : 'Never logged in',
                 'hasLoggedIn'    => $hasLoggedIn,
             ];

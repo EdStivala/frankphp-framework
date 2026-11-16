@@ -285,7 +285,9 @@ try {
 	$otherTenantId = (new TenantService())->create('Other Co', 'other-co', 'x@other.co');
 	$sqlState = null;
 	try {
-		$userModel->insertUser($otherTenantId, 'new.person@acme-corp.com', 'Dupe', 'user', gmdate('Y-m-d H:i:s'));
+		// A plain INSERT, so the check is on the schema's unique key itself.
+		$pdo->prepare('INSERT INTO users (tenant_id, email, name, role, created_at) VALUES (?, ?, ?, ?, ?)')
+			->execute([$otherTenantId, 'new.person@acme-corp.com', 'Dupe', 'user', gmdate('Y-m-d H:i:s')]);
 	} catch (PDOException $e) {
 		$sqlState = (string) $e->getCode();
 	}

@@ -38,10 +38,27 @@ class User extends BaseModel
     // User-level settings (NULL = inherit from tenant/app where applicable)
     public ?string $timezone      = null;
 
+    // Terms & Conditions acceptance (v2.1.0 columns; public properties from v3.0.0)
+    public ?string $terms_accepted_at = null; // UTC DATETIME
+    public ?string $terms_version     = null;
+
     // ----------------------------------------------------------------
-    // User finders
+    // User finders — lookups ACROSS ALL TENANTS
+    //
+    // These exist because the inherited BaseModel finders cannot do them:
+    // find(id, tenantId), all(tenantId) and where(tenantId, ...) always add
+    // "AND tenant_id = ...", so they only work once the tenant is known.
+    // Each method below is used at a point where the tenant is NOT yet
+    // known, and the lookup is what identifies the user (and so the tenant).
+    // Use the inherited tenant-scoped finders everywhere else.
     // ----------------------------------------------------------------
 
+    /**
+     * Load a user by id alone. Used by AuthMiddleware on every request: the
+     * session holds only user_id, so the user must be loaded before their
+     * tenant is known (the middleware then checks the tenant in the address
+     * matches theirs).
+     */
     public function findById(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM users WHERE id = :id');
@@ -49,6 +66,12 @@ class User extends BaseModel
         return $stmt->fetch() ?: null;
     }
 
+    /**
+     * Load a user by email alone. Used by LoginCodeService at sign-in, where
+     * the email address is all that is known. users.email is unique across
+     * all tenants (one email = one user), so this is also the check that an
+     * address has no account before a new one is created.
+     */
     public function findByEmail(string $email): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM users WHERE email = :e');
@@ -56,170 +79,16 @@ class User extends BaseModel
         return $stmt->fetch() ?: null;
     }
 
+    /**
+     * Load a user by the hash of their API key. Used by ApiAuthMiddleware:
+     * an API request carries only the key, so the key is what identifies the
+     * user and their tenant.
+     */
     public function findApiKeyHash(string $hash): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM users WHERE api_key_hash = :hash LIMIT 1');
         $stmt->execute(['hash' => $hash]);
         return $stmt->fetch() ?: null;
-    }
-
-    // ----------------------------------------------------------------
-    // User writes
-    // ----------------------------------------------------------------
-
-    /**
-     * Record the UTC timestamp of a successful login.
-     *
-     * $accessedAt is computed by UserService::recordLogin() via Clock.
-     * Tenant-scoped — can only update a user belonging to the given tenant.
-     *
-     * @param int    $userId
-     * @param int    $tenantId
-     * @param string $accessedAt  UTC DATETIME string from UserService
-     */
-    public function updateLastAccessed(int $userId, int $tenantId, string $accessedAt): bool
-    {
-        $stmt = $this->db->prepare('
-            UPDATE users
-               SET accessed_at = :accessed_at
-             WHERE id = :id AND tenant_id = :tenant_id
-        ');
-
-        return $stmt->execute([
-            'accessed_at' => $accessedAt,
-            'id'          => $userId,
-            'tenant_id'   => $tenantId,
-        ]);
-    }
-
-    /**
-     * Persist a pre-filtered, pre-validated set of user preference columns.
-     *
-     * The $columns array must already be filtered to the allowlist and have
-     * nullable fields resolved by UserService::saveSettings() before this
-     * method is called. This model applies no allowlist and makes no
-     * business-logic decisions about the data.
-     *
-     * $updatedAt is a UTC DATETIME string computed by UserService via Clock.
-     *
-     * @param int    $userId
-     * @param int    $tenantId
-     * @param array  $columns   Validated column => value pairs, ready to persist
-     * @param string $updatedAt UTC DATETIME string
-     */
-    public function saveSettings(int $userId, int $tenantId, array $columns, string $updatedAt): bool
-    {
-        if (empty($columns)) {
-            return true;
-        }
-
-        $columns['updated_at'] = $updatedAt;
-
-        $setClauses = implode(', ', array_map(
-            static fn (string $col): string => "$col = :$col",
-            array_keys($columns)
-        ));
-
-        $columns['id']        = $userId;
-        $columns['tenant_id'] = $tenantId;
-
-        $stmt = $this->db->prepare(
-            "UPDATE users SET $setClauses WHERE id = :id AND tenant_id = :tenant_id"
-        );
-
-        return $stmt->execute($columns);
-    }
-
-    /**
-     * Insert a new user row and return its id.
-     *
-     * $name and $createdAt are computed by LoginCodeService — name derivation
-     * is business logic, timestamp generation belongs in the service.
-     * users.email is globally unique (v3.0.0): inserting an address that
-     * already exists throws PDOException (SQLSTATE 23000).
-     *
-     * @param int    $tenantId
-     * @param string $email
-     * @param string $name         Derived by LoginCodeService from email local-part
-     * @param string $role
-     * @param string $createdAt    UTC DATETIME string from LoginCodeService
-     * @param string|null $termsAcceptedAt  v2.1.0 — UTC DATETIME of T&C acceptance
-     * @param string|null $termsVersion     v2.1.0 — app's terms version string
-     * @return int|null  New user id, or null on failure
-     *
-     * Migration safety (v2.1.0): the terms columns are only written when
-     * $termsAcceptedAt is non-null, so installs that have not yet run
-     * sql/migrations/v2.1.0_signup_terms.sql keep working while the
-     * signup.require_terms flag is off. For the same reason the terms
-     * columns are deliberately NOT public properties (BaseModel::save()
-     * persists every public property).
-     */
-    public function insertUser(
-        int    $tenantId,
-        string $email,
-        string $name,
-        string $role,
-        string $createdAt,
-        ?string $termsAcceptedAt = null,
-        ?string $termsVersion = null
-    ): ?int {
-        $params = [
-            'tenant_id'  => $tenantId,
-            'email'      => $email,
-            'name'       => $name,
-            'role'       => $role,
-            'created_at' => $createdAt,
-        ];
-
-        if ($termsAcceptedAt !== null) {
-            $params['terms_accepted_at'] = $termsAcceptedAt;
-            $params['terms_version']     = $termsVersion;
-        }
-
-        $stmt = $this->db->prepare($this->buildInsert('users', array_keys($params)));
-        $ok   = $stmt->execute($params);
-
-        return $ok ? (int) $this->db->lastInsertId() : null;
-    }
-
-    /**
-     * INSERT statement for a fixed, code-defined column list (never user input).
-     *
-     * @param string[] $columns
-     */
-    private function buildInsert(string $table, array $columns): string
-    {
-        return sprintf(
-            'INSERT INTO %s (%s) VALUES (%s)',
-            $table,
-            implode(', ', $columns),
-            implode(', ', array_map(static fn (string $c): string => ':' . $c, $columns))
-        );
-    }
-
-    // ----------------------------------------------------------------
-    // User management queries (v1.4)
-    // ----------------------------------------------------------------
-
-    /**
-     * Return all users for a tenant ordered by creation date descending.
-     *
-     * Used by UserManagementService to build the admin user dashboard.
-     * Returns only the columns needed for display — not api_key_hash.
-     *
-     * @param int $tenantId
-     * @return array
-     */
-    public function allByTenant(int $tenantId): array
-    {
-        $stmt = $this->db->prepare('
-            SELECT id, tenant_id, email, name, role, created_at, accessed_at
-              FROM users
-             WHERE tenant_id = :tenant_id
-             ORDER BY created_at DESC
-        ');
-        $stmt->execute(['tenant_id' => $tenantId]);
-        return $stmt->fetchAll();
     }
 
     // ----------------------------------------------------------------

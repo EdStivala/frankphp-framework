@@ -4,6 +4,7 @@ namespace Frank\Controllers;
 use Frank\Core\BaseController;
 use Frank\Core\Request;
 use Frank\Core\Response;
+use Frank\Core\Session;
 use Frank\Services\TenantService;
 
 /**
@@ -15,7 +16,7 @@ use Frank\Services\TenantService;
  *
  * Routes:
  *   GET  /tenant/{tenant_id}/tenant-settings
- *   POST /tenant/{tenant_id}/tenant-settings/save
+ *   POST /tenant/{tenant_id}/tenant-settings/save   (v3.0.0: requires the csrf_token field)
  */
 class TenantSettingsController extends BaseController
 {
@@ -67,11 +68,24 @@ class TenantSettingsController extends BaseController
             return $redirect;
         }
 
+        if (!$this->validCsrf($request->post)) {
+            return Response::redirect("/tenant/{$tenant['id']}/tenant-settings?error=invalid_request");
+        }
+
         $ok = $this->tenantService->saveSettings((int)$tenant['id'], $request->post);
 
         return Response::redirect(
             "/tenant/{$tenant['id']}/tenant-settings?" .
             ($ok ? 'success=1' : 'error=save_failed')
         );
+    }
+
+    /** Same check as the login forms: $_SESSION['csrf_token'] compared with hash_equals. */
+    private function validCsrf(array $data): bool
+    {
+        Session::start();
+        $stored = $_SESSION['csrf_token'] ?? '';
+
+        return $stored !== '' && hash_equals($stored, (string) ($data['csrf_token'] ?? ''));
     }
 }

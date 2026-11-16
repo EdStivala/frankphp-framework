@@ -280,19 +280,29 @@ class LoginCodeService
                 $placement = $this->tenantResolver->resolve($email, $name);
                 $tenantId  = (int) $placement['tenant_id'];
 
-                $userId = $this->userModel->insertUser(
-                    $tenantId,
-                    $email,
-                    $name,
-                    $placement['role'],
-                    $now,
-                    $termsAcceptedAt,
-                    $termsAcceptedAt !== null ? $termsVersion : null
-                );
+                // Inherited from BaseModel: fill() then save().
+                $user = new User();
+                $user->fill([
+                    'tenant_id'         => $tenantId,
+                    'email'             => $email,
+                    'name'              => $name,
+                    'role'              => $placement['role'],
+                    'created_at'        => $now,
+                    'terms_accepted_at' => $termsAcceptedAt,
+                    'terms_version'     => $termsAcceptedAt !== null ? $termsVersion : null,
+                ]);
 
-                if (!$userId) {
-                    throw new \RuntimeException('User insert returned no id.');
+                if (!$user->save()) {
+                    throw new \RuntimeException('User save failed.');
                 }
+
+                // Read the saved user back (inherited where(), tenant-scoped): gives
+                // the new id and confirms the save worked.
+                $saved = User::where($tenantId, 'email', $email)[0] ?? null;
+                if ($saved === null) {
+                    throw new \RuntimeException('Saved user not found.');
+                }
+                $userId = (int) $saved->id;
 
                 return [
                     'user_id'     => $userId,

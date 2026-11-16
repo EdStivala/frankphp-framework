@@ -15,6 +15,8 @@ ob_start();
     <div class="alert alert-success settings-alert">Settings saved.</div>
 <?php elseif (($_GET['error'] ?? '') === 'save_failed') : ?>
     <div class="alert alert-danger settings-alert">Could not save settings — please try again.</div>
+<?php elseif (($_GET['error'] ?? '') === 'invalid_request') : ?>
+    <div class="alert alert-danger settings-alert">Invalid request. Please try again.</div>
 <?php endif; ?>
 
 <div class="settings-layout">
@@ -25,6 +27,7 @@ ob_start();
 
     <div class="settings-panel">
         <form method="post" action="/tenant/<?= (int) $tenant['id'] ?>/tenant-settings/save">
+            <?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
 
             <div class="settings-group">
                 <div class="settings-group-title">
@@ -68,6 +71,14 @@ ob_start();
 
             <button type="submit" class="btn btn-brand-primary">Save changes</button>
         </form>
+
+        <?php if (($user['role'] ?? '') === 'owner') : ?>
+        <div class="settings-group mt-4">
+            <div class="settings-group-title">Delete tenant</div>
+            <div class="settings-group-description">Permanently deletes this organisation and every user in it. You will be asked to confirm on the next screen.</div>
+            <a href="/tenant/<?= (int) $tenant['id'] ?>/tenant-delete" class="btn btn-outline-danger">Delete tenant</a>
+        </div>
+        <?php endif; ?>
     </div>
 
 </div>

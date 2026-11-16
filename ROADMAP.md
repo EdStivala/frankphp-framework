@@ -52,6 +52,18 @@ separate pass.
   checking upstream for security releases should become a routine step when
   cutting each framework release, not a one-off.
 
+## Tech Debt
+
+- The seven `login_codes` query functions live in the `User` model
+  (`framework/Models/User.php`), whose table is `users`: `insertLoginCode()`,
+  `invalidatePendingLoginCodes()`, `markLoginCodeUsed()`,
+  `incrementLoginCodeAttempts()`, `findMostRecentPendingLoginCode()`,
+  `countRecentLoginCodesByIp()`, `deleteExpiredLoginCodes()`. They are DB
+  access only (the business logic is in `LoginCodeService`), so they belong in
+  a model, but not in `User`. Introduced by AI in v3.0.0 sprint 1, repeating
+  the v2 pattern of keeping the password-reset and signup-token functions in
+  `User.php`. Deferred because v3.0.0 is behind schedule.
+
 ## App Migration
 
 - Migrate the existing FrankPHP apps (2–3 of them, still on the old mixed-zip
