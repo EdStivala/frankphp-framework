@@ -1,6 +1,6 @@
 <?php
 // PLACEHOLDER — replace with your application's real Terms & Conditions
-// before going live. Linked from auth/signup.php (FrankPHP 2.1+).
+// before going live. Linked from auth/login-terms.php (FrankPHP 3.0).
 // Bump $config['signup']['terms_version'] whenever the content changes.
 $title = 'Terms & Conditions - FrankPHP';
 ob_start();
@@ -24,7 +24,7 @@ ob_start();
 			<div class="alert alert-warning" role="alert">
 				<strong>Placeholder.</strong> This page ships with the FrankPHP starter app.
 				Replace <code>app/Views/auth/terms.php</code> with your own Terms &amp; Conditions
-				before accepting real signups.
+				before letting real people create accounts.
 			</div>
 
 			<p class="text-muted small mb-0">

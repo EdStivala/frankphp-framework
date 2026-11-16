@@ -17,7 +17,7 @@ class AuthMiddleware implements MiddlewareInterface
     public function handle(Request $request, callable $next)
     {
         // simple session-based auth
-        if (session_status() === PHP_SESSION_NONE) session_start();
+        \Frank\Core\Session::start();
         if (!isset($_SESSION['user_id'])) {
             // redirect to login (keep intended path)
             $intended = urlencode($_SERVER['REQUEST_URI'] ?? '/');

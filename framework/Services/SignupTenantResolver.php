@@ -8,11 +8,11 @@ namespace Frank\Services;
  * SignupTenantResolver
  *
  * Policy point: decides which tenant a newly verified signup joins and with
- * what role. Called by SignupService::completeSignup() INSIDE the signup
+ * what role. Called by LoginCodeService INSIDE the account-creation
  * transaction — any rows it writes roll back if the user insert fails.
  *
- * Framework default (v2.1.0): CreateTenantForSignup — every signup creates
- * a new tenant and the user becomes its owner.
+ * Framework default (v2.1.0): CreateTenantForSignup — every new person (an
+ * unknown email that verified its sign-in code, v3.0.0) creates a new tenant and the user becomes its owner.
  *
  * Apps with a different model (e.g. invite-into-existing-tenant) replace it
  * in app/bootstrap.php:

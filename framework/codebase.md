@@ -89,45 +89,45 @@ framework/
 │   ├── MiddlewareInterface.php  # handle(Request, callable $next)
 │   ├── Request.php            # Wraps $_GET, $_POST, $_SERVER, rawBody, bodyParams, user, tenant
 │   ├── Response.php           # Static: json(), view(), redirect()
-│   └── Router.php             # add(), override(), dispatch(), middleware pipeline builder — accepts Container
+│   ├── Router.php             # add(), override(), dispatch(), middleware pipeline builder — accepts Container
+│   └── Session.php            # v3.0.0 — the only place a session is started: Session::start() / destroy(). 28-day rolling session, own save path. See §11
 ├── Controllers/                        # Framework-owned only — no application controllers live here
-│   ├── AuthController.php              # Login, logout, forgot/reset password — injects PasswordResetService + UserService
-│   ├── SignupController.php            # Two-step email-verified signup — injects SignupService + UserService (v2.1.0: auto-login calls recordLogin)
+│   ├── AuthController.php              # v3.0.0 passwordless: the one sign-in/sign-up screen, code verify, resend, terms step, logout — injects LoginCodeService + UserService
 │   ├── TenantSettingsController.php    # Tenant settings read/write — admin/owner only
 │   ├── AccountSettingsController.php   # Per-user account settings read/write
 │   └── UserManagementController.php    # User management dashboard (platform/admin/owner) — injects UserManagementService + config (v1.4; platform cross-tenant v2.2.0)
 ├── Middleware/
-│   ├── AuthMiddleware.php           # Session check, loads $request->user
+│   ├── AuthMiddleware.php           # Starts the session via Session::start(), checks it, loads $request->user
 │   ├── TenantMiddleware.php         # Resolves tenant_id param, loads $request->tenant
 │   ├── JsonBodyParserMiddleware.php # Parses raw JSON body into $request->bodyParams
 │   └── ApiAuthMiddleware.php        # API key auth — validates api_key_hash, loads $request->user
 ├── Models/                  # Framework-owned only — User and Tenant, nothing else. See §16.7 for extending these.
-│   ├── User.php              # Extends BaseModel — DB access only. Covers users, password_reset_tokens, signup_tokens tables. Never calls Clock.
+│   ├── User.php              # Extends BaseModel — DB access only. Covers the users and login_codes tables. Never calls Clock.
 │   └── Tenant.php            # Standalone (does not extend BaseModel) — DB access only. findById, findAll, slugExists, insertTenant, saveSettings. Never calls Clock.
 ├── Services/                 # Framework-owned business logic — return ServiceResult objects. Own all Clock calls.
 │   ├── Email/
-│   │   ├── EmailService.php        # SMTP dispatch via vendored PHPMailer — fromConfig(), the three framework send*() methods
+│   │   ├── EmailService.php        # SMTP dispatch via vendored PHPMailer — fromConfig(), the two framework send*() methods (sendLoginCode, sendPlatformOwnerSignupAlert)
 │   │   ├── EmailMessage.php        # Value object passed to EmailService::send()
 │   │   ├── EmailResult.php         # Result object returned by EmailService::send()
-│   │   ├── Templates/               # Default templates for the three framework email flows — overridable per-app, see §16.8
+│   │   ├── Templates/               # Default templates for the two framework email flows (LoginCodeEmailTemplate, PlatformOwnerSignupAlertTemplate) — overridable per-app, see §16.8
 │   │   └── PHPMailer/               # Vendored PHPMailer (no Composer) — see §16.8 for the version-maintenance note
-│   ├── PasswordResetService.php    # requestPasswordReset(), validateToken(), resetPassword()
-│   ├── SignupService.php           # initiateSignup(), completeSignup(), resendCode() — opt-in terms acceptance (v2.1.0, §16.9)
-│   ├── SignupTenantResolver.php    # Interface — policy point: which tenant + role a new signup gets (v2.1.0, §16.9)
-│   ├── CreateTenantForSignup.php   # Default SignupTenantResolver — new tenant per signup, user becomes owner (v2.1.0)
-│   ├── TenantNameGenerator.php     # Pure helper — default tenant name + slug from a signup email (v2.1.0)
+│   ├── LoginCodeService.php        # v3.0.0 — requestCode(), verifyCode(), acceptTerms(), isTermsStepOpen(), cleanupExpiredCodes(). Sign-in + sign-up by emailed 6-digit code; opt-in terms step (§11, §16.9)
+│   ├── SignupTenantResolver.php    # Interface — policy point: which tenant + role a new person (unknown email, verified code) gets (v2.1.0, §16.9)
+│   ├── CreateTenantForSignup.php   # Default SignupTenantResolver — new tenant per new person, user becomes owner (v2.1.0)
+│   ├── TenantNameGenerator.php     # Pure helper — default tenant name + slug from the new person's email (v2.1.0)
 │   ├── UserService.php             # recordLogin(), saveSettings() — framework user business logic
 │   ├── TenantService.php           # saveSettings(), create() (v2.1.0) — framework tenant business logic
 │   ├── UserManagementService.php   # getUserDashboard() — user dashboard KPIs and user list; platform role spans all tenants (v1.4, v2.2.0)
 │   └── ServiceResult.php           # Standardised result object for all services
 ├── sql/
-│   ├── schema.core.sql      # Auto-executed on first boot if users table missing. Contains seed data.
+│   ├── schema.core.sql      # Auto-executed on first boot if users table missing. A fresh install starts EMPTY — no seed data (v3.0.0).
 │   └── migrations/          # Hand-run, idempotent SQL for EXISTING installs when a release changes framework tables (v2.1.0+). Shipped in release zips. See §16.6.
-│       └── v2.1.0_signup_terms.sql
+│       ├── v2.1.0_signup_terms.sql
+│       └── v3.0.0_passwordless.sql   # Unique users.email, login_codes; drops password_hash, password_reset_tokens, signup_tokens. Stops if one email exists in two tenants.
 ├── tools/
 │   ├── build_release.php              # Builds a clean, framework-only dist/ zip for a GitHub Release update asset
 │   └── generate_release_manifest.php  # Diffs this release against the last one — file/route/schema changes — drafts RELEASE_MANIFEST.json
-├── tests/                   # Pre-release checks (plain PHP CLI). boot_layout_test.php verifies the APP_BASE_DIR contract. Excluded from release zips.
+├── tests/                   # Pre-release checks (plain PHP CLI). boot_layout_test.php verifies the APP_BASE_DIR contract; login_code_test.php (v3.0.0) exercises LoginCodeService against a scratch database `frank_v3_test` that it creates and drops. Excluded from release zips.
 ├── releases/                # Historical per-version snapshots, used by generate_release_manifest.php for diffing. Excluded from release zips.
 └── Versions/                 # Per-release migration notes (e.g. FrankPHP_v2.1.0_migration_notes.md). Shipped in release zips from v2.1.0 so upgraders receive the notes with the SQL.
 ```
@@ -151,8 +151,8 @@ app/
 ├── Views/
 │   ├── layouts/
 │   │   ├── app-main.php    # Authenticated app shell — topbar, sidebar nav, page-content-area. All authenticated views require this layout.
-│   │   └── authViews.php   # Unauthenticated shell. Used for login, signup, password reset, terms.
-│   ├── auth/               # login.php, forgot-password.php, forgot-password-sent.php, reset-password.php, reset-password-error.php, signup.php, signup-verify.php, terms.php (placeholder — replace, §16.9)
+│   │   └── authViews.php   # Unauthenticated shell. Used for the sign-in screens and terms.
+│   ├── auth/               # login.php (the one sign-in/sign-up screen), login-verify.php, login-terms.php, terms.php (placeholder — replace, §16.9)
 │   ├── home/
 │   │   └── dashboard.php   # Default tenant dashboard — replace with application-specific content
 │   ├── users/
@@ -164,9 +164,11 @@ app/
 │       ├── app-nav.php     # Sidebar nav — included by app-main.php. Add new nav items here.
 │       ├── gtm_head.html   # Google Tag Manager head snippet
 │       └── gtm_body.html   # Google Tag Manager body snippet
+├── private/
+│   └── sessions/              # v3.0.0 — PHP session files, created on demand by Session::start() (mode 0700, git-ignored, outside the web root)
 ├── Scaffold/examples/         # Cookbook-style reference implementations, not live code — organization, media, form-presenter, video-library. See each folder's own README.
 └── public/                    # Web root
-    ├── index.php               # Entry point — defines APP_BASE_DIR, requires framework/bootstrap.php, dispatches the request
+    ├── index.php               # Entry point — defines APP_BASE_DIR, requires framework/bootstrap.php, starts the session with Session::start(), dispatches the request
     ├── .htaccess
     ├── favicon.ico
     └── assets/
@@ -200,7 +202,7 @@ app/public/index.php (entry point)
         └── APP_VIEWS_DIR and FRANK_VERSION constants defined
         └── Container created → framework services registered as singletons
         └── Router created → receives Container
-        └── framework routes registered (login, signup, password reset, tenant/account settings, user management)
+        └── framework routes registered (sign-in / verify / terms / logout, tenant/account settings, user management)
         └── hard-requires app/bootstrap.php as its final step, passing $container/$router/$config already in scope
               └── app/bootstrap.php registers application routes and container bindings, returns $router
   └── $router->dispatch(new Request())
@@ -225,7 +227,7 @@ A missing `app/bootstrap.php` is a fatal boot error by design — there is no sh
 
 **Middleware execution order for a standard tenant route `[$tm, $auth]`:**
 1. `TenantMiddleware` — resolves `{tenant_id}` from route params, loads tenant row, sets `$request->tenant`
-2. `AuthMiddleware` — checks `$_SESSION['user_id']`, loads user row, validates user belongs to tenant, sets `$request->user`
+2. `AuthMiddleware` — starts the session (`Session::start()`), checks `$_SESSION['user_id']`, loads user row, validates user belongs to tenant, sets `$request->user`
 3. Controller method executes
 
 **If any middleware fails:** it calls `Response::redirect()` or `http_response_code()` and returns without calling `$next` — the pipeline stops.
@@ -263,7 +265,7 @@ Application-defined middleware follows the same bare-shorthand-resolves-to-`App\
 
 **Standard middleware combinations:**
 - Public page: `[]`
-- Public POST (login): `[$json]`
+- Public POST (sign-in code request / verify / terms): `[$json]`
 - Authenticated tenant page: `[$tm, $auth]`
 - Authenticated tenant POST: `[$tm, $auth, $json]`
 - API endpoint: `[$tm, $apiAuth, $json]`
@@ -307,8 +309,8 @@ A framework controller follows the identical pattern one namespace over: `namesp
 class AuthController extends BaseController
 {
     public function __construct(
-        private PasswordResetService $passwordResetService,
-        private UserService          $userService
+        private LoginCodeService $loginCodeService,
+        private UserService      $userService
     ) {}
 }
 ```
@@ -349,7 +351,7 @@ require APP_VIEWS_DIR . '/layouts/app-main.php'; // or authViews.php
 
 **Layouts:**
 - `app-main.php` — full authenticated shell. Renders `$content` inside `.page-content-area`. Includes header and nav partials. Expects `$title`, `$tenant`, `$user` in scope.
-- `authViews.php` — minimal unauthenticated shell. Renders `$content` only. Used for login, password reset pages.
+- `authViews.php` — minimal unauthenticated shell. Renders `$content` only. Used for the sign-in screens (login, verify, terms).
 
 **Variables available in views** (via `extract()` in `Response::view()`): everything passed in the params array to `$this->view()`.
 
@@ -380,10 +382,10 @@ A view that resolves priority between data sources must be refactored — this i
 ```php
 // In a Service:
 $now = Clock::nowUtcString();
-$this->userModel->markSignupTokenUsed($tokenId, $now); // model receives string, never calls Clock
+$this->userModel->markLoginCodeUsed($codeId, $now); // model receives string, never calls Clock
 
 // WRONG — model must not do this:
-public function markSignupTokenUsed(int $id): bool {
+public function markLoginCodeUsed(int $id): bool {
     // Clock::nowUtcString() here is a SoC violation
 }
 ```
@@ -483,9 +485,8 @@ return $this->view('some/view', ['error' => $result->message]);
 
 | Method | Purpose |
 |--------|---------|
-| `sendPasswordReset(email, name, resetUrl)` | Password reset flow |
-| `sendSignupVerification(email, code, expiryMinutes)` | Signup email verification |
-| `sendPlatformOwnerSignupAlert(triggeringEmail, event)` | Alerts the platform owner (`MAIL_SITE_ADMIN`) on a signup-related event — both a verification code being requested and an account being successfully created |
+| `sendLoginCode(email, code, expiryMinutes)` | The emailed 6-digit sign-in code (v3.0.0). One email for both sign-in and sign-up; code only, no link |
+| `sendPlatformOwnerSignupAlert(triggeringEmail, event)` | Alerts the platform owner (`MAIL_SITE_ADMIN`) twice, as in v2: when an address with no account requests a code, and when the account is created |
 
 Each renders a default template shipped in `Services/Email/Templates/`. The template *class* — not this method — is what's overridable per-application, via `config('mail.templates')`, without editing this file. See §16.8, "Overriding Framework Email Templates."
 
@@ -518,14 +519,12 @@ Each renders a default template shipped in `Services/Email/Templates/`. The temp
 | Id (class string) | Type | Why |
 |---|---|---|
 | `EmailService::class` | singleton | Config-driven SMTP credentials; shared across all services |
-| `PasswordResetService::class` | singleton | Depends on EmailService |
-| `SignupTenantResolver::class` | singleton | Signup tenant-placement policy — default `CreateTenantForSignup`. Replace with `override()` (§16.9). v2.1.0 |
-| `SignupService::class` | singleton | Depends on User model + EmailService + SignupTenantResolver + `$config['signup']` (§16.9) |
+| `SignupTenantResolver::class` | singleton | New-account tenant-placement policy — default `CreateTenantForSignup`. Replace with `override()` (§16.9). v2.1.0 |
+| `LoginCodeService::class` | singleton | Depends on User model + EmailService + SignupTenantResolver + `$config['signup']` (§11, §16.9). v3.0.0 |
 | `UserService::class` | singleton | Framework user business logic — recordLogin, saveSettings |
 | `TenantService::class` | singleton | Framework tenant business logic — saveSettings allowlist and null-coercion |
 | `UserManagementService::class` | singleton | Admin user dashboard data service — introduced v1.4 |
-| `AuthController::class` | bind | Needs PasswordResetService + UserService injected |
-| `SignupController::class` | bind | Needs SignupService + UserService injected (UserService added v2.1.0) |
+| `AuthController::class` | bind | Needs LoginCodeService + UserService injected |
 | `UserManagementController::class` | bind | Needs UserManagementService + $config injected — introduced v1.4 |
 
 Controllers are registered with `bind()` (not `singleton()`) because a fresh controller instance per request is the correct behaviour.
@@ -601,11 +600,11 @@ class NotificationService
 
 `Database::getPdo()` returns the singleton — called by `BaseModel::__construct()` and standalone models.
 
-**On first boot:** if the `users` table does not exist, `schema.core.sql` is executed automatically via `Database::runSchemaFileIfMissingTable()` and seed data is inserted (one tenant, two seed users with password `password`).
+**On first boot:** if the `users` table does not exist, `schema.core.sql` is executed automatically via `Database::runSchemaFileIfMissingTable()`. A fresh install starts **empty** (v3.0.0): no seeded tenant and no seeded users — the first person to verify an emailed sign-in code creates the first tenant and becomes its owner (§11).
 
 `Database::runSchemaFileIfMissingTable(path, sentinelTable)` is a general-purpose primitive, not specific to the core schema — application code may call it a second time for its own `app/sql/schema.app.sql`, guarded by an application-chosen sentinel table. See §16.7 for the full pattern and why this exists.
 
-`Database::transaction(callable $fn)` *(v2.1.0)* runs `$fn` in one transaction on the shared connection — commits on return, rolls back and rethrows on any `Throwable`. Every model defaults to the same `getPdo()` connection, so writes across `User` and `Tenant` inside the callable are atomic. Called from Services (e.g. `SignupService::completeSignup()`), never from Models.
+`Database::transaction(callable $fn)` *(v2.1.0)* runs `$fn` in one transaction on the shared connection — commits on return, rolls back and rethrows on any `Throwable`. Every model defaults to the same `getPdo()` connection, so writes across `User` and `Tenant` inside the callable are atomic. Called from Services (e.g. `LoginCodeService` creating a tenant + owner user), never from Models.
 
 **PDO settings:** `ERRMODE_EXCEPTION`, `FETCH_ASSOC`.
 
@@ -754,7 +753,7 @@ Examples:
 - birthday → `DATE`
 - local calendar-only due date → `DATE`
 - event starts at an exact instant → UTC `DATETIME`
-- password reset expiry → UTC `DATETIME`
+- sign-in code expiry → UTC `DATETIME`
 
 ### 10.5 Output Rules
 
@@ -848,10 +847,18 @@ When building or reviewing FrankPHP code:
 
 ## 11. Authentication and Multi-tenancy
 
-**Session:** PHP native sessions. `$_SESSION['user_id']` is the only session value the framework sets.
+**Passwordless (v3.0.0).** There are no passwords anywhere in the framework. One screen (`/login`) signs people in and signs new people up: the person enters an email address and is emailed a 6-digit code (code only, no link). Whatever they do, the screens and messages are identical for known and unknown addresses until the code is verified.
+
+**Session:** PHP native sessions, always started through `Frank\Core\Session::start()` — never bare `session_start()` (`app/public/index.php` and `AuthMiddleware` both use it).
+
+- **28 days, rolling.** The session and its cookie last 28 days from the person's last use, so staying logged in is renewed while they keep using the app. For a logged-in session the cookie is re-issued with a fresh 28-day expiry at most once an hour, and a session idle for more than 28 days is destroyed. Clearing cookies logs the person out.
+- **Own save path.** Session files live in `APP_BASE_DIR/app/private/sessions` (created on demand, mode 0700, git-ignored) and `session.gc_maxlifetime` is set to 28 days, so another site sharing the same PHP install cannot garbage-collect these sessions early.
+- Cookie flags: `HttpOnly`, `SameSite=Lax`, `Secure` when the request is HTTPS.
+- Session keys set by the framework: `user_id` (the login), `csrf_token`, and the in-flight sign-in state `login_email` / `login_terms`; `Session` keeps `_last_activity` and `_cookie_refreshed_at`.
+- `Session` uses `time()` for cookie and idle arithmetic. This is PHP runtime session mechanics, not a persisted application timestamp, so it is the one sanctioned use outside `Clock` (§10); every timestamp written to the database still comes from `Clock` in a Service.
 
 **AuthMiddleware** on every protected route:
-1. Starts session if not started
+1. Starts the session via `Session::start()`
 2. Redirects to `/login?next={current_url}` if `user_id` not in session
 3. Loads user via `User::findById()`
 4. If route has `{tenant_id}` param, verifies `user.tenant_id === route tenant_id` — returns 403 if mismatch
@@ -862,13 +869,25 @@ When building or reviewing FrankPHP code:
 2. Loads tenant via `Tenant::findById()` — returns 404 if not found
 3. Sets `$request->tenant` (array)
 
-**Login flow:** `AuthController@login` → verifies email + `password_verify()` → sets `$_SESSION['user_id']` → calls `UserService::recordLogin()` which records the UTC login timestamp via Clock → redirects to `/tenant/{tenant_id}/dashboard`.
+**One email = one user = one tenant.** `users.email` is globally unique. A person who needs a second tenant uses a different email address.
 
-**Signup flow (two-step):**
-1. `POST /signup` → `SignupController@initiateSignup` → validates (including Terms & Conditions acceptance when `signup.require_terms` is on — §16.9), creates pending record, sends verification code via `EmailService::sendSignupVerification()`, stores `signup_email` in session
-2. `POST /signup/verify` → `SignupController@completeSignup` → verifies code; then, in one transaction, `SignupTenantResolver` places the user (framework default v2.1.0: **creates a new tenant and the user becomes its `owner`**), the user row is inserted and the token marked used → logs user in and calls `UserService::recordLogin()` (a failure there is logged, never blocks the new user) → redirects to `/tenant/{new tenant_id}/dashboard`
+**Sign-in / sign-up flow** (`AuthController` + `LoginCodeService`; routes in §16.4):
+1. `GET /login` — one field: email. `POST /login` requests a code: `LoginCodeService::requestCode()` validates the address, applies the per-IP limit, cancels earlier unused codes for that address, stores the new code hashed (`password_hash()`) in `login_codes`, and emails the plain code via `EmailService::sendLoginCode()`. The controller then always redirects to `/login/verify` (address held in `$_SESSION['login_email']`).
+2. `GET/POST /login/verify` — `LoginCodeService::verifyCode()`.
+   - A code lasts **15 minutes**.
+   - **3 wrong guesses cancel the code** (`login_codes.attempts`, counted atomically before the comparison so parallel requests cannot exceed the cap); the person must request a new one. The old `$_SESSION` lockout counters are gone.
+   - A correct code is consumed (`used_at`); it cannot be reused.
+   - **Known email:** the user is logged in.
+   - **Unknown email:** inside one `Database::transaction()`, `SignupTenantResolver` places the user (framework default: **creates a new tenant and the user becomes its `owner`**, name derived from the email — §16.9) and the user row is inserted, then the person is logged in. There is no "create an account?" step. The platform owner is alerted (`sendPlatformOwnerSignupAlert`).
+   - **Terms (only when `signup.require_terms` is on):** an *unknown* email that has verified its code is sent to `GET/POST /login/terms` first; nothing is created until they accept. The "verified, awaiting terms" state is `$_SESSION['login_terms']` and expires after 15 minutes. Existing users never see this step; with the flag off there is no such step.
+3. `POST /login/resend` — a new code for the address in the session. It counts toward the limit and cancels earlier unused codes, exactly like step 1. The resend form is its own `<form>`, never nested inside the verify form.
+4. **On success** (`AuthController::completeLogin()`): `session_regenerate_id(true)`, `$_SESSION['user_id']` set, `UserService::recordLogin()` writes the UTC login timestamp via Clock (a failure is logged and does not block the person — the code is already spent), redirect to `/tenant/{tenant_id}/dashboard`.
+5. **Rate limit:** at most **5 code requests per hour per IP address** (requests and resends together; one `login_codes` row per request). The over-limit response re-renders `/login` with "Too many requests. Please try again later." and no email is sent.
+6. **CSRF:** every POST form in this flow carries a hidden `csrf_token` matching `$_SESSION['csrf_token']` (generated by the controller, compared with `hash_equals`); a mismatch re-renders the screen with "Invalid request. Please try again."
 
-Before v2.1.0 every signup joined tenant 1 as `user`. Apps that need the old or another model (e.g. invite into an existing tenant) replace the resolver — see §16.9.
+`GET /logout` destroys the session (`Session::destroy()`) and redirects to `/login`.
+
+Apps that need a different placement model (e.g. invite into an existing tenant) replace the `SignupTenantResolver` — see §16.9.
 
 **Role checking** is done in controllers, not middleware. Pattern used in `TenantSettingsController`:
 ```php
@@ -954,7 +973,7 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 
 **External dependencies — not uniform, currently split two ways:**
 - `app-main.php` (the authenticated shell) loads Bootstrap 5.3.2, Bootstrap Icons 1.10.5, and Syncfusion EJ2 32.1.19 from CDN.
-- `authViews.php` (the unauthenticated shell — login, signup, password reset) loads a *locally vendored* copy instead, from `app/public/assets/vendor/`: Bootstrap 5.3.6, Bootstrap Icons, and Swiper. This is a different Bootstrap version than the CDN one — a known inconsistency, not a deliberate design choice, and not yet resolved.
+- `authViews.php` (the unauthenticated shell — the sign-in screens) loads a *locally vendored* copy instead, from `app/public/assets/vendor/`: Bootstrap 5.3.6, Bootstrap Icons, and Swiper. This is a different Bootstrap version than the CDN one — a known inconsistency, not a deliberate design choice, and not yet resolved.
 
 ---
 
@@ -962,7 +981,9 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 
 - `.env` file sits outside the public web root (`/public`) — credentials cannot be requested directly by a browser
 - All DB queries use PDO prepared statements
-- `password_hash()` / `password_verify()` for passwords
+- There are no passwords (v3.0.0). Sign-in codes are 6-digit, random (`random_int`), stored only as `password_hash()` hashes, valid 15 minutes, single-use, cancelled after 3 wrong guesses, and requests are limited to 5 per hour per IP (§11)
+- Known and unknown email addresses behave identically until a code is verified, so the sign-in screen does not reveal whether an address has an account. The person sees no difference; behind the scenes the platform owner is alerted when an address with no account requests a code
+- Sessions: 28-day rolling, `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, stored in `app/private/sessions` (§11)
 - `htmlspecialchars()` on all user-supplied output in views
 - Tenant isolation enforced at middleware level (route param vs session user) and at model level (tenant_id in all queries)
 - The single sanctioned cross-tenant read is the Users dashboard for role `platform` (v2.2.0). It is decided in `UserManagementService` from the authenticated user's role, never from request input, and it is still built from tenant-scoped `User::allByTenant()` calls. `admin` and `owner` stay tenant-scoped. Role `user` is refused by the controller, and the app nav hides the link from it.
@@ -970,7 +991,7 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - Multi-statement PDO mode is disabled after schema import
 - SMTP credentials live exclusively in `.env` and flow through `config['mail']` → `EmailService::fromConfig()` → the container singleton. They are never present in any service or controller file.
 - Persisted timestamps are stored as UTC `DATETIME` values and generated through `Frank\Core\Clock` in the Service layer; models receive pre-computed UTC strings as parameters and never call Clock directly.
-- Signup Terms & Conditions acceptance (v2.1.0, §16.9) is enforced **server-side** in `SignupService::initiateSignup()` when `signup.require_terms` is on. A view's `required` checkbox or disabled submit button is UX only and can be bypassed — never rely on it.
+- Terms & Conditions acceptance (v2.1.0, §16.9) is enforced **server-side** in `LoginCodeService::acceptTerms()` when `signup.require_terms` is on, before the tenant and user are created. A view's `required` checkbox or disabled submit button is UX only and can be bypassed — never rely on it.
 - Consent columns (`users.terms_accepted_at`, `terms_version`) are deliberately not public properties on `User`, so `BaseModel::save()` can never overwrite recorded consent (§16.2).
 
 ---
@@ -981,8 +1002,8 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - No template engine — plain PHP views
 - No event system
 - No queue system
-- No built-in CSRF protection — <!-- add if/when implemented -->
-- No built-in rate limiting — <!-- add if/when implemented -->
+- No framework-wide CSRF protection — only the sign-in forms carry a per-session `csrf_token` (§11). Application forms must add their own
+- No general rate-limiting facility — only sign-in code requests are limited, per IP (§11)
 - No Composer — zero external dependencies
 - No external date/time library — UTC/local handling is provided by `Frank\Core\Clock` using native PHP date/time classes
 
@@ -1015,13 +1036,14 @@ You are reading CODEBASE.md. It describes the framework. Everything specific to 
 Before writing or modifying any code, classify the work:
 
 **Framework-owned (described in CODEBASE.md, Section 16):**
-- `tenants`, `users`, `password_reset_tokens` tables and any future framework auth tables
+- `tenants`, `users`, `login_codes` tables and any future framework auth tables
 - All models in `Models/User.php`, `Models/Tenant.php`
-- All controllers in `framework/Controllers/`: `AuthController.php`, `SignupController.php`, `TenantSettingsController.php`, `AccountSettingsController.php`, `UserManagementController.php`
-- All framework default routes (login, logout, password reset, signup, tenant/account settings, user management) — not the dashboard route, which is app-owned; see §16.4
+- All controllers in `framework/Controllers/`: `AuthController.php`, `TenantSettingsController.php`, `AccountSettingsController.php`, `UserManagementController.php`
+- All framework default routes (sign-in / verify / resend / terms, logout, tenant/account settings, user management) — not the dashboard route, which is app-owned; see §16.4
 - The middleware stack (`AuthMiddleware`, `TenantMiddleware`, `JsonBodyParserMiddleware`, `ApiAuthMiddleware`)
-- `Core/Clock.php`, `Core/Container.php`, and the service bindings registered in `framework/bootstrap.php` for framework services
+- `Core/Clock.php`, `Core/Container.php`, `Core/Session.php`, and the service bindings registered in `framework/bootstrap.php` for framework services
 - `Services/UserService.php` — framework service for user business logic
+- `Services/LoginCodeService.php` — framework service for passwordless sign-in / sign-up (v3.0.0)
 - `Services/TenantService.php` — framework service for tenant business logic
 - `Services/UserManagementService.php` — framework service for the admin user management dashboard (v1.4)
 
@@ -1107,12 +1129,12 @@ Adapt your documentation output to the mode you are operating in:
 
 Do not add the following to MYAPP.md — they belong in CODEBASE.md and are already documented there:
 
-- Framework table schemas (`tenants`, `users`, `password_reset_tokens`, `signup_tokens`)
-- Framework default routes (auth, tenant/account settings, signup, user management) — not the dashboard route; that's app-owned and belongs in MYAPP.md, see §16.4
+- Framework table schemas (`tenants`, `users`, `login_codes`)
+- Framework default routes (sign-in, tenant/account settings, user management) — not the dashboard route; that's app-owned and belongs in MYAPP.md, see §16.4
 - Framework middleware descriptions
 - BaseModel, BaseController, Container, or core class behaviour
 - General framework conventions (these apply globally and are not re-stated per application)
-- EmailService's three framework-flow methods (password reset, signup verification, platform owner signup alert)
+- EmailService's two framework-flow methods (sign-in code, platform owner signup alert)
 
 If a feature depends on a framework-provided table or route, reference it by name in MYAPP.md where relevant (e.g. "foreign key to `users.id`") but do not re-document the framework schema.
 
@@ -1154,52 +1176,38 @@ MYAPP.md exists precisely to eliminate guessing. If it is incomplete, the right 
 |--------|------|-------|
 | id | int PK AUTO_INCREMENT | |
 | tenant_id | int NOT NULL FK | tenants.id — CASCADE DELETE |
-| email | varchar(255) NOT NULL | unique per tenant (uq_users_tenant_email) |
+| email | varchar(255) NOT NULL | **globally unique** (`uq_users_email`, v3.0.0) — one email = one user = one tenant. Stored lowercase |
 | name | varchar(255) NOT NULL | |
-| password_hash | varchar(255) | nullable |
-| role | varchar(50) NOT NULL | `owner`, `admin`, `user`, `platform` — default `user`. From v2.1.0 a self-service signup creates its own tenant and is its `owner` (§16.9) |
+| role | varchar(50) NOT NULL | `owner`, `admin`, `user`, `platform` — default `user`. From v2.1.0 a new person (v3.0.0: an unknown email that verified its sign-in code) gets their own tenant and is its `owner` (§16.9) |
 | api_key_hash | char(64) | nullable — hashed API key for apiAuth middleware |
 | timezone | varchar(100) | nullable — inherits from tenant if null |
 | created_at | datetime NOT NULL | UTC |
 | updated_at | datetime | nullable UTC |
-| accessed_at | datetime | nullable UTC — last successful login, written by UserService::recordLogin() (login and, from v2.1.0, signup auto-login) |
-| terms_accepted_at | datetime | nullable UTC — *v2.1.0.* When the user ticked Terms & Conditions and submitted signup step 1 (`Clock::nowUtcString()`), not when they verified. NULL = not recorded (feature off, or pre-2.1 user). Never backfilled. §16.9 |
+| accessed_at | datetime | nullable UTC — last successful login, written by UserService::recordLogin() (every sign-in, including the one that creates the account) |
+| terms_accepted_at | datetime | nullable UTC — *v2.1.0.* When the person accepted Terms & Conditions on the terms step (`Clock::nowUtcString()`; v3.0.0 — before v3.0.0 it was the sign-up step-1 time). NULL = not recorded (feature off, or pre-2.1 user). Never backfilled. §16.9 |
 | terms_version | varchar(50) | nullable — *v2.1.0.* `signup.terms_version` in force at acceptance. §16.9 |
 
-#### `password_reset_tokens`
+#### `login_codes` *(v3.0.0)*
+
+One row per code request (sign-in, sign-up and resend all use it). Replaces `password_reset_tokens` and `signup_tokens`, which were dropped.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | id | int PK AUTO_INCREMENT | |
-| user_id | int NOT NULL FK | users.id — CASCADE DELETE |
-| tenant_id | int NOT NULL FK | tenants.id — CASCADE DELETE |
-| token_hash | varchar(255) NOT NULL | hashed reset token |
+| email | varchar(255) NOT NULL | address the code was requested for, lowercase. No foreign key — it may belong to nobody yet |
+| code_hash | varchar(255) NOT NULL | `password_hash()` of the 6-digit code; the plain code exists only in the email |
+| attempts | int NOT NULL DEFAULT 0 | guesses made against this code; at 3 the code is cancelled |
+| expires_at | datetime NOT NULL | UTC — request time + 15 minutes |
+| used_at | datetime | nullable UTC — set when the code is consumed, cancelled (3 wrong guesses) or superseded by a newer request/resend |
 | created_at | datetime NOT NULL | UTC |
-| expires_at | datetime NOT NULL | UTC |
-| used_at | datetime | nullable UTC — set when token is consumed or invalidated |
-
-#### `signup_tokens`
-
-| Column | Type | Notes |
-|--------|------|-------|
-| id | int PK AUTO_INCREMENT | |
-| email | varchar(255) NOT NULL | email address attempting signup |
-| code_hash | varchar(255) NOT NULL | hashed verification code |
-| password_hash | varchar(255) NOT NULL | pre-hashed password held until signup completes |
-| tenant_id | int FK | nullable — NULL until signup completes; CASCADE DELETE |
-| expires_at | datetime NOT NULL | UTC |
-| used_at | datetime | nullable UTC — set by markSignupTokenUsed() or invalidatePendingSignupTokens() |
-| created_at | datetime NOT NULL | UTC |
-| ip_address | varchar(45) | nullable — for rate limiting in SignupService |
+| ip_address | varchar(45) | nullable — drives the 5-requests-per-hour-per-IP limit |
 | user_agent | varchar(512) | nullable |
-| terms_accepted_at | datetime | nullable UTC — *v2.1.0.* Step-1 acceptance time, carried through `resendCode()` and copied to `users` on completion. §16.9 |
-| terms_version | varchar(50) | nullable — *v2.1.0.* Copied to `users` on completion. §16.9 |
 
-> **Note:** `signup_tokens.tenant_id` is NULL for the entire lifetime of an unverified token because no tenant exists until signup completes. This makes per-tenant scoping of unverified signup tokens structurally impossible — any query on this table that needs tenant context must join through `users` after completion.
+Indexes: `email`, `expires_at`, `(ip_address, created_at)`. All datetimes are written by `LoginCodeService` via `Clock`.
 
-**Schema initialisation:** If the `users` table does not exist on first boot, `sql/schema.core.sql` is executed automatically and seed data is inserted (one tenant, two seed users with password `password`). Change seed passwords before sharing any URL.
+**Schema initialisation:** If the `users` table does not exist on first boot, `sql/schema.core.sql` is executed automatically. A fresh install starts **empty** — no seeded tenant, no seeded users (v3.0.0). The first person to verify an emailed sign-in code creates the first tenant and becomes its owner.
 
-**Existing installs** do not re-run `schema.core.sql`. Columns added in a later release arrive via the hand-run script in `sql/migrations/` for that release (v2.1.0: `v2.1.0_signup_terms.sql`) — see §16.6.
+**Existing installs** do not re-run `schema.core.sql`. Columns added in a later release arrive via the hand-run script in `sql/migrations/` for that release (v2.1.0: `v2.1.0_signup_terms.sql`; v3.0.0: `v3.0.0_passwordless.sql`) — see §16.6.
 
 ---
 
@@ -1207,7 +1215,7 @@ MYAPP.md exists precisely to eliminate guessing. If it is incomplete, the right 
 
 | Model | File | Notes |
 |-------|------|-------|
-| `User` | `Models/User.php` | Extends BaseModel. DB access only — never calls Clock. Methods accept pre-computed UTC timestamp strings from Services. Public methods: `findById()`, `findByEmail()`, `findApiKeyHash(hash)`, `allByTenant(tenantId)` *(v1.4)*, `updateLastAccessed(userId, tenantId, accessedAt)`, `saveSettings(userId, tenantId, data, updatedAt)`, `updatePasswordHash(userId, hash, updatedAt)`, `insertUser(...)`, `insertPasswordResetToken(...)`, `findValidPasswordResetTokens(now)`, `markPasswordResetTokenAsUsed(id, usedAt)`, `invalidateAllUserPasswordResetTokens(userId, usedAt)`, `countRecentPasswordResetTokens(userId, threshold)`, `deleteExpiredPasswordResetTokens(cutoff)`, `insertSignupToken(...)`, `invalidatePendingSignupTokens(email, usedAt)`, `markSignupTokenUsed(id, usedAt)`, `findPendingSignupTokens(email, now)`, `findMostRecentPendingSignupToken(email, now)`, `countRecentSignupTokensByIp(ip, threshold)`, `deleteExpiredSignupTokens(cutoff)`. *v2.1.0:* `insertUser()` and `insertSignupToken()` take optional trailing `termsAcceptedAt, termsVersion`; the terms columns are included in the INSERT **only when `termsAcceptedAt` is non-null**, so an install that has not run the v2.1.0 migration keeps working while the feature is off. The terms columns are deliberately **not** public properties — `BaseModel::save()` persists every public property and would overwrite recorded consent with NULL from a partially-filled object. Token finders use `SELECT *`, so the columns are returned once they exist. |
+| `User` | `Models/User.php` | Extends BaseModel. DB access only — never calls Clock. Methods accept pre-computed UTC timestamp strings from Services. Public methods: `findById()`, `findByEmail()`, `findApiKeyHash(hash)`, `allByTenant(tenantId)` *(v1.4)*, `updateLastAccessed(userId, tenantId, accessedAt)`, `saveSettings(userId, tenantId, data, updatedAt)`, `insertUser(tenantId, email, name, role, createdAt, termsAcceptedAt = null, termsVersion = null)` *(v3.0.0: no password argument; throws PDOException 23000 if the email already exists)*. *v3.0.0 login-code methods (replace the password-reset and signup-token methods, and `updatePasswordHash()`; the `password_hash` property is gone):* `insertLoginCode(email, codeHash, expiresAt, createdAt, ip, userAgent)`, `invalidatePendingLoginCodes(email, usedAt)`, `markLoginCodeUsed(codeId, usedAt)` *(only updates an unused code and returns true for exactly one caller, so racing correct submissions cannot both win)*, `incrementLoginCodeAttempts(codeId, maxAttempts)` *(atomic; false once the code is used or at the cap)*, `findMostRecentPendingLoginCode(email, now)`, `countRecentLoginCodesByIp(ip, threshold)`, `deleteExpiredLoginCodes(cutoff)`. *v2.1.0:* `insertUser()` takes optional trailing `termsAcceptedAt, termsVersion`; the terms columns are included in the INSERT **only when `termsAcceptedAt` is non-null**, so an install that has not run the v2.1.0 migration keeps working while the feature is off. The terms columns are deliberately **not** public properties — `BaseModel::save()` persists every public property and would overwrite recorded consent with NULL from a partially-filled object. `findById()` / `findByEmail()` use `SELECT *`, so the columns are returned once they exist. |
 | `Tenant` | `Models/Tenant.php` | Does **not** extend BaseModel. Standalone PDO class. DB access only — never calls Clock, applies no allowlist. Methods: `findById()`, `findAll()`, `slugExists(slug)` *(v2.1.0)*, `insertTenant(name, slug, companyEmail, createdAt)` *(v2.1.0 — throws PDOException 23000 on slug collision; `TenantService` owns the retry)*, `saveSettings(tenantId, columns, updatedAt)`. `$columns` is a pre-validated map from `TenantService`; `$updatedAt` is a UTC string from `TenantService`. |
 
 ---
@@ -1217,6 +1225,7 @@ MYAPP.md exists precisely to eliminate guessing. If it is incomplete, the right 
 | Utility | File | Notes |
 |---------|------|-------|
 | `Clock` | `Core/Clock.php` | Stateless static date/time utility introduced in v1.3.0. Owns UTC timestamp generation, UTC/local conversion, timezone validation, timezone resolution, and UTC query boundary calculation. Loaded by PSR-4; no container binding required. Called from Services only — never from Models, Controllers, or Views. |
+| `Session` | `Core/Session.php` | *v3.0.0.* `Session::start()` is the only way a session is started (28-day rolling session, own save path `app/private/sessions`, `HttpOnly` / `SameSite=Lax` / `Secure` on HTTPS, hourly cookie refresh, idle-expiry destroy); `Session::destroy()` ends it. Used by `app/public/index.php`, `AuthMiddleware` and `AuthController`. See §11. |
 | `Database::transaction()` | `Core/Database.php` | *v2.1.0.* Runs a callable in one transaction on the shared PDO connection; commit on return, rollback + rethrow on any Throwable. Called from Services. See §9. |
 
 ---
@@ -1229,16 +1238,12 @@ These routes are registered in `framework/bootstrap.php` and are part of the fra
 |--------|---------|-------------------|------------|
 | GET | /login | AuthController@showLogin | none |
 | POST | /login | AuthController@login | json |
+| GET | /login/verify | AuthController@showVerify | none |
+| POST | /login/verify | AuthController@verify | json |
+| POST | /login/resend | AuthController@resend | json |
+| GET | /login/terms | AuthController@showTerms | none |
+| POST | /login/terms | AuthController@acceptTerms | json |
 | GET | /logout | AuthController@logout | none |
-| GET | /forgot-password | AuthController@showForgotPassword | none |
-| POST | /forgot-password | AuthController@sendPasswordReset | none |
-| GET | /reset-password | AuthController@showResetPassword | none |
-| POST | /reset-password | AuthController@resetPassword | none |
-| GET | /signup | SignupController@showSignup | none |
-| POST | /signup | SignupController@initiateSignup | json |
-| GET | /signup/verify | SignupController@showVerify | none |
-| POST | /signup/verify | SignupController@completeSignup | json |
-| POST | /signup/resend | SignupController@resendCode | json |
 | GET | /tenant/{tenant_id}/tenant-settings | TenantSettingsController@index | tm, auth |
 | POST | /tenant/{tenant_id}/tenant-settings/save | TenantSettingsController@save | tm, auth, json |
 | GET | /tenant/{tenant_id}/account | AccountSettingsController@index | tm, auth |
@@ -1246,6 +1251,8 @@ These routes are registered in `framework/bootstrap.php` and are part of the fra
 | GET | /tenant/{tenant_id}/users | UserManagementController@index | tm, auth |
 
 `GET /` and `GET /tenant/{tenant_id}/dashboard` are deliberately not in this table — they're registered in `app/bootstrap.php` against `App\Controllers\HomeController`, not here. `HomeController` ships as app-owned starter content specifically so an application can replace it freely; see `app/bootstrap.php`'s own comments. Likewise `GET /terms` (v2.1.0, `App\Controllers\LegalController@terms`) is registered in the starter's `app/bootstrap.php`, not here — see §16.9.
+
+`POST /login` and `POST /login/resend` request a code and are the only routes subject to the 5-per-hour-per-IP limit. The v2 `/signup`, `/signup/*`, `/forgot-password` and `/reset-password` routes no longer exist (v3.0.0).
 
 ---
 
@@ -1256,9 +1263,8 @@ These services are framework-owned and registered in the container by `framework
 | Service | Container type | Dependencies | Notes |
 |---------|---------------|--------------|-------|
 | `EmailService` | singleton | `$config['mail']` | SMTP gateway. All application email flows call `EmailService` send methods — never PHPMailer directly |
-| `PasswordResetService` | singleton | `User` model, `EmailService` | Password reset token lifecycle. Owns Clock calls for all reset token timestamps. |
-| `SignupService` | singleton | `User` model, `EmailService`, `SignupTenantResolver`, `$config['signup']` | Two-step email-verified signup. Owns Clock calls for all signup token timestamps. Delegates all DB access to User model — no raw PDO. *v2.1.0:* constructor adds trailing `tenantResolver`, `requireTerms` (default false), `termsVersion`; `initiateSignup()` adds trailing `$termsAccepted` and returns failure type `terms_required` when the flag is on and it isn't `'1'`; `completeSignup()` runs resolver + user insert + token update in `Database::transaction()`. The container factory reads `$config['signup'] ?? []` and, only when `require_terms` is on, verifies the v2.1.0 columns exist (throws `LogicException` naming the migration if not). §16.9 |
-| `SignupTenantResolver` | singleton | `TenantService` (default impl) | *v2.1.0.* Interface: `resolve(email, name): array{tenant_id, role, tenant_name?}`, called inside the signup transaction. Default `CreateTenantForSignup` — creates a tenant via `TenantNameGenerator` + `TenantService::create()` and returns role `owner`. Apps replace via `$container->override()`. §16.9 |
+| `LoginCodeService` | singleton | `User` model, `EmailService`, `SignupTenantResolver`, `$config['signup']` | *v3.0.0.* Passwordless sign-in and sign-up by emailed 6-digit code (replaces `SignupService` and `PasswordResetService`). Methods: `requestCode(email, ip, userAgent)` (validate, per-IP limit 5/hour, cancel earlier codes, store hashed, email, alert the platform owner when the address has no account; used for first request and resend), `verifyCode(email, code)` → success data `status` = `logged_in` (`user_id`, `tenant_id`, `email`) or `terms_required` (`email`, `verified_at`), `acceptTerms(email, verifiedAt, accepted)`, `isTermsStepOpen(verifiedAt)` (15-minute window), `cleanupExpiredCodes(olderThanDays = 7)` (cron). Owns every Clock call, `password_verify()` and every limit comparison; delegates all DB access to the `User` model. Unknown + correct code creates tenant + owner in `Database::transaction()` via the resolver, then alerts the platform owner. Constructor: `(userModel, emailService, tenantResolver, requireTerms = false, termsVersion = null, codeExpiryMinutes = 15, maxAttempts = 3, rateLimitRequests = 5, rateLimitMinutes = 60)`. The container factory reads `$config['signup'] ?? []` and, only when `require_terms` is on, verifies the v2.1.0 terms columns exist on `users` (throws `LogicException` naming the migration if not). §11, §16.9 |
+| `SignupTenantResolver` | singleton | `TenantService` (default impl) | *v2.1.0.* Interface: `resolve(email, name): array{tenant_id, role, tenant_name?}`, called inside the account-creation transaction. Default `CreateTenantForSignup` — creates a tenant via `TenantNameGenerator` + `TenantService::create()` and returns role `owner`. Apps replace via `$container->override()`. §16.9 |
 | `UserService` | singleton | `User` model | Introduced v1.3.2. Owns business logic for the user record: `recordLogin(userId, tenantId)`, `saveSettings(userId, tenantId, data)`. Owns allowlist and null-coercion for user preferences. Computes timestamps via Clock and passes them to the User model. |
 | `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`, `create(name, baseSlug, companyEmail): int` *(v2.1.0 — owns slug uniqueness: suffixes `-2`, `-3`… with the UNIQUE index as final guard and retry on collision; safe inside a transaction)*. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
 | `TenantNameGenerator` | not in container | none | *v2.1.0.* Pure helper (no DB, no Clock), constructed by `CreateTenantForSignup`. `fromEmail(email): array{name, slug}` — business domain → organisation name (`jane@acme-corp.com` → `Acme Corp` / `acme-corp`; two-part suffixes like `co.uk` handled); free-mail domain (`FREE_MAIL_DOMAINS`, extendable via constructor) → `"<Name>'s Workspace"`. `slugify()` is public static. Slug uniqueness is not its job. |
@@ -1274,7 +1280,9 @@ FrankPHP may add or modify framework-owned tables, models, and routes in future 
 - `schema.core.sql` is updated for fresh installs, and an idempotent, hand-run script ships in `sql/migrations/` for existing installs, with notes in `Versions/` (both in the release zip)
 - MYAPP.md will not be affected unless the application has deviated from framework defaults (which should already be recorded in the MYAPP.md Known Deviations section)
 
-**Worked example — v2.1.0.** Signup terms acceptance added `terms_accepted_at` / `terms_version` to `users` and `signup_tokens`. Shipped as: `schema.core.sql` (fresh installs), `sql/migrations/v2.1.0_signup_terms.sql` (existing installs — each `ALTER` guarded by an `information_schema` check, safe to re-run), `Versions/FrankPHP_v2.1.0_migration_notes.md`. The code stays safe on an un-migrated install (columns written only when the opt-in feature is on) and the feature fails fast with a clear message if enabled before the migration runs. There is no migration runner yet — a structured migration/upgrade tool is on the ROADMAP.
+**Worked example — v2.1.0.** Signup terms acceptance added `terms_accepted_at` / `terms_version` to `users` (and to `signup_tokens`, which v3.0.0 later dropped). Shipped as: `schema.core.sql` (fresh installs), `sql/migrations/v2.1.0_signup_terms.sql` (existing installs — each `ALTER` guarded by an `information_schema` check, safe to re-run), `Versions/FrankPHP_v2.1.0_migration_notes.md`. The code stays safe on an un-migrated install (columns written only when the opt-in feature is on) and the feature fails fast with a clear message if enabled before the migration runs. There is no migration runner yet — a structured migration/upgrade tool is on the ROADMAP.
+
+**Worked example — v3.0.0 (breaking).** Passwordless sign-in shipped as `schema.core.sql` (fresh installs: no seed rows, no `password_hash`, unique `users.email`, `login_codes`, no token tables) and `sql/migrations/v3.0.0_passwordless.sql` (existing installs, hand-run, idempotent). Order matters: the unique key on `users.email` is added **first** and the script stops there if one address exists in two tenants (the file's header gives the `SELECT` that lists them); only then are `login_codes` created and `password_hash`, `password_reset_tokens` and `signup_tokens` dropped. Unlike v2.1.0 the code is **not** safe on an un-migrated database — run the script when deploying v3.0.0.
 
 This separation is what makes framework upgrades safe — application-layer documentation and framework-layer documentation do not overlap.
 
@@ -1324,7 +1332,7 @@ if (file_exists($appSchemaPath)) {
 
 ### 16.8 Overriding Framework Email Templates
 
-Three email flows are framework-owned because framework-owned Services trigger them directly (`SignupService`, `PasswordResetService` — see §16.5): signup verification, password reset, and the platform-owner signup alert. Every application needs these to work, but the wording and branding inside them is exactly the kind of thing a real business wants in its own voice — this is a deliberate, narrow exception to "don't touch framework-owned files."
+Two email flows are framework-owned because a framework-owned Service triggers them directly (`LoginCodeService` — see §16.5): the sign-in code and the platform-owner signup alert. Every application needs these to work, but the wording and branding inside them is exactly the kind of thing a real business wants in its own voice — this is a deliberate, narrow exception to "don't touch framework-owned files."
 
 **The rule:** never edit `Services/Email/Templates/*.php` directly. Override the template *class* via config instead.
 
@@ -1334,8 +1342,7 @@ Three email flows are framework-owned because framework-owned Services trigger t
 'mail' => [
     // ...existing keys...
     'templates' => [
-        // 'signup_verification'         => \App\Email\Templates\MySignupVerificationTemplate::class,
-        // 'password_reset'               => \App\Email\Templates\MyPasswordResetTemplate::class,
+        // 'login_code'                  => \App\Email\Templates\MyLoginCodeTemplate::class,
         // 'platform_owner_signup_alert'  => \App\Email\Templates\MyPlatformOwnerAlertTemplate::class,
     ],
 ],
@@ -1345,8 +1352,7 @@ An override class must implement the same static methods, with the same argument
 
 | Flow key | Required static signature |
 |----------|---------------------------|
-| `signup_verification` | `buildHtml(string $email, string $code, int $expiry): string` and `buildText(string $email, string $code, int $expiry): string` |
-| `password_reset` | `buildHtml(string $name, string $resetUrl): string` and `buildText(string $name, string $resetUrl): string` |
+| `login_code` | `buildHtml(string $email, string $code, int $expiry): string` and `buildText(string $email, string $code, int $expiry): string` — the email carries the code only, never a link |
 | `platform_owner_signup_alert` | `buildHtml(string $email, string $event): string` and `buildText(string $email, string $event): string` |
 
 The override class can live anywhere under `App\`; it does not need to sit in any particular folder.
@@ -1355,22 +1361,25 @@ The override class can live anywhere under `App\`; it does not need to sit in an
 
 ---
 
-### 16.9 Signup: Tenant Creation and Terms Acceptance (v2.1.0)
+### 16.9 New Accounts: Tenant Creation and Terms Acceptance (v2.1.0, reworked v3.0.0)
 
-#### Tenant-on-signup
+Since v3.0.0 there is no separate sign-up. A new account is created when an email address that has no user yet verifies its emailed sign-in code (§11).
 
-Every verified signup creates a **new tenant** and the user becomes its **`owner`** (before v2.1.0: tenant 1, role `user`).
+#### Tenant-on-first-sign-in
 
-- **Tenant name** — derived from the email by `TenantNameGenerator`, no extra form field: business domain → organisation name (`jane@acme-corp.com` → "Acme Corp"); free-mail domain (gmail, outlook, icloud…) → "Jane's Workspace". The owner can rename it in Tenant Settings.
+An unknown email that verifies its code creates a **new tenant** and the person becomes its **`owner`** (before v2.1.0: tenant 1, role `user`). One email = one user = one tenant.
+
+- **Tenant name** — derived from the email by `TenantNameGenerator`, no extra form field: business domain → organisation name (`jane@acme-corp.com` → "Acme Corp"); free-mail domain (gmail, outlook, icloud…) → "Jane's Workspace". The owner can rename it in Tenant Settings. The user's display name is derived from the email local part (`john.doe@…` → "John Doe").
 - **Slug** — from the name, made unique by `TenantService::create()` (`acme-corp`, `acme-corp-2`, …).
-- **`company_email`** — set to the signup email.
-- **Atomic** — tenant insert, user insert and token update run in one `Database::transaction()`. Any failure rolls back all three and the user sees "Account creation failed".
-- Two people from the same company signing up separately get **two tenants** — joining an existing tenant needs an invite flow (not in the framework yet).
+- **`company_email`** — set to the email.
+- **Atomic** — tenant insert and user insert run in one `Database::transaction()`. Any failure rolls back both and the person sees "Account creation failed". The code is already spent at that point, so they request a new one.
+- Two people from the same company signing in separately get **two tenants** — joining an existing tenant needs an invite flow (not in the framework yet).
+- There is no seeded tenant or user: a fresh install starts empty and the first person to sign in creates the first tenant.
 
 **Changing the policy** — replace the `SignupTenantResolver` binding in `app/bootstrap.php`:
 
 ```php
-// Example: every signup joins tenant 1 as 'user' (the pre-2.1 behaviour)
+// Example: every new person joins tenant 1 as 'user' (the pre-2.1 behaviour)
 $container->override(\Frank\Services\SignupTenantResolver::class, fn ($c) =>
     new class implements \Frank\Services\SignupTenantResolver {
         public function resolve(string $email, string $name): array {
@@ -1380,11 +1389,11 @@ $container->override(\Frank\Services\SignupTenantResolver::class, fn ($c) =>
 );
 ```
 
-`resolve()` runs inside the signup transaction — any rows it writes roll back with the rest.
+`resolve()` runs inside the account-creation transaction — any rows it writes roll back with the rest.
 
 #### Terms & Conditions acceptance (opt-in)
 
-When enabled, the framework enforces acceptance **server-side** and records **when** and **which version**. Off by default — an app that upgrades without touching config behaves exactly like v2.0.
+When enabled, the framework enforces acceptance **server-side** and records **when** and **which version**. Off by default — an app that upgrades without touching config shows no terms step.
 
 **Config** (`app/Config/config.php` — a literal, not `.env`):
 
@@ -1395,27 +1404,29 @@ When enabled, the framework enforces acceptance **server-side** and records **wh
 ],
 ```
 
-**Protocol contract (for app-owned signup views):**
+**Where it appears (v3.0.0):** only an **unknown** email that has just verified its code is sent to `GET /login/terms`, **before** the tenant and user are created. Existing users are never shown it. When the flag is off there is no terms step and nothing is recorded. The "verified, awaiting terms" state is held in `$_SESSION['login_terms']` and expires after 15 minutes (`LoginCodeService::isTermsStepOpen()`); after that the person starts again from `/login`.
 
-- Post a field named `terms_accepted` with value `1` from the step-1 form (`POST /signup`).
-- Render `$error` (shown on rejection: "You must accept the Terms & Conditions to continue.").
-- Re-tick the checkbox from `$terms_accepted` after any step-1 error.
+**Protocol contract (for app-owned views):**
+
+- `POST /login/terms` must post a field named `terms_accepted` with value `1`, plus the `csrf_token` the controller supplies.
+- Render `$error` (shown on rejection: "You must accept the Terms & Conditions to continue.") and `$email`.
 - A `required` attribute / disabled submit button is UX only — the server check is the enforcement.
 
 **Behaviour matrix:**
 
-| `require_terms` | `terms_accepted=1` posted? | Result |
+| `require_terms` | Email | Result |
 |---|---|---|
-| off / missing | either | Signup proceeds; **nothing recorded** (terms columns stay NULL and are not written — safe on un-migrated installs) |
-| on | no | Rejected — `ServiceResult` failure type `terms_required`; no token created, no email sent |
-| on | yes | Signup proceeds; acceptance recorded |
+| off / missing | known or unknown | No terms step; **nothing recorded** (terms columns stay NULL and are not written) |
+| on | known | Logged in; no terms step |
+| on | unknown, `terms_accepted=1` not posted | Terms screen again with an error; no tenant, no user |
+| on | unknown, `terms_accepted=1` posted | Tenant + owner created; acceptance recorded; logged in |
 
-**What is recorded:** `terms_accepted_at` = the UTC moment step 1 was submitted (`Clock::nowUtcString()`, same value as the token's `created_at`), and `terms_version`. Written to `signup_tokens` at step 1, carried across `resendCode()`, copied to `users` on completion. Users created before v2.1.0 or with the feature off stay NULL — never backfill. Age confirmation or any other statement in the checkbox label is covered by the same timestamp; there is no separate column.
+**What is recorded:** `terms_accepted_at` = the UTC moment the terms step was accepted (`Clock::nowUtcString()`, same value as the user's `created_at`), and `terms_version`, written straight onto the new `users` row. Users created before v2.1.0 or with the feature off stay NULL — never backfill. Age confirmation or any other statement in the checkbox label is covered by the same timestamp; there is no separate column.
 
 **Reading consent:** the columns come back from `User::findById()` / `findByEmail()` (`SELECT *`). They are not public properties on `User` (see §16.2). A dedicated read accessor is on the ROADMAP.
 
-**Migration requirement:** existing installs must run `framework/sql/migrations/v2.1.0_signup_terms.sql` (idempotent) **before** enabling `require_terms`. If the flag is on and the columns are missing, the signup routes throw a `LogicException` naming the script. Order: deploy code → run migration → enable flag.
+**Migration requirement:** existing installs must run `framework/sql/migrations/v2.1.0_signup_terms.sql` (idempotent) **before** enabling `require_terms`. If the flag is on and the `users` columns are missing, the first use of `LoginCodeService` throws a `LogicException` naming the script. Order: deploy code → run migrations → enable flag.
 
-**Starter app reference implementation:** `app/Views/auth/signup.php` (checkbox, re-tick, disabled-until-ticked button), `app/Views/auth/terms.php` + `App\Controllers\LegalController` + `GET /terms` in `app/bootstrap.php` (placeholder — **replace the content before going live**; the route is app-owned because upgraded apps don't receive new starter views).
+**Starter app reference implementation:** `app/Views/auth/login-terms.php` (checkbox, disabled-until-ticked button), `app/Views/auth/terms.php` + `App\Controllers\LegalController` + `GET /terms` in `app/bootstrap.php` (placeholder — **replace the content before going live**; the route is app-owned because upgraded apps don't receive new starter views).
 
 **Not yet included (future work):** re-acceptance when `terms_version` changes (e.g. a login-time gate), a consent audit log / IP + user-agent on `users`, config-driven terms URLs.

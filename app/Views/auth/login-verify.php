@@ -1,5 +1,7 @@
 <?php
-$title = 'Verify Your Email - FrankPHP';
+// Enter the emailed 6-digit code (FrankPHP 3.0). Supplied by AuthController:
+// $csrfToken, $email, and optionally $error / $success.
+$title = 'Enter your code - FrankPHP';
 ob_start();
 ?>
 
@@ -12,7 +14,7 @@ ob_start();
 				<img
 					src="/assets/images/logo_full.svg"
 					style="width: 200px;"
-					alt="FrankPHP new user sign up verification"
+					alt="FrankPHP sign-in code"
 				/>
 			</h3>
 
@@ -24,27 +26,30 @@ ob_start();
 			<h4 class="text-center mb-2">Check your email</h4>
 
 			<p class="text-muted text-center mb-4" style="font-size: 0.875rem;">
-				We sent a 6-digit code to <strong><?= htmlspecialchars($email ?? '') ?></strong>.
-				Enter it below to confirm your address and create your account.
+				We sent a 6-digit code to <strong><?= htmlspecialchars($email ?? '', ENT_QUOTES, 'UTF-8') ?></strong>.
+				Enter it below to continue.
 			</p>
 
-			<?php if (isset($error)): ?>
+			<?php if (!empty($error)): ?>
 			<div class="alert alert-danger" role="alert">
-				<?= htmlspecialchars($error) ?>
+				<?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?>
 			</div>
 			<?php endif; ?>
 
-			<?php if (isset($success)): ?>
+			<?php if (!empty($success)): ?>
 			<div class="alert alert-info" role="alert">
-				<?= htmlspecialchars($success) ?>
+				<?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?>
 			</div>
 			<?php endif; ?>
 
-			<form id="verifyForm" method="post" action="/signup/verify">
+			<form id="verifyForm" method="post" action="/login/verify">
+
+				<!-- CSRF Token -->
+				<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 
 				<!-- 6-digit code -->
 				<div class="mb-4">
-					<label for="code" class="form-label">Verification Code</label>
+					<label for="code" class="form-label">Code</label>
 					<input
 						type="text"
 						class="form-control text-center"
@@ -62,30 +67,27 @@ ob_start();
 				</div>
 
 				<!-- Submit -->
-				<button type="submit" id="verifySubmit" class="btn btn-primary w-100 mb-3">Verify &amp; Create Account</button>
-
-				<!-- Resend -->
-				<div class="text-center mb-2">
-					<form method="post" action="/signup/resend" class="d-inline">
-						<button type="submit" class="btn btn-link btn-sm text-decoration-none p-0">
-							Didn't receive a code? Resend
-						</button>
-					</form>
-				</div>
-
-				<!-- Start over -->
-				<div class="text-center">
-					<a href="/signup" class="text-decoration-none small text-muted">Use a different email</a>
-				</div>
-
+				<button type="submit" id="verifySubmit" class="btn btn-primary w-100 mb-3">Continue</button>
 			</form>
+
+			<!-- Resend — its own form, NOT nested inside the verify form -->
+			<form id="resendForm" method="post" action="/login/resend" class="text-center mb-2">
+				<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+				<button type="submit" class="btn btn-link btn-sm text-decoration-none p-0">
+					Didn't receive a code? Send a new one
+				</button>
+			</form>
+
+			<!-- Start over -->
+			<div class="text-center">
+				<a href="/login" class="text-decoration-none small text-muted">Use a different email</a>
+			</div>
+
 		</div>
 	</div>
 
 	<script>
-		// Digits only — the user submits explicitly with the button (or Enter).
-		// No auto-submit: a second in-flight POST after a successful verify
-		// lands on the destroyed pre-login session and bounces to /signup.
+		// Digits only — the person submits explicitly with the button (or Enter).
 		document.getElementById('code').addEventListener('input', function () {
 			this.value = this.value.replace(/\D/g, '');
 		});
@@ -104,7 +106,7 @@ ob_start();
 				}
 				submitted = true;
 				button.disabled = true;
-				button.textContent = 'Verifying…';
+				button.textContent = 'Checking…';
 			});
 
 			// Re-enable if the page is restored from the back/forward cache.
@@ -112,7 +114,7 @@ ob_start();
 				if (e.persisted) {
 					submitted = false;
 					button.disabled = false;
-					button.textContent = 'Verify & Create Account';
+					button.textContent = 'Continue';
 				}
 			});
 		})();

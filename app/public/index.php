@@ -15,8 +15,8 @@ $router = require_once APP_BASE_DIR . '/framework/bootstrap.php';
 
 use Frank\Core\Request;
 
-// Start session for UI auth
-if (session_status() === PHP_SESSION_NONE) session_start();
+// Start session for UI auth — 28-day rolling session, see Frank\Core\Session
+\Frank\Core\Session::start();
 
 /** @var \Frank\Core\Router $router */
 $request = new Request();

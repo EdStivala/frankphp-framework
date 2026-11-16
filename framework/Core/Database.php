@@ -36,11 +36,10 @@ class Database
 			self::$pdo = $pdo;
 
 			// 4. Framework schema — guarded on 'users', framework's own
-			//    sentinel table. Seed data (Tenant 1, owner@tenant1.com /
-			//    user@tenant1.com — see docs.n3wmedia.com's install guide)
-			//    lives inside schema.core.sql itself and runs as part of
-			//    this same import. Do not seed anywhere else — a second,
-			//    different seed set previously ran alongside this one.
+			//    sentinel table. A fresh install starts EMPTY (v3.0.0): there
+			//    is no seeded tenant and no seeded user — the first person to
+			//    verify an emailed sign-in code creates the first tenant and
+			//    becomes its owner. Do not seed anywhere else.
 			self::runSchemaFileIfMissingTable(__DIR__ . '/../sql/schema.core.sql', 'users');
 		}
 		return self::$pdo;

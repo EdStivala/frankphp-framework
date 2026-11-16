@@ -60,25 +60,26 @@ return [
         'admin_email'  => Env::require('MAIL_SITE_ADMIN'),
 
         // Optional per-app overrides for the framework's required email
-        // templates (signup verification, password reset, platform-owner
-        // alert). See codebase.md §16.8. Leave empty to use the framework
-        // defaults — nothing here is required.
+        // templates (sign-in code, platform-owner alert). See codebase.md
+        // §16.8. Leave empty to use the framework defaults — nothing here
+        // is required.
         'templates' => [
-            // 'signup_verification'        => \App\Email\Templates\MySignupVerificationTemplate::class,
-            // 'password_reset'              => \App\Email\Templates\MyPasswordResetTemplate::class,
+            // 'login_code'                  => \App\Email\Templates\MyLoginCodeTemplate::class,
             // 'platform_owner_signup_alert' => \App\Email\Templates\MyPlatformOwnerAlertTemplate::class,
         ],
     ],
 
     // ----------------------------------------------------------------
-    // Signup — Terms & Conditions acceptance (FrankPHP 2.1+, see
+    // Terms & Conditions acceptance for new accounts (FrankPHP 2.1+, see
     // codebase.md §16.9). Opt-in: omit this section (or set require_terms
     // to false) to leave the feature off.
     //
-    // require_terms  true = the framework rejects signups that don't post
-    //                terms_accepted=1, and records the acceptance time (UTC)
-    //                and terms_version on the user. Requires the v2.1.0
-    //                migration on existing installs
+    // require_terms  true = an email address that has just verified its
+    //                sign-in code and has no account yet must accept the
+    //                Terms (terms_accepted=1) before its tenant and user are
+    //                created; the acceptance time (UTC) and terms_version
+    //                are recorded on the user. Existing users are never asked.
+    //                Requires the v2.1.0 migration on existing installs
     //                (framework/sql/migrations/v2.1.0_signup_terms.sql).
     // terms_version  Your current terms version, stored with each acceptance.
     //                Change it when your terms change.

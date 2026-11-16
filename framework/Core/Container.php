@@ -57,7 +57,7 @@ class Container
 * Register a factory that is called once; the result is cached
 * and returned on every subsequent make() call.
 *
-* Use this for stateless services (EmailService, PasswordResetService,
+* Use this for stateless services (EmailService, LoginCodeService,
 * etc.) — the default choice for almost everything.
 */
 	public function singleton(string $id, callable $factory): void

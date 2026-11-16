@@ -3,24 +3,27 @@
 namespace Frank\Services\Email\Templates;
 
 /**
- * SignupVerificationEmailTemplate
+ * LoginCodeEmailTemplate (v3.0.0)
  *
- * Builds the HTML and plain-text bodies for signup email verification.
- * Sends a 6-digit code rather than a link so the user stays in-session.
+ * Builds the HTML and plain-text bodies for the emailed sign-in code. The
+ * same email is sent whether or not the address already has an account —
+ * one screen signs people in and signs new people up. The email contains a
+ * 6-digit code only, never a link.
  */
-class SignupVerificationEmailTemplate
+class LoginCodeEmailTemplate
 {
     /**
      * Build the HTML email body
      *
      * @param string $email  Recipient email address (shown for reassurance)
-     * @param string $code   6-digit verification code (plain, not hashed)
+     * @param string $code   6-digit code (plain, not hashed)
      * @param int    $expiry Minutes until the code expires
      */
     public static function buildHtml(string $email, string $code, int $expiry = 15): string
     {
         $safeEmail = htmlspecialchars($email);
         $safeCode  = htmlspecialchars($code);
+        $year      = date('Y');
 
         return <<<HTML
 <!DOCTYPE html>
@@ -28,7 +31,7 @@ class SignupVerificationEmailTemplate
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify your email</title>
+    <title>Your sign-in code</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F3F4F6;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
 
@@ -48,14 +51,14 @@ class SignupVerificationEmailTemplate
                     <tr>
                         <td style="background-color:#FFFFFF;padding:40px 48px 36px;">
 
-                            <h2 style="margin:0 0 12px;font-size:1.125rem;font-weight:700;color:#111827;">Verify your email address</h2>
+                            <h2 style="margin:0 0 12px;font-size:1.125rem;font-weight:700;color:#111827;">Your sign-in code</h2>
                             <p style="margin:0 0 32px;font-size:0.9375rem;color:#374151;line-height:1.7;">
-                                You're almost there! Enter the code below to confirm <strong>{$safeEmail}</strong> and complete your account setup.
+                                Enter the code below to sign in as <strong>{$safeEmail}</strong>.
                             </p>
 
-                            <!-- Verification code block -->
+                            <!-- Code block -->
 							<div style="background-color:#F3F4F6;border:1px solid #2B3A67;border-radius:10px;padding:28px 24px;text-align:center;margin-bottom:32px;">
-                                <p style="margin:0 0 12px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;">Your verification code</p>
+                                <p style="margin:0 0 12px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;">Your code</p>
 								<span style="font-size:2.5rem;font-weight:900;letter-spacing:0.3em;color:#2B3A67;font-family:'Courier New',Courier,monospace;">{$safeCode}</span>
                                 <p style="margin:12px 0 0;font-size:0.8125rem;color:#6B7280;">Expires in <strong style="color:#374151;">{$expiry} minutes</strong></p>
                             </div>
@@ -70,7 +73,7 @@ class SignupVerificationEmailTemplate
                     <tr>
                         <td style="background-color:#F9FAFB;border-top:1px solid #E5E7EB;border-radius:0 0 12px 12px;padding:20px 48px;text-align:center;">
                             <p style="margin:0;font-size:0.75rem;color:#9CA3AF;">
-                                &copy; <?= date('Y') ?> FrankPHP &mdash; This is an automated message, please do not reply.
+                                &copy; {$year} FrankPHP &mdash; This is an automated message, please do not reply.
                             </p>
                         </td>
                     </tr>
@@ -91,12 +94,12 @@ HTML;
     public static function buildText(string $email, string $code, int $expiry = 15): string
     {
         return <<<TEXT
-        Verify your email address
-        =========================
+        Your sign-in code
+        =================
 
-        You're almost there! Enter the code below to confirm {$email} and complete your FrankPHP account setup.
+        Enter the code below to sign in as {$email}.
 
-        Your verification code: {$code}
+        Your code: {$code}
 
         This code expires in {$expiry} minutes.
 

@@ -4,3 +4,4 @@ storage/
 dist/
 .idea/
 .claude/
+app/private/sessions/

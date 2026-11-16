@@ -12,7 +12,7 @@ No Docker. No Composer. No build step. If you can FTP a file, you can deploy Fra
 
 FrankPHP ships with the parts every SaaS business needs and almost never wants to build from scratch:
 
-- **Multi-tenant users and accounts** — tenants, users, roles, login, logout, email-verified signup, password reset, an admin user-management dashboard.
+- **Multi-tenant users and accounts** — tenants, users, roles, passwordless sign-in and sign-up with an emailed 6-digit code (one screen, no passwords), logout, and an admin user-management dashboard.
 - **A framework/application split** — `framework/` is the reusable core, safely replaceable on every update. `app/` is entirely yours: your controllers, models, views, business logic. An update never touches it.
 - **AI-native architecture** — `framework/codebase.md` is a machine-readable architecture contract, written so AI coding assistants (Claude, ChatGPT, or any LLM) can work on your FrankPHP project accurately from day one, not guess at your conventions.
 - **API-first** — every framework flow is reachable through the same clean architecture your API controllers use, with an API auth middleware ready to go. Recipes for wiring a native iOS Swift app to your FrankPHP backend are coming soon — FrankPHP doesn't write your mobile code, but it makes the wiring simple and correct.
@@ -26,7 +26,7 @@ FrankPHP ships with the parts every SaaS business needs and almost never wants t
 1. Download the latest release from the [Releases page](../../releases) — grab the **Source code** zip or tarball, or `git clone` the repo directly. Either way you get both `framework/` and `app/`, a complete working starting point.
 2. Copy `app/env.example` to `app/.env` and fill in your database and mail credentials.
 3. Point your web server's document root at `app/public/`.
-4. Visit the site — the framework creates its schema and seeds a starter tenant and two users automatically on first boot. Change the seed passwords before sharing any URL.
+4. Visit the site — the framework creates its schema automatically on first boot. A fresh install starts empty: enter your email address on the sign-in screen, type the 6-digit code that is emailed to you, and your tenant and owner account are created.
 
 ### Updating an existing install
 

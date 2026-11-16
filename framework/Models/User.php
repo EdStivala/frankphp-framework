@@ -9,8 +9,7 @@ use Frank\Core\BaseModel;
 /**
  * User
  *
- * DB access layer for the users, password_reset_tokens, and signup_tokens
- * tables. Framework-owned.
+ * DB access layer for the users and login_codes tables. Framework-owned.
  *
  * SoC contract (enforced from FrankPHP v1.3.2):
  * - This model MUST NOT call Frank\Core\Clock.
@@ -30,7 +29,6 @@ class User extends BaseModel
     public int     $tenant_id;
     public string  $name;
     public string  $email;
-    public string  $password_hash;
     public ?string $role          = 'user';
     public ?string $api_key_hash  = null;
     public ?string $created_at    = null; // UTC DATETIME
@@ -133,42 +131,18 @@ class User extends BaseModel
     }
 
     /**
-     * Update the password hash for a user.
-     *
-     * $updatedAt is computed by PasswordResetService via Clock.
-     *
-     * @param int    $userId
-     * @param string $passwordHash  bcrypt hash
-     * @param string $updatedAt     UTC DATETIME string from PasswordResetService
-     */
-    public function updatePasswordHash(int $userId, string $passwordHash, string $updatedAt): bool
-    {
-        $stmt = $this->db->prepare('
-            UPDATE users
-               SET password_hash = :password_hash,
-                   updated_at    = :updated_at
-             WHERE id = :id
-        ');
-
-        return $stmt->execute([
-            'password_hash' => $passwordHash,
-            'updated_at'    => $updatedAt,
-            'id'            => $userId,
-        ]);
-    }
-
-    /**
      * Insert a new user row and return its id.
      *
-     * $name and $createdAt are computed by SignupService — name derivation
+     * $name and $createdAt are computed by LoginCodeService — name derivation
      * is business logic, timestamp generation belongs in the service.
+     * users.email is globally unique (v3.0.0): inserting an address that
+     * already exists throws PDOException (SQLSTATE 23000).
      *
      * @param int    $tenantId
      * @param string $email
-     * @param string $name         Derived by SignupService from email local-part
-     * @param string $passwordHash bcrypt hash
+     * @param string $name         Derived by LoginCodeService from email local-part
      * @param string $role
-     * @param string $createdAt    UTC DATETIME string from SignupService
+     * @param string $createdAt    UTC DATETIME string from LoginCodeService
      * @param string|null $termsAcceptedAt  v2.1.0 — UTC DATETIME of T&C acceptance
      * @param string|null $termsVersion     v2.1.0 — app's terms version string
      * @return int|null  New user id, or null on failure
@@ -184,19 +158,17 @@ class User extends BaseModel
         int    $tenantId,
         string $email,
         string $name,
-        string $passwordHash,
         string $role,
         string $createdAt,
         ?string $termsAcceptedAt = null,
         ?string $termsVersion = null
     ): ?int {
         $params = [
-            'tenant_id'     => $tenantId,
-            'email'         => $email,
-            'name'          => $name,
-            'password_hash' => $passwordHash,
-            'role'          => $role,
-            'created_at'    => $createdAt,
+            'tenant_id'  => $tenantId,
+            'email'      => $email,
+            'name'       => $name,
+            'role'       => $role,
+            'created_at' => $createdAt,
         ];
 
         if ($termsAcceptedAt !== null) {
@@ -233,7 +205,7 @@ class User extends BaseModel
      * Return all users for a tenant ordered by creation date descending.
      *
      * Used by UserManagementService to build the admin user dashboard.
-     * Returns only the columns needed for display — not password_hash or api_key_hash.
+     * Returns only the columns needed for display — not api_key_hash.
      *
      * @param int $tenantId
      * @return array
@@ -251,191 +223,47 @@ class User extends BaseModel
     }
 
     // ----------------------------------------------------------------
-    // Password reset token methods
+    // Login code methods (v3.0.0)
     // ----------------------------------------------------------------
 
     /**
-     * Insert a new password reset token.
-     *
-     * $expiresAt and $createdAt are computed by PasswordResetService via Clock.
+     * Insert a new login code. $codeHash is password_hash() of the plain code;
+     * $expiresAt and $createdAt are UTC strings computed by LoginCodeService.
      */
-    public function insertPasswordResetToken(
-        int    $userId,
-        int    $tenantId,
-        string $tokenHash,
-        string $expiresAt,
-        string $createdAt
-    ): bool {
-        $stmt = $this->db->prepare('
-            INSERT INTO password_reset_tokens
-                (user_id, tenant_id, token_hash, expires_at, created_at)
-            VALUES
-                (:user_id, :tenant_id, :token_hash, :expires_at, :created_at)
-        ');
-
-        return $stmt->execute([
-            'user_id'    => $userId,
-            'tenant_id'  => $tenantId,
-            'token_hash' => $tokenHash,
-            'expires_at' => $expiresAt,
-            'created_at' => $createdAt,
-        ]);
-    }
-
-    /**
-     * Return all unexpired, unused password reset tokens with joined user data.
-     *
-     * $now is computed by PasswordResetService via Clock.
-     *
-     * @param string $now  UTC DATETIME string — tokens with expires_at > $now are returned
-     */
-    public function findValidPasswordResetTokens(string $now): array
-    {
-        $stmt = $this->db->prepare('
-            SELECT prt.*, u.id AS user_id, u.email, u.tenant_id, u.name
-              FROM password_reset_tokens prt
-              JOIN users u ON prt.user_id = u.id
-             WHERE prt.expires_at > :now
-               AND prt.used_at IS NULL
-        ');
-        $stmt->execute(['now' => $now]);
-        return $stmt->fetchAll();
-    }
-
-    /**
-     * Mark a single password reset token as used.
-     *
-     * $usedAt is computed by PasswordResetService via Clock.
-     */
-    public function markPasswordResetTokenAsUsed(int $tokenId, string $usedAt): bool
-    {
-        $stmt = $this->db->prepare('
-            UPDATE password_reset_tokens
-               SET used_at = :used_at
-             WHERE id = :id
-        ');
-
-        return $stmt->execute([
-            'used_at' => $usedAt,
-            'id'      => $tokenId,
-        ]);
-    }
-
-    /**
-     * Mark all unused password reset tokens for a user as used.
-     *
-     * $usedAt is computed by PasswordResetService via Clock.
-     */
-    public function invalidateAllUserPasswordResetTokens(int $userId, string $usedAt): bool
-    {
-        $stmt = $this->db->prepare('
-            UPDATE password_reset_tokens
-               SET used_at = :used_at
-             WHERE user_id = :user_id
-               AND used_at IS NULL
-        ');
-
-        return $stmt->execute([
-            'used_at'  => $usedAt,
-            'user_id'  => $userId,
-        ]);
-    }
-
-    /**
-     * Count password reset tokens created for a user after $threshold.
-     *
-     * $threshold is computed by PasswordResetService via Clock.
-     *
-     * @param int    $userId
-     * @param string $threshold  UTC DATETIME string — only tokens created after this are counted
-     */
-    public function countRecentPasswordResetTokens(int $userId, string $threshold): int
-    {
-        $stmt = $this->db->prepare('
-            SELECT COUNT(*) AS count
-              FROM password_reset_tokens
-             WHERE user_id = :user_id
-               AND created_at > :threshold
-        ');
-        $stmt->execute([
-            'user_id'   => $userId,
-            'threshold' => $threshold,
-        ]);
-
-        $result = $stmt->fetch();
-        return (int) ($result['count'] ?? 0);
-    }
-
-    /**
-     * Delete expired password reset tokens older than $cutoff.
-     *
-     * $cutoff is computed by PasswordResetService via Clock.
-     *
-     * @param string $cutoff  UTC DATETIME string
-     * @return int  Number of rows deleted
-     */
-    public function deleteExpiredPasswordResetTokens(string $cutoff): int
-    {
-        $stmt = $this->db->prepare('
-            DELETE FROM password_reset_tokens
-             WHERE expires_at < :cutoff
-        ');
-        $stmt->execute(['cutoff' => $cutoff]);
-        return $stmt->rowCount();
-    }
-
-    // ----------------------------------------------------------------
-    // Signup token methods
-    // ----------------------------------------------------------------
-
-    /**
-     * Insert a new signup token.
-     *
-     * $expiresAt and $createdAt are computed by SignupService via Clock.
-     *
-     * v2.1.0: optional $termsAcceptedAt / $termsVersion carry T&C acceptance
-     * from step 1 to account creation. Written only when $termsAcceptedAt is
-     * non-null (migration safety — see insertUser()).
-     */
-    public function insertSignupToken(
+    public function insertLoginCode(
         string $email,
         string $codeHash,
-        string $passwordHash,
         string $expiresAt,
         string $createdAt,
         string $ipAddress,
-        string $userAgent,
-        ?string $termsAcceptedAt = null,
-        ?string $termsVersion = null
+        string $userAgent
     ): bool {
-        $params = [
-            'email'         => $email,
-            'code_hash'     => $codeHash,
-            'password_hash' => $passwordHash,
-            'expires_at'    => $expiresAt,
-            'created_at'    => $createdAt,
-            'ip_address'    => substr($ipAddress, 0, 45),
-            'user_agent'    => substr($userAgent, 0, 512),
-        ];
+        $stmt = $this->db->prepare('
+            INSERT INTO login_codes
+                (email, code_hash, expires_at, created_at, ip_address, user_agent)
+            VALUES
+                (:email, :code_hash, :expires_at, :created_at, :ip_address, :user_agent)
+        ');
 
-        if ($termsAcceptedAt !== null) {
-            $params['terms_accepted_at'] = $termsAcceptedAt;
-            $params['terms_version']     = $termsVersion;
-        }
-
-        $stmt = $this->db->prepare($this->buildInsert('signup_tokens', array_keys($params)));
-        return $stmt->execute($params);
+        return $stmt->execute([
+            'email'      => $email,
+            'code_hash'  => $codeHash,
+            'expires_at' => $expiresAt,
+            'created_at' => $createdAt,
+            'ip_address' => substr($ipAddress, 0, 45),
+            'user_agent' => substr($userAgent, 0, 512),
+        ]);
     }
 
     /**
-     * Mark all unused signup tokens for an email address as used.
+     * Cancel every unused login code for an email address.
      *
-     * $usedAt is computed by SignupService via Clock.
+     * $usedAt is computed by LoginCodeService via Clock.
      */
-    public function invalidatePendingSignupTokens(string $email, string $usedAt): bool
+    public function invalidatePendingLoginCodes(string $email, string $usedAt): bool
     {
         $stmt = $this->db->prepare('
-            UPDATE signup_tokens
+            UPDATE login_codes
                SET used_at = :used_at
              WHERE email = :email
                AND used_at IS NULL
@@ -448,72 +276,70 @@ class User extends BaseModel
     }
 
     /**
-     * Mark a single signup token as used.
+     * Mark a single login code as used (consumed or cancelled).
      *
-     * $usedAt is computed by SignupService via Clock.
+     * Only an unused code is updated, so the return value is a claim: true
+     * for exactly one caller even if two requests race on the same code.
+     *
+     * $usedAt is computed by LoginCodeService via Clock.
      */
-    public function markSignupTokenUsed(int $tokenId, string $usedAt): bool
+    public function markLoginCodeUsed(int $codeId, string $usedAt): bool
     {
         $stmt = $this->db->prepare('
-            UPDATE signup_tokens
+            UPDATE login_codes
                SET used_at = :used_at
              WHERE id = :id
-        ');
-
-        return $stmt->execute([
-            'used_at' => $usedAt,
-            'id'      => $tokenId,
-        ]);
-    }
-
-    /**
-     * Return unexpired, unused signup token candidate rows for an email.
-     *
-     * Returns raw rows — hash verification (password_verify) is the
-     * responsibility of SignupService, not this model.
-     *
-     * $now is computed by SignupService via Clock.
-     *
-     * @param string $email
-     * @param string $now   UTC DATETIME string
-     * @return array  Up to 10 candidate rows ordered newest first
-     */
-    public function findPendingSignupTokens(string $email, string $now): array
-    {
-        $stmt = $this->db->prepare('
-            SELECT *
-              FROM signup_tokens
-             WHERE email = :email
-               AND expires_at > :now
                AND used_at IS NULL
-             ORDER BY created_at DESC
-             LIMIT 10
         ');
         $stmt->execute([
-            'email' => $email,
-            'now'   => $now,
+            'used_at' => $usedAt,
+            'id'      => $codeId,
         ]);
 
-        return $stmt->fetchAll();
+        return $stmt->rowCount() === 1;
     }
 
     /**
-     * Return the most recent unexpired, unused signup token for an email.
+     * Add one guess to an unused code, but only while it has fewer than
+     * $maxAttempts. Atomic, so parallel guesses cannot exceed the cap.
      *
-     * $now is computed by SignupService via Clock.
-     *
-     * @param string $email
-     * @param string $now   UTC DATETIME string
+     * Returns false when no guess was recorded (code used, cancelled or already
+     * at the cap). The cap value is a business rule supplied by the service.
      */
-    public function findMostRecentPendingSignupToken(string $email, string $now): ?array
+    public function incrementLoginCodeAttempts(int $codeId, int $maxAttempts): bool
+    {
+        $stmt = $this->db->prepare('
+            UPDATE login_codes
+               SET attempts = attempts + 1
+             WHERE id = :id
+               AND used_at IS NULL
+               AND attempts < :max_attempts
+        ');
+        $stmt->execute([
+            'id'           => $codeId,
+            'max_attempts' => $maxAttempts,
+        ]);
+
+        return $stmt->rowCount() === 1;
+    }
+
+    /**
+     * Return the most recent unexpired, unused login code for an email.
+     *
+     * Returns the raw row — hash verification (password_verify) is the
+     * responsibility of LoginCodeService, not this model.
+     *
+     * $now is computed by LoginCodeService via Clock.
+     */
+    public function findMostRecentPendingLoginCode(string $email, string $now): ?array
     {
         $stmt = $this->db->prepare('
             SELECT *
-              FROM signup_tokens
+              FROM login_codes
              WHERE email = :email
                AND expires_at > :now
                AND used_at IS NULL
-             ORDER BY created_at DESC
+             ORDER BY created_at DESC, id DESC
              LIMIT 1
         ');
         $stmt->execute([
@@ -525,27 +351,23 @@ class User extends BaseModel
     }
 
     /**
-     * Count signup token rows created from an IP address after $threshold.
+     * Count login codes requested from an IP address after $threshold.
      *
-     * Returns a count — the rate-limit decision (>= maxAttempts) is made
-     * by SignupService, not this model.
+     * Returns a count — the rate-limit decision (>= maxRequests) is made
+     * by LoginCodeService, not this model.
      *
-     * $threshold is computed by SignupService via Clock.
-     *
-     * @param string $ipAddress
-     * @param string $threshold  UTC DATETIME string
-     * @return int
+     * $threshold is computed by LoginCodeService via Clock.
      */
-    public function countRecentSignupTokensByIp(string $ipAddress, string $threshold): int
+    public function countRecentLoginCodesByIp(string $ipAddress, string $threshold): int
     {
         $stmt = $this->db->prepare('
             SELECT COUNT(*) AS cnt
-              FROM signup_tokens
+              FROM login_codes
              WHERE ip_address = :ip
                AND created_at > :threshold
         ');
         $stmt->execute([
-            'ip'        => $ipAddress,
+            'ip'        => substr($ipAddress, 0, 45),
             'threshold' => $threshold,
         ]);
 
@@ -554,17 +376,16 @@ class User extends BaseModel
     }
 
     /**
-     * Delete expired signup tokens older than $cutoff.
+     * Delete login codes that expired before $cutoff.
      *
-     * $cutoff is computed by SignupService via Clock.
+     * $cutoff is computed by LoginCodeService via Clock.
      *
-     * @param string $cutoff  UTC DATETIME string
      * @return int  Number of rows deleted
      */
-    public function deleteExpiredSignupTokens(string $cutoff): int
+    public function deleteExpiredLoginCodes(string $cutoff): int
     {
         $stmt = $this->db->prepare('
-            DELETE FROM signup_tokens
+            DELETE FROM login_codes
              WHERE expires_at < :cutoff
         ');
         $stmt->execute(['cutoff' => $cutoff]);

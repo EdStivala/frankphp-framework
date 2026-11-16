@@ -1,5 +1,61 @@
 # Changelog
 
+## [Unreleased] 3.0.0
+
+> **BREAKING RELEASE.** Passwords are removed. One screen signs people in and signs new people up with an emailed 6-digit code. The database must be migrated (`sql/migrations/v3.0.0_passwordless.sql`) and `app/` views, routes and config that mention passwords or `/signup` must be updated. Not yet released: `VERSION` and `RELEASE_MANIFEST.json` are unchanged.
+
+### Human-readable summary
+
+FrankPHP 3.0.0 is passwordless. At `/login` a person enters an email address and is emailed a 6-digit code (a code only, no link). The code lasts 15 minutes, and 3 wrong guesses cancel it. At most 5 codes can be requested per hour per IP address. Known and unknown addresses behave identically until the code is verified. A known address with the right code is logged in. An unknown address with the right code gets a new tenant and an owner user straight away and is logged in, with no "create account?" step. When `signup.require_terms` is on, an unknown address is shown the Terms step before anything is created.
+
+One email is now one user in one tenant (`users.email` is globally unique). Staying logged in lasts 28 days and renews while the person keeps using the app. A fresh install starts empty: there is no seeded tenant and there are no seeded users.
+
+### Added
+
+- `Core/Session.php`: `Session::start()` is now the only place a session is started. 28-day rolling session, `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, session files in `app/private/sessions` (created on demand, mode 0700, git-ignored) so another site on the same PHP install cannot garbage-collect them early, an hourly cookie refresh, and idle-expiry destruction. `Session::destroy()` ends a session.
+- `Services/LoginCodeService.php` (singleton): `requestCode()`, `verifyCode()`, `acceptTerms()`, `isTermsStepOpen()`, `cleanupExpiredCodes()`. Replaces `SignupService` and `PasswordResetService`.
+- Table `login_codes` (`email`, `code_hash`, `attempts`, `expires_at`, `used_at`, `created_at`, `ip_address`, `user_agent`).
+- Routes: `GET/POST /login/verify`, `POST /login/resend`, `GET/POST /login/terms`. `AuthController` actions `showVerify`, `verify`, `resend`, `showTerms`, `acceptTerms`, `redirectToLogin`.
+- `User` model: `insertLoginCode()`, `invalidatePendingLoginCodes()`, `markLoginCodeUsed()`, `incrementLoginCodeAttempts()`, `findMostRecentPendingLoginCode()`, `countRecentLoginCodesByIp()`, `deleteExpiredLoginCodes()`.
+- `EmailService::sendLoginCode()` and `Templates/LoginCodeEmailTemplate` (template key `login_code` for `mail.templates` overrides).
+- `sql/migrations/v3.0.0_passwordless.sql` (hand-run, idempotent).
+- `tests/login_code_test.php`: end-to-end test of `LoginCodeService` against a scratch database (`frank_v3_test`, created and dropped by the script) with a stub in place of `EmailService`.
+- App template views `auth/login-verify.php` and `auth/login-terms.php`.
+
+### Changed
+
+- `/login` is the one sign-in and sign-up screen. `AuthController` is rewritten and no longer has any password handling or `$_SESSION` lockout counters; the per-code `attempts` column replaces them. Every POST form in the flow carries the CSRF token.
+- `users.email` is globally unique (`uq_users_email` replaces `uq_users_tenant_email` in `schema.core.sql`; the migration adds the new key and drops the old one, so a migrated database is identical to a fresh install).
+- `User::insertUser()` no longer takes a password hash argument. Its terms arguments are unchanged.
+- The terms step moved. With `signup.require_terms` on, an unknown email that has verified its code sees the terms step (`/login/terms`) before the tenant and user are created. Acceptance time and `terms_version` are written on the new `users` row. Existing users are never shown it. The `signup` config keys are unchanged.
+- The "email verified, awaiting terms" state lives in the session and expires after 15 minutes.
+- The platform-owner signup alert is unchanged from v2: sent when an address with no account requests a code, and again when the account is created.
+- The resend form on the verify screen is no longer nested inside the verify form (fixes the broken Resend button).
+- `AuthMiddleware` and `app/public/index.php` use `Session::start()` instead of `session_start()`.
+- `schema.core.sql`: no seed rows. The first-boot comment in `Core/Database.php` is updated.
+- `LoginCodeService`'s container factory verifies the v2.1.0 terms columns on `users` (was `users` and `signup_tokens`) when `signup.require_terms` is on.
+- `codebase.md` §2, §3, §5, §7, §8, §9, §10, §11, §12, §13, §14, §15, §16 describe v3 only.
+- App template (`app/`, not shipped in the framework zip): `auth/login.php` rewritten; `auth/terms.php`, `bootstrap.php`, `Config/config.php`, `MYAPP.md` no longer mention passwords or a separate sign-up.
+
+### Removed
+
+- Passwords: `users.password_hash`, the `User::$password_hash` property, `User::updatePasswordHash()`, password login.
+- The forgot/reset-password flow: routes `/forgot-password` and `/reset-password`, the `AuthController` actions, `PasswordResetService`, `PasswordResetEmailTemplate`, `EmailService::sendPasswordReset()`, the `password_reset` template key, and the `password_reset_tokens` table.
+- The two-step sign-up: every `/signup` route (`GET /signup`, `POST /signup`, `/signup/verify`, `/signup/resend`) — `/signup` now returns not-found, so links to it must point at `/login`; `SignupController`, `SignupService`, `SignupVerificationEmailTemplate`, `EmailService::sendSignupVerification()`, the `signup_verification` template key, the `signup_tokens` table, and the signup token methods on `User`.
+- The seeded tenant and the two seeded users (`owner@tenant1.com`, `user@tenant1.com`).
+- App template views `auth/signup.php`, `auth/signup-verify.php`, `auth/forgot-password.php`, `auth/forgot-password-sent.php`, `auth/reset-password.php`, `auth/reset-password-error.php`.
+
+### Upgrade notes
+
+1. Back up the database.
+2. Find duplicate emails and resolve them by hand, because one email can now exist only once: `SELECT email, COUNT(*) FROM users GROUP BY email HAVING COUNT(*) > 1;`. The migration stops at its first step if any exist.
+3. Replace `framework/` and deploy.
+4. Run `framework/sql/migrations/v3.0.0_passwordless.sql` against the app database. It adds the unique key, creates `login_codes`, then drops `password_hash`, `password_reset_tokens` and `signup_tokens`. Nobody can sign in with a password after this.
+5. Copy the new `app/Views/auth/login.php`, `login-verify.php` and `login-terms.php` into your `app/Views/`, and delete the old password and sign-up views. Remove any link or text in your own views about passwords, "forgot password" or `/signup`.
+6. In `app/public/index.php`, replace the `session_start()` block with `\Frank\Core\Session::start();`.
+7. In `app/Config/config.php`, rename any `mail.templates` overrides: `signup_verification` becomes `login_code` (same method signatures), and `password_reset` is no longer used.
+8. Make sure the web server user can create `app/private/sessions` (mode 0700). Everyone is signed out once, because sessions move to the new folder.
+
 ## [2.2.0] - 2026-10-19
 
 ### Human-readable summary

@@ -122,17 +122,6 @@ $container->singleton(
     }
 );
 
-// PasswordResetService — depends on EmailService
-$container->singleton(
-    \Frank\Services\PasswordResetService::class,
-    function ($c) {
-        return new \Frank\Services\PasswordResetService(
-            userModel:    new \Frank\Models\User(),
-            emailService: $c->make(\Frank\Services\Email\EmailService::class),
-        );
-    }
-);
-
 // SignupTenantResolver — v2.1.0 policy point: which tenant + role a new
 // signup gets. Default creates a new tenant with the user as owner. Apps
 // replace it via $container->override() in app/bootstrap.php.
@@ -145,14 +134,13 @@ $container->singleton(
     }
 );
 
-// SignupService — depends on User model, EmailService and SignupTenantResolver.
-// v1.3.2: accepts User model (not raw PDO) — all DB access via model methods.
-// v2.1.0: opt-in terms acceptance from $config['signup'] (missing = off, so
-// upgraded apps without the config section behave exactly like v2.0). When
-// the flag is on, verify once — lazily, only on signup routes — that the
+// LoginCodeService — v3.0.0 passwordless sign-in / sign-up. Depends on User
+// model, EmailService and SignupTenantResolver.
+// v2.1.0 terms opt-in from $config['signup'] (missing = off). When the flag is
+// on, verify once — lazily, only when the service is first used — that the
 // v2.1.0 migration has been applied, and fail with a clear message if not.
 $container->singleton(
-    \Frank\Services\SignupService::class,
+    \Frank\Services\LoginCodeService::class,
     function ($c) use ($config) {
         $signup       = $config['signup'] ?? [];
         $requireTerms = (bool) ($signup['require_terms'] ?? false);
@@ -161,10 +149,10 @@ $container->singleton(
             $check = \Frank\Core\Database::getPdo()->query(
                 "SELECT COUNT(*) FROM information_schema.COLUMNS
                   WHERE TABLE_SCHEMA = DATABASE()
-                    AND TABLE_NAME IN ('users', 'signup_tokens')
+                    AND TABLE_NAME = 'users'
                     AND COLUMN_NAME IN ('terms_accepted_at', 'terms_version')"
             );
-            if ((int) $check->fetchColumn() < 4) {
+            if ((int) $check->fetchColumn() < 2) {
                 throw new \LogicException(
                     'signup.require_terms is enabled but the v2.1.0 migration has not been applied — ' .
                     'run framework/sql/migrations/v2.1.0_signup_terms.sql against the app database.'
@@ -172,7 +160,7 @@ $container->singleton(
             }
         }
 
-        return new \Frank\Services\SignupService(
+        return new \Frank\Services\LoginCodeService(
             userModel:      new \Frank\Models\User(),
             emailService:   $c->make(\Frank\Services\Email\EmailService::class),
             tenantResolver: $c->make(\Frank\Services\SignupTenantResolver::class),
@@ -205,25 +193,12 @@ $container->singleton(
     }
 );
 
-// AuthController — needs PasswordResetService and UserService injected.
-// v1.3.2: UserService added to injection (recordLogin moved out of controller).
+// AuthController — needs LoginCodeService and UserService injected.
 $container->bind(
     \Frank\Controllers\AuthController::class,
     function ($c) {
         return new \Frank\Controllers\AuthController(
-            $c->make(\Frank\Services\PasswordResetService::class),
-            $c->make(\Frank\Services\UserService::class),
-        );
-    }
-);
-
-// SignupController — needs SignupService and UserService injected.
-// v2.1.0: UserService added (auto-login after signup calls recordLogin).
-$container->bind(
-    \Frank\Controllers\SignupController::class,
-    function ($c) {
-        return new \Frank\Controllers\SignupController(
-            $c->make(\Frank\Services\SignupService::class),
+            $c->make(\Frank\Services\LoginCodeService::class),
             $c->make(\Frank\Services\UserService::class),
         );
     }
@@ -281,23 +256,15 @@ $auth    = 'Frank\\Middleware\\AuthMiddleware';
 $apiAuth = 'Frank\\Middleware\\ApiAuthMiddleware';
 $json    = 'Frank\\Middleware\\JsonBodyParserMiddleware';
 
-// Public
-$router->add('GET',  '/login',  'Frank\\Controllers\\AuthController@showLogin', []);
-$router->add('POST', '/login',  'Frank\\Controllers\\AuthController@login',     [$json]);
-$router->add('GET',  '/logout', 'Frank\\Controllers\\AuthController@logout',    []);
-
-// Password reset
-$router->add('GET',  '/forgot-password', 'Frank\\Controllers\\AuthController@showForgotPassword', []);
-$router->add('POST', '/forgot-password', 'Frank\\Controllers\\AuthController@sendPasswordReset',  []);
-$router->add('GET',  '/reset-password',  'Frank\\Controllers\\AuthController@showResetPassword',  []);
-$router->add('POST', '/reset-password',  'Frank\\Controllers\\AuthController@resetPassword',      []);
-
-// Signup
-$router->add('GET',  '/signup',         'Frank\\Controllers\\SignupController@showSignup',     []);
-$router->add('POST', '/signup',         'Frank\\Controllers\\SignupController@initiateSignup', [$json]);
-$router->add('GET',  '/signup/verify',  'Frank\\Controllers\\SignupController@showVerify',     []);
-$router->add('POST', '/signup/verify',  'Frank\\Controllers\\SignupController@completeSignup', [$json]);
-$router->add('POST', '/signup/resend',  'Frank\\Controllers\\SignupController@resendCode',     [$json]);
+// Public — one screen signs in and signs up (v3.0.0, passwordless)
+$router->add('GET',  '/login',         'Frank\\Controllers\\AuthController@showLogin',  []);
+$router->add('POST', '/login',         'Frank\\Controllers\\AuthController@login',      [$json]);
+$router->add('GET',  '/login/verify',  'Frank\\Controllers\\AuthController@showVerify', []);
+$router->add('POST', '/login/verify',  'Frank\\Controllers\\AuthController@verify',     [$json]);
+$router->add('POST', '/login/resend',  'Frank\\Controllers\\AuthController@resend',     [$json]);
+$router->add('GET',  '/login/terms',   'Frank\\Controllers\\AuthController@showTerms',  []);
+$router->add('POST', '/login/terms',   'Frank\\Controllers\\AuthController@acceptTerms', [$json]);
+$router->add('GET',  '/logout',        'Frank\\Controllers\\AuthController@logout',     []);
 
 // Tenant-scoped UI
 $router->add('GET', '/tenant/{tenant_id}/users', 'Frank\\Controllers\\UserManagementController@index', [$tm, $auth]);

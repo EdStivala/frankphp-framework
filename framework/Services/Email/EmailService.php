@@ -10,8 +10,7 @@ namespace Frank\Services\Email;
 use Frank\Services\Email\PHPMailer\PHPMailer;
 use Frank\Services\Email\PHPMailer\Exception;
 use Frank\Services\Email\PHPMailer\SMTP;
-use Frank\Services\Email\Templates\PasswordResetEmailTemplate;
-use Frank\Services\Email\Templates\SignupVerificationEmailTemplate;
+use Frank\Services\Email\Templates\LoginCodeEmailTemplate;
 use Frank\Services\Email\Templates\PlatformOwnerSignupAlertTemplate;
 
 /**
@@ -108,18 +107,18 @@ class EmailService
     }
 
 	/**
-	* Send a signup email verification code.
-	* Called by SignupService — credentials come from the service's own config,
-	* not from the caller.
+	* Send the emailed sign-in code (v3.0.0). One email for both sign-in and
+	* sign-up. Called by LoginCodeService — credentials come from this
+	* service's own config, not from the caller.
 	*/
-	public function sendSignupVerification(
+	public function sendLoginCode(
 	string $email,
 	string $code,
 	int    $expiryMinutes
 	): EmailResult
 	{
-		$subject  = 'Your verification code';
-		$templateClass = $this->resolveTemplateClass('signup_verification', SignupVerificationEmailTemplate::class);
+		$subject  = 'Your sign-in code';
+		$templateClass = $this->resolveTemplateClass('login_code', LoginCodeEmailTemplate::class);
 		$htmlBody = $templateClass::buildHtml($email, $code, $expiryMinutes);
 		$textBody = $templateClass::buildText($email, $code, $expiryMinutes);
 
@@ -139,7 +138,7 @@ class EmailService
 
 	/**
 	* Alert the platform owner about a signup-related event (e.g. a new
-	* verification code requested, or a new account successfully created).
+	* account successfully created).
 	* Recipient is $this->adminEmail — sourced from MAIL_SITE_ADMIN in
 	* .env via config['mail']['admin_email'], set in the constructor.
 	* Not tenant-scoped: this is a single, platform-wide operator address,
@@ -169,31 +168,6 @@ class EmailService
 		replyTo:               $this->replyToEmail,
 		));
 	}
-
-    // ----------------------------------------------------------------
-    // Convenience send methods
-    // ----------------------------------------------------------------
-
-    public function sendPasswordReset(string $email, string $name, string $resetUrl): EmailResult
-    {
-        $subject  = 'Password Reset Request';
-        $templateClass = $this->resolveTemplateClass('password_reset', PasswordResetEmailTemplate::class);
-        $htmlBody = $templateClass::buildHtml($name, $resetUrl);
-        $textBody = $templateClass::buildText($name, $resetUrl);
-
-        return $this->send(new EmailMessage(
-            credentialsUserName:   $this->username,
-            credentialsUserSecret: $this->password,
-            to:                    $email,
-            subject:               $subject,
-            htmlBody:              $htmlBody,
-            toName:                $name,
-            textBody:              $textBody,
-            from:                  $this->fromEmail,
-            fromName:              $this->fromName,
-            replyTo:               $this->replyToEmail,
-        ));
-    }
 
     // ----------------------------------------------------------------
     // Core send — PHPMailer dispatch

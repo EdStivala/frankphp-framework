@@ -20,7 +20,7 @@
 
 ## Roles
 
-The framework provides `role` on the `users` table with values `platform`, `owner`, `admin`, `user`. From FrankPHP 2.1, a self-service signup creates its own tenant and that user is its `owner` (CODEBASE.md §16.9). If this app places signups differently, record the `SignupTenantResolver` override under Known Deviations.
+The framework provides `role` on the `users` table with values `platform`, `owner`, `admin`, `user`. From FrankPHP 3.0 there are no passwords: one sign-in screen emails a 6-digit code, and an email address with no account yet gets its own tenant and becomes its `owner` (CODEBASE.md §16.9). If this app places new accounts differently, record the `SignupTenantResolver` override under Known Deviations.
 
 This app uses roles as follows:
 
@@ -67,7 +67,7 @@ assets/css/
 
 ## Data Model
 
-> Framework tables (`tenants`, `users`, `password_reset_tokens`) are documented in CODEBASE.md §15. Do not repeat them here.
+> Framework tables (`tenants`, `users`, `login_codes`) are documented in CODEBASE.md §16.1. Do not repeat them here.
 > Add one entry per application-specific table.
 
 ### `[table_name]`
@@ -155,7 +155,7 @@ class [ModelName] extends BaseModel
 
 - [Rule 1]
 - [Rule 2]
-- Signup terms acceptance: [Does this app set `signup.require_terms` in `Config/config.php`? If so, give the current `terms_version`, where the terms/privacy pages live, and anything the checkbox also confirms, e.g. age. See CODEBASE.md §16.9]
+- Terms acceptance for new accounts: [Does this app set `signup.require_terms` in `Config/config.php`? If so, give the current `terms_version`, where the terms/privacy pages live, and anything the checkbox also confirms, e.g. age. See CODEBASE.md §16.9]
 
 ---
 

@@ -14,10 +14,10 @@ separate pass.
 - Invite flow: invite a user into an existing tenant, and change a user's role.
   Since v2.1.0 every signup creates its own tenant, so colleagues who sign up
   separately end up in separate tenants.
-- Resend code is broken on `app/Views/auth/signup-verify.php`. The resend
-  `<form>` is nested inside the verify form (invalid HTML), so the Resend
-  button submits to `/signup/verify` instead of `/signup/resend`.
-- No CSRF protection on the signup / verify / resend forms (login has it).
+- ~~Resend code is broken (resend `<form>` nested inside the verify form).~~
+  Done in v3.0.0: the resend form is its own form on `login-verify.php`.
+- ~~No CSRF protection on the signup / verify / resend forms.~~ Done in
+  v3.0.0: every POST form in the sign-in flow carries the CSRF token.
 - `platform` role isn't cross-tenant yet: `AuthMiddleware` 403s on a tenant
   mismatch, and `TenantSettingsController` only admits `admin`/`owner`.
 - Terms re-acceptance when `signup.terms_version` changes, plus a consent
