@@ -8,8 +8,8 @@ item is the owner's call.
 
 - Branch `v3.0.0`. Not merged to `main`, not pushed.
   - `08336c0` sprint 1: passwordless email-code login (tested and approved).
-  - `0c7f09b` sprint 2 checkpoint (tested by the owner; sprint 2 NOT finished).
-  - Everything from the 2026-11-17 session is UNCOMMITTED on top of `0c7f09b`.
+  - `0c7f09b` sprint 2 checkpoint.
+  - `e9ca98c`, `3a7b807` sprint 2 completed (2026-11-17; tested by the owner).
 - Approved plan: `/Users/edstivala/.claude/plans/this-is-a-planning-adaptive-mitten.md`.
 - Working rules are in the project memory (no choices without instruction,
   one small step at a time, the owner drives, check files rather than memory,
@@ -28,9 +28,11 @@ item is the owner's call.
    AI without the owner's instruction and have been deleted, with their
    references in codebase.md and CHANGELOG.md. Only `boot_layout_test.php`
    (v2.1.1) remains.
-4. Sprint 2 screens and business rules — IN PROGRESS (see below).
+4. Sprint 2 screens and business rules — DONE (tested by the owner 2026-11-17).
 
-## Done in the 2026-11-17 session (uncommitted, tested by the owner unless noted)
+**Sprint 2 is DONE.** Next per the plan: sprint 3, invites.
+
+## Done in the 2026-11-17 session (committed, tested by the owner)
 
 - `UserService::changeRole()` sets `updated_at`.
 - `Tenant.php`: comments explain why `Tenant` does not extend `BaseModel`.
