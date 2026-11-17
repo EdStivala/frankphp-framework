@@ -55,8 +55,10 @@ $container->bind(\App\Controllers\UserAdminController::class, function ($c) {
     return new \App\Controllers\UserAdminController(
         $c->make(\Frank\Services\UserService::class),
         $c->make(\Frank\Services\TenantService::class),
+        $c->make(\Frank\Services\InviteService::class),
     );
 });
+$router->add('POST', '/tenant/{tenant_id}/users/invite',    'App\\Controllers\\UserAdminController@sendInvite',       [$tm, $auth, $json]);
 $router->add('GET',  '/tenant/{tenant_id}/users/edit',      'App\\Controllers\\UserAdminController@showUserEdit',     [$tm, $auth]);
 $router->add('POST', '/tenant/{tenant_id}/users/save',      'App\\Controllers\\UserAdminController@saveUser',         [$tm, $auth, $json]);
 $router->add('POST', '/tenant/{tenant_id}/users/delete',    'App\\Controllers\\UserAdminController@deleteUser',       [$tm, $auth, $json]);

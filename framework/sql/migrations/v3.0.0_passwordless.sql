@@ -23,6 +23,7 @@
 --   3. users.password_hash           column dropped
 --   4. password_reset_tokens         table dropped
 --   5. signup_tokens                 table dropped
+--   6. invites                       table created
 --
 -- Steps 3-5 are destructive and cannot be undone: after them nobody can sign
 -- in with a password (passwords no longer exist in v3) and pending sign-up /
@@ -92,3 +93,21 @@ DROP TABLE IF EXISTS password_reset_tokens;
 
 -- 5. signup_tokens dropped
 DROP TABLE IF EXISTS signup_tokens;
+
+-- 6. invites (same definition as schema.core.sql)
+CREATE TABLE IF NOT EXISTS invites (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id          INT NOT NULL,
+  email              VARCHAR(255) NOT NULL,
+  kind               VARCHAR(20) NOT NULL,
+  invited_by_user_id INT NOT NULL,
+  token_hash         CHAR(64) NOT NULL,
+  expires_at         DATETIME NOT NULL,
+  created_at         DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
+
+  UNIQUE KEY uq_invites_token_hash (token_hash),
+  INDEX idx_invites_tenant_email (tenant_id, email),
+
+  CONSTRAINT fk_invites_tenant
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

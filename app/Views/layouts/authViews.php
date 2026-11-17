@@ -16,9 +16,9 @@
 		<meta name="Author" content="Ed Stivala Limited">
 		<title><?= htmlspecialchars($title ?? 'FrankPHP | The AI-Native PHP Framework for multi-tenant SaaS Apps') ?></title>
 
-		<link href="../assets/vendor/bootstrap-5.3.6-dist/CSS/bootstrap.min.css" rel="stylesheet">
-		<link href="../assets/vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
-		<link href="../assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
+		<link href="/assets/vendor/bootstrap-5.3.6-dist/CSS/bootstrap.min.css" rel="stylesheet">
+		<link href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css" rel="stylesheet">
+		<link href="/assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
 
 		<!-- Fonts -->
 		<link href="https://fonts.googleapis.com" rel="preconnect">
@@ -26,8 +26,8 @@
 		<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
 
 		<!-- CSS default for site then layering in each of the sections -->
-		<!-- <link href="../assets/css/app-core.css" rel="stylesheet"> -->
-		<link href="../assets/css/authViews.css" rel="stylesheet">
+		<!-- <link href="/assets/css/app-core.css" rel="stylesheet"> -->
+		<link href="/assets/css/authViews.css" rel="stylesheet">
 
 
 	</head>
@@ -40,9 +40,9 @@
 		<!-- Include POPPER for dropdown menu functionality -->
 		<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"> </script>
 
-		<script src="../assets/vendor/bootstrap-5.3.6-dist/JS/bootstrap.min.js"> </script>
-		<script src="../assets/vendor/swiper/swiper-bundle.min.js"> </script>
-		<script src="../assets/js/main.js"> </script>
+		<script src="/assets/vendor/bootstrap-5.3.6-dist/JS/bootstrap.min.js"> </script>
+		<script src="/assets/vendor/swiper/swiper-bundle.min.js"> </script>
+		<script src="/assets/js/main.js"> </script>
 	</body>
 </html>
 

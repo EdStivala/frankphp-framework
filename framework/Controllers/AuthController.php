@@ -8,6 +8,7 @@ use Frank\Core\BaseController;
 use Frank\Core\Request;
 use Frank\Core\Response;
 use Frank\Core\Session;
+use Frank\Services\InviteService;
 use Frank\Services\LoginCodeService;
 use Frank\Services\ServiceResult;
 use Frank\Services\UserService;
@@ -23,10 +24,14 @@ use Frank\Services\UserService;
  * - login_email  — the address a code was requested for (verify screen)
  * - login_terms  — ['email', 'verified_at'] after an unknown email verified its
  *                  code while signup.require_terms is on (terms screen)
+ * - invite       — ['tenant_id', 'invite_id', 'email'] after a usable invite
+ *                  link was opened (/invite/{tenant_id}/{token}); cleared
+ *                  when the invite is accepted or turns out unusable
  *
  * Dependencies injected via container (bootstrap.php):
  * - LoginCodeService
- * - UserService  (recordLogin)
+ * - UserService    (recordLogin)
+ * - InviteService  (invite link)
  *
  * Controller responsibility: orchestration only.
  * - Reads request input, calls services, redirects or renders views.
@@ -39,7 +44,8 @@ class AuthController extends BaseController
 
     public function __construct(
         private LoginCodeService $loginCodeService,
-        private UserService      $userService
+        private UserService      $userService,
+        private InviteService    $inviteService
     ) {}
 
     // ----------------------------------------------------------------
@@ -72,6 +78,80 @@ class AuthController extends BaseController
 
         $_SESSION['login_email'] = $result->get('email');
         Response::redirect('/login/verify');
+    }
+
+    // ----------------------------------------------------------------
+    // Invite link (v3.0.0) — /invite/{tenant_id}/{token}
+    // ----------------------------------------------------------------
+
+    /**
+     * GET /invite/{tenant_id}/{token}. No code is needed — the link went only
+     * to the invited address. A usable invite is remembered in the session
+     * and the welcome screen opens. Nothing is created on open: mail scanners
+     * open links, so the account is created only when the person presses the
+     * button (POST /invite/accept). Missing, used or expired → one error screen.
+     */
+    public function showInvite(Request $request, array $params): mixed
+    {
+        Session::start();
+
+        $result = $this->inviteService->findOpenInvite(
+            (int) ($params['tenant_id'] ?? 0),
+            (string) ($params['token'] ?? '')
+        );
+
+        if (!$result->success) {
+            unset($_SESSION['invite']);
+            return $this->view('auth/invite-expired');
+        }
+
+        $_SESSION['invite'] = [
+            'tenant_id' => $result->get('tenant_id'),
+            'invite_id' => $result->get('invite_id'),
+            'email'     => $result->get('email'),
+        ];
+
+        return $this->inviteWelcomeView();
+    }
+
+    /** POST /invite/accept — the welcome screen's button. */
+    public function acceptInvite(Request $request, array $params): mixed
+    {
+        Session::start();
+
+        $state = $_SESSION['invite'] ?? null;
+        if (!is_array($state) || empty($state['invite_id']) || empty($state['tenant_id'])) {
+            Response::redirect('/login');
+        }
+
+        $data = $request->bodyParams ?? $_POST;
+        if (!$this->validateCsrfToken((string) ($data['csrf_token'] ?? ''))) {
+            return $this->inviteWelcomeView(self::INVALID_REQUEST_MSG);
+        }
+
+        $accepted = $data['terms_accepted'] ?? null;
+        $accepted = is_bool($accepted) ? $accepted : ($accepted !== null ? (string) $accepted : null);
+
+        $result = $this->inviteService->acceptInvite(
+            (int) $state['tenant_id'],
+            (int) $state['invite_id'],
+            $accepted
+        );
+
+        if (!$result->success) {
+            switch ($result->errorType) {
+                case 'invite_unusable':
+                    unset($_SESSION['invite']);
+                    return $this->view('auth/invite-expired');
+                case 'account_exists':
+                    unset($_SESSION['invite']);
+                    return $this->loginError($result->message, (string) $state['email']);
+                default: // terms_required, system
+                    return $this->inviteWelcomeView($result->message);
+            }
+        }
+
+        return $this->completeLogin($result); // clears the invite from the session
     }
 
     // ----------------------------------------------------------------
@@ -214,7 +294,7 @@ class AuthController extends BaseController
         $tenantId = (int) $result->get('tenant_id');
 
         session_regenerate_id(true);
-        unset($_SESSION['login_email'], $_SESSION['login_terms']);
+        unset($_SESSION['login_email'], $_SESSION['login_terms'], $_SESSION['invite']);
         $_SESSION['user_id'] = $userId;
 
         // The code is already spent and the session is established, so a
@@ -252,6 +332,16 @@ class AuthController extends BaseController
             'csrfToken' => $this->csrfToken(),
             'email'     => $email,
             'error'     => $error,
+        ]);
+    }
+
+    private function inviteWelcomeView(?string $error = null): mixed
+    {
+        return $this->view('auth/invite-welcome', [
+            'csrfToken'    => $this->csrfToken(),
+            'email'        => $_SESSION['invite']['email'] ?? '',
+            'requireTerms' => $this->inviteService->termsRequired(),
+            'error'        => $error,
         ]);
     }
 

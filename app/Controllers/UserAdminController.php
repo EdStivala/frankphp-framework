@@ -10,6 +10,7 @@ use Frank\Core\Response;
 use Frank\Core\Session;
 use Frank\Models\Tenant;
 use Frank\Models\User;
+use Frank\Services\InviteService;
 use Frank\Services\TenantService;
 use Frank\Services\UserService;
 
@@ -26,11 +27,13 @@ use Frank\Services\UserService;
  * The example's rules:
  *   - user: delete their own account (Account Settings shows it to role user only)
  *   - owner: delete the tenant (warning screen, type the tenant's name, then delete)
+ *   - owner / platform: send an invite from the Users screen (InviteService)
  *
  * Every POST here checks the CSRF token ($_SESSION['csrf_token'], hash_equals),
  * the same mechanism as the login forms.
  *
  * Routes (registered in app/bootstrap.php with [$tm, $auth, $json]):
+ *   POST /tenant/{tenant_id}/users/invite
  *   POST /tenant/{tenant_id}/account/delete
  *   GET  /tenant/{tenant_id}/tenant-delete
  *   POST /tenant/{tenant_id}/tenant-delete
@@ -39,8 +42,62 @@ class UserAdminController extends BaseController
 {
     public function __construct(
         private UserService   $userService,
-        private TenantService $tenantService
+        private TenantService $tenantService,
+        private InviteService $inviteService
     ) {
+    }
+
+    // ----------------------------------------------------------------
+    // Invite (platform / owner) — the invite is saved and the invite email
+    // sent (InviteService::createInvite). The link itself is handled by the
+    // framework's AuthController (/invite/{tenant_id}/{token}).
+    // ----------------------------------------------------------------
+
+    /**
+     * POST /tenant/{tenant_id}/users/invite — field: email
+     *
+     * The example's rules: an owner sends 'join_tenant' (the person joins the
+     * owner's tenant as 'user'); a 'platform' user sends 'new_tenant' (the
+     * person gets a new tenant as 'owner'). The invite always carries the
+     * sender's tenant.
+     */
+    public function sendInvite(Request $request, array $params): mixed
+    {
+        $tenant = $request->tenant;
+        $user   = $request->user;
+        $users  = "/tenant/{$tenant['id']}/users";
+
+        if (!$this->canEditUsers($user)) {
+            return Response::redirect("/tenant/{$tenant['id']}/dashboard?error=forbidden");
+        }
+
+        $data = $this->body($request);
+        if (!$this->validCsrf($data)) {
+            return Response::redirect($users . '?error=invalid_request');
+        }
+
+        $kind   = ($user['role'] ?? '') === 'platform'
+            ? InviteService::KIND_NEW_TENANT
+            : InviteService::KIND_JOIN_TENANT;
+        $result = $this->inviteService->createInvite(
+            (string) ($data['email'] ?? ''),
+            (int) $tenant['id'],
+            $kind,
+            (int) $user['id']
+        );
+
+        if (!$result->success) {
+            $error = match ($result->errorType) {
+                'validation'     => 'invalid_email',
+                'account_exists' => 'account_exists',
+                'invite_open'    => 'invite_open',
+                'email_failed'   => 'invite_email_failed',
+                default          => 'invite_failed',
+            };
+            return Response::redirect($users . '?error=' . $error);
+        }
+
+        return Response::redirect($users . '?success=invited');
     }
 
     // ----------------------------------------------------------------

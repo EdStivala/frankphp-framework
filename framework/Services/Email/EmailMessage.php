@@ -52,6 +52,6 @@ class EmailMessage
         return !empty($this->to) 
             && !empty($this->subject) 
             && !empty($this->htmlBody)
-            && filter_var($this->to, FILTER_VALIDATE_EMAIL);
+            && EmailAddress::isValid($this->to);
     }
 }

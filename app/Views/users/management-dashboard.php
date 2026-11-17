@@ -10,6 +10,22 @@ ob_start();
     </div>
 </div>
 
+<?php if (($_GET['success'] ?? '') === 'invited') : ?>
+    <div class="alert alert-success settings-alert">Invite sent.</div>
+<?php elseif (($_GET['error'] ?? '') === 'invalid_email') : ?>
+    <div class="alert alert-danger settings-alert">Please enter a valid email address.</div>
+<?php elseif (($_GET['error'] ?? '') === 'account_exists') : ?>
+    <div class="alert alert-danger settings-alert">That email address already has an account.</div>
+<?php elseif (($_GET['error'] ?? '') === 'invite_open') : ?>
+    <div class="alert alert-danger settings-alert">That email address already has an open invite.</div>
+<?php elseif (($_GET['error'] ?? '') === 'invite_email_failed') : ?>
+    <div class="alert alert-danger settings-alert">The invite email could not be sent — please try again.</div>
+<?php elseif (($_GET['error'] ?? '') === 'invite_failed') : ?>
+    <div class="alert alert-danger settings-alert">Could not save the invite — please try again.</div>
+<?php elseif (($_GET['error'] ?? '') === 'invalid_request') : ?>
+    <div class="alert alert-danger settings-alert">Invalid request. Please try again.</div>
+<?php endif; ?>
+
 <!-- Your details + KPI Stat Cards -->
 <div class="row g-3 mb-4">
 
@@ -40,7 +56,7 @@ ob_start();
     <div class="row g-3">
 
     <div class="col-6">
-        <div class="stat-card">
+        <div class="stat-card position-relative">
             <div class="stat-card-icon stat-card-icon--primary">
                 <i class="bi bi-people-fill"></i>
             </div>
@@ -48,6 +64,10 @@ ob_start();
                 <div class="stat-card-value"><?= $totalUsers ?></div>
                 <div class="stat-card-label">Total Users</div>
             </div>
+            <button type="button" class="btn btn-sm btn-brand-primary position-absolute top-0 end-0 m-3"
+                data-bs-toggle="modal" data-bs-target="#inviteModal">
+                <i class="bi bi-plus-lg me-1"></i>Invite
+            </button>
         </div>
     </div>
 
@@ -90,6 +110,30 @@ ob_start();
     </div>
     </div>
 
+</div>
+
+<!-- Invite modal (sprint 3: saves the invite and sends the invite email) -->
+<div class="modal fade" id="inviteModal" tabindex="-1" aria-labelledby="inviteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="/tenant/<?= (int) $tenant['id'] ?>/users/invite">
+                <?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inviteModalLabel"><?= $crossTenant ? 'Invite a new tenant' : 'Invite a new user' ?></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label" for="invite-email">Email address</label>
+                    <input type="email" class="form-control" id="invite-email" name="email" maxlength="255"
+                        placeholder="name@example.com" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-brand-primary">Send invite</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Users Table -->

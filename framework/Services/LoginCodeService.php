@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Frank\Services;
 
 use Frank\Core\Clock;
-use Frank\Core\Database;
 use Frank\Models\User;
+use Frank\Services\Email\EmailAddress;
 use Frank\Services\Email\EmailService;
 
 /**
@@ -25,7 +25,7 @@ use Frank\Services\Email\EmailService;
  *   emailed in both cases.
  * - Known email + correct code: the user is returned (the controller logs in).
  * - Unknown email + correct code: a tenant and its owner user are created
- *   straight away via SignupTenantResolver inside Database::transaction().
+ *   straight away by AccountService::create(), placed by SignupTenantResolver.
  * - Only when $config['signup']['require_terms'] is on, an unknown email that
  *   has verified its code must accept the Terms first (acceptTerms()); the
  *   tenant and user are created only after acceptance. Existing users are
@@ -43,31 +43,32 @@ class LoginCodeService
     private User $userModel;
     private EmailService $emailService;
     private SignupTenantResolver $tenantResolver;
-    private ?string $termsVersion;
+    private AccountService $accountService;
 
     /**
-     * @param bool        $requireTerms  $config['signup']['require_terms'] (off = no terms step)
-     * @param string|null $termsVersion  $config['signup']['terms_version'], stored with the acceptance
+     * @param bool        $requireTerms    $config['signup']['require_terms'] (off = no terms step)
+     * @param string|null $termsVersion    $config['signup']['terms_version'], stored with the
+     *                                     acceptance (AccountService trims it to the column)
+     * @param AccountService|null $accountService  Last, so existing positional calls still work
      */
     public function __construct(
         ?User         $userModel    = null,
         ?EmailService $emailService = null,
         ?SignupTenantResolver $tenantResolver = null,
         private bool $requireTerms = false,
-        ?string $termsVersion = null,
+        private ?string $termsVersion = null,
         private int $codeExpiryMinutes = 15,
         private int $maxAttempts       = 3,
         private int $rateLimitRequests = 5,
-        private int $rateLimitMinutes  = 60
+        private int $rateLimitMinutes  = 60,
+        ?AccountService $accountService = null
     ) {
         $this->userModel      = $userModel ?? new User();
         $this->emailService   = $emailService ?? throw new \LogicException(
             'LoginCodeService requires an EmailService. Register it in the container.'
         );
         $this->tenantResolver = $tenantResolver ?? new CreateTenantForSignup(new TenantService());
-        $this->termsVersion   = ($termsVersion !== null && trim($termsVersion) !== '')
-            ? substr(trim($termsVersion), 0, 50)
-            : null;
+        $this->accountService = $accountService ?? new AccountService($this->emailService);
     }
 
     // ----------------------------------------------------------------
@@ -84,9 +85,9 @@ class LoginCodeService
      */
     public function requestCode(string $email, string $ipAddress = '', string $userAgent = ''): ServiceResult
     {
-        $email = $this->normaliseEmail($email);
+        $email = EmailAddress::normalise($email);
 
-        if (!$this->isValidEmail($email)) {
+        if (!EmailAddress::isValid($email)) {
             return ServiceResult::failure('Please enter a valid email address.', 'validation');
         }
 
@@ -138,7 +139,7 @@ class LoginCodeService
      */
     public function verifyCode(string $email, string $code): ServiceResult
     {
-        $email = $this->normaliseEmail($email);
+        $email = EmailAddress::normalise($email);
         $code  = trim($code);
 
         if ($email === '' || $code === '') {
@@ -217,7 +218,7 @@ class LoginCodeService
      */
     public function acceptTerms(string $email, string $verifiedAt, bool|string|null $accepted): ServiceResult
     {
-        $email = $this->normaliseEmail($email);
+        $email = EmailAddress::normalise($email);
 
         if (!$this->isTermsStepOpen($verifiedAt)) {
             return ServiceResult::failure(
@@ -264,8 +265,8 @@ class LoginCodeService
     // ----------------------------------------------------------------
 
     /**
-     * Place the user via SignupTenantResolver (default: new tenant, owner) and
-     * insert the user — one transaction, so a failure leaves no orphan tenant.
+     * Create the account through AccountService, placed by the app's
+     * SignupTenantResolver (default: new tenant, owner).
      */
     private function createAccount(
         string $email,
@@ -273,59 +274,19 @@ class LoginCodeService
         ?string $termsAcceptedAt = null,
         ?string $termsVersion = null
     ): ServiceResult {
-        $name = $this->deriveNameFromEmail($email);
-
-        try {
-            $account = Database::transaction(function () use ($email, $name, $now, $termsAcceptedAt, $termsVersion): array {
-                $placement = $this->tenantResolver->resolve($email, $name);
-                $tenantId  = (int) $placement['tenant_id'];
-
-                // Inherited from BaseModel: fill() then save().
-                $user = new User();
-                $user->fill([
-                    'tenant_id'         => $tenantId,
-                    'email'             => $email,
-                    'name'              => $name,
-                    'role'              => $placement['role'],
-                    'created_at'        => $now,
-                    'terms_accepted_at' => $termsAcceptedAt,
-                    'terms_version'     => $termsAcceptedAt !== null ? $termsVersion : null,
-                ]);
-
-                if (!$user->save()) {
-                    throw new \RuntimeException('User save failed.');
-                }
-
-                // Read the saved user back (inherited where(), tenant-scoped): gives
-                // the new id and confirms the save worked.
-                $saved = User::where($tenantId, 'email', $email)[0] ?? null;
-                if ($saved === null) {
-                    throw new \RuntimeException('Saved user not found.');
-                }
-                $userId = (int) $saved->id;
-
-                return [
-                    'user_id'     => $userId,
-                    'tenant_id'   => $tenantId,
-                    'role'        => $placement['role'],
-                    'tenant_name' => $placement['tenant_name'] ?? null,
-                ];
-            });
-        } catch (\Throwable $e) {
-            error_log('[LoginCodeService] Account creation failed for ' . $email . ': ' . $e->getMessage());
-            return ServiceResult::failure('Account creation failed. Please try again.', 'system');
-        }
-
-        $tenantLabel = $account['tenant_name'] !== null
-            ? "\"{$account['tenant_name']}\" (tenant_id: {$account['tenant_id']})"
-            : "tenant_id: {$account['tenant_id']}";
-
-        $this->emailService->sendPlatformOwnerSignupAlert(
+        $result = $this->accountService->create(
             $email,
-            "A new account was created via sign-in code. Tenant: {$tenantLabel}, role: {$account['role']}."
+            $this->tenantResolver,
+            $now,
+            $termsAcceptedAt,
+            $termsVersion
         );
 
-        return $this->loggedIn($account['user_id'], $account['tenant_id'], $email);
+        if (!$result->success) {
+            return $result;
+        }
+
+        return $this->loggedIn((int) $result->get('user_id'), (int) $result->get('tenant_id'), $email);
     }
 
     private function loggedIn(int $userId, int $tenantId, string $email): ServiceResult
@@ -338,32 +299,12 @@ class LoginCodeService
         ]);
     }
 
-    private function normaliseEmail(string $email): string
-    {
-        return strtolower(trim($email));
-    }
-
-    private function isValidEmail(string $email): bool
-    {
-        return strlen($email) <= 255 && filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
-    }
-
     /**
      * Cryptographically random 6-digit code, zero-padded.
      */
     private function generateCode(): string
     {
         return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Derive a display name from an email local-part.
-     * e.g. "john.doe@example.com" → "John Doe"
-     */
-    private function deriveNameFromEmail(string $email): string
-    {
-        $localPart = explode('@', $email)[0];
-        return ucwords(str_replace(['.', '_', '-'], ' ', $localPart));
     }
 
     /**

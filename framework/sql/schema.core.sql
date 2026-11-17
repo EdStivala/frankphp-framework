@@ -76,3 +76,31 @@ CREATE TABLE IF NOT EXISTS login_codes (
   INDEX idx_login_codes_expires_at (expires_at),
   INDEX idx_login_codes_ip_created (ip_address, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Invites (v3.0.0). tenant_id is always the SENDER's tenant (an owner's
+-- tenant, or the platform's tenant), so every row is tenant-scoped and is
+-- read only through BaseModel's inherited tenant-scoped methods.
+-- kind decides where the invited person ends up when their account is
+-- created: 'join_tenant' = joins tenant_id as 'user' (owner's invite);
+-- 'new_tenant' = gets a new tenant of their own as 'owner' (platform invite).
+-- The emailed link carries tenant_id and a random token; only the token's
+-- SHA-256 hash is stored. An invite lasts 7 days (expires_at), works once
+-- (the row is deleted when the account is created) and cannot be cancelled.
+-- All datetimes are UTC, written by the Service. Deleting a tenant deletes
+-- its invites.
+CREATE TABLE IF NOT EXISTS invites (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  tenant_id          INT NOT NULL,
+  email              VARCHAR(255) NOT NULL,
+  kind               VARCHAR(20) NOT NULL,
+  invited_by_user_id INT NOT NULL,
+  token_hash         CHAR(64) NOT NULL,
+  expires_at         DATETIME NOT NULL,
+  created_at         DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP()),
+
+  UNIQUE KEY uq_invites_token_hash (token_hash),
+  INDEX idx_invites_tenant_email (tenant_id, email),
+
+  CONSTRAINT fk_invites_tenant
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Frank\Services;
 
+use Frank\Services\Email\EmailAddress;
+
 /**
  * TenantNameGenerator
  *
@@ -55,7 +57,7 @@ class TenantNameGenerator
      */
     public function fromEmail(string $email): array
     {
-        $email  = strtolower(trim($email));
+        $email  = EmailAddress::normalise($email);
         $at     = strrpos($email, '@');
         $local  = $at === false ? $email : substr($email, 0, $at);
         $domain = $at === false ? '' : substr($email, $at + 1);

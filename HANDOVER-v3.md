@@ -32,6 +32,29 @@ item is the owner's call.
 
 **Sprint 2 is DONE.** Next per the plan: sprint 3, invites.
 
+## Sprint 3 — invites (DONE, committed 2026-11-17)
+
+Tested by the owner: sending an invite (owner and platform), the invite email,
+the link opening (valid and invalid), accepting — platform invite creates a new
+tenant and owner, owner invite creates a `user` in the inviting tenant. Sign-up
+re-tested after account creation moved to `AccountService`. Role changes and
+owner tenant delete (with clean-up) re-tested and still correct.
+
+Not tested, skipped on the owner's instruction: accepting with terms off, and
+an invite genuinely past its 7 days.
+
+Owner decisions this sprint (now in the plan's Invites rules): no code to join
+— the link proves the address and the address cannot be changed; a welcome
+screen with one button (nothing created on open, because mail scanners open
+links); the accepted invite is deleted, not marked used; a failed invite email
+saves nothing; live-invite check within the sender's tenant only.
+
+Reuse refactors this sprint: `EmailAddress` (email rules), `EmailService`
+`sendTemplated()`, `AccountService` (account creation for sign-up and invites).
+
+Docs: codebase.md (§2, §8.1, §8.2, §11, §14, §15, §16.1–16.5, §16.8–16.11) and
+CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
+
 ## Done in the 2026-11-17 session (committed, tested by the owner)
 
 - `UserService::changeRole()` sets `updated_at`.
@@ -115,7 +138,7 @@ Sprint 2 (in `0c7f09b`) — items 2–6 and 10 no longer exist (removed 2026-11-
 21. The CSRF check is written separately in three controllers.
 22. Stale `/signup` changelog line removed.
 
-2026-11-17 session (uncommitted):
+2026-11-17 session (committed):
 1. Addresses and file names: `…/users/edit|save|delete`, `…/tenants/edit|save|delete`,
    `users/user-edit.php`, `users/tenant-edit.php`, method `deleteTenantAsPlatform`.
 2. Edit User shows name only (no timezone); email and role read-only.
@@ -130,3 +153,22 @@ Sprint 2 (in `0c7f09b`) — items 2–6 and 10 no longer exist (removed 2026-11-
 9. `Tenant.php` comment on `insertTenant()` includes an unconfirmed reason
    (an upsert would overwrite a tenant whose slug clashes); owner said it is not material.
 10. The CHANGELOG `admin` entry says existing admins do not see Delete my account.
+
+Sprint 3 (provisional — copied from existing patterns, not yet confirmed):
+1. Invite email: subject "You've been invited", wording, one template for both
+   kinds; says "join FrankPHP", not the tenant's name.
+2. Expired screen wording ("This invite has expired." + contact line).
+3. Welcome screen heading "Welcome aboard!" and both texts (terms on / off).
+4. Accepting when the address got an account meanwhile: login screen, address
+   filled in, "That email address already has an account. Please sign in."
+5. Users-screen banner messages for invites; button label "Invite"; modal
+   titles "Invite a new user" / "Invite a new tenant".
+6. The opened invite stays in the session until accepted, found unusable, or logout.
+7. A signed-in person who accepts an invite for another address becomes that account.
+8. The DB transaction stays open while the invite email is sent (1–2 seconds).
+9. Platform-owner alert says "created via invite" for invite accounts.
+10. `EmailMessage::isValid()` now also enforces the 255-character limit.
+11. Addresses and file names: `/invite/{tenant_id}/{token}`, `/invite/accept`,
+    `auth/invite-welcome.php`, `auth/invite-expired.php`, `AccountService`,
+    `JoinTenantAsUser`, `EmailAddress`.
+12. Expired, never-used invites are never cleaned up (owner: stick to the plan).

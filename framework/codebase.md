@@ -92,7 +92,7 @@ framework/
 │   ├── Router.php             # add(), override(), dispatch(), middleware pipeline builder — accepts Container
 │   └── Session.php            # v3.0.0 — the only place a session is started: Session::start() / destroy(). 28-day rolling session, own save path. See §11
 ├── Controllers/                        # Framework-owned only — no application controllers live here
-│   ├── AuthController.php              # v3.0.0 passwordless: the one sign-in/sign-up screen, code verify, resend, terms step, logout — injects LoginCodeService + UserService
+│   ├── AuthController.php              # v3.0.0 passwordless: the one sign-in/sign-up screen, code verify, resend, terms step, invite welcome + accept, logout — injects LoginCodeService + UserService + InviteService
 │   ├── TenantSettingsController.php    # Tenant settings read/write — owner only
 │   └── AccountSettingsController.php   # Per-user account settings read/write
 ├── Middleware/
@@ -100,17 +100,22 @@ framework/
 │   ├── TenantMiddleware.php         # Resolves tenant_id param, loads $request->tenant
 │   ├── JsonBodyParserMiddleware.php # Parses raw JSON body into $request->bodyParams
 │   └── ApiAuthMiddleware.php        # API key auth — validates api_key_hash, loads $request->user
-├── Models/                  # Framework-owned only — User and Tenant, nothing else. See §16.7 for extending these.
+├── Models/                  # Framework-owned only — User, Tenant and Invite, nothing else. See §16.7 for extending User and Tenant.
 │   ├── User.php              # Extends BaseModel — DB access only. Covers the users and login_codes tables. Never calls Clock.
-│   └── Tenant.php            # Standalone (does not extend BaseModel) — DB access only. findById, findAll, slugExists, insertTenant, saveSettings. Never calls Clock.
+│   ├── Tenant.php            # Standalone (does not extend BaseModel) — DB access only. findById, findAll, slugExists, insertTenant, saveSettings. Never calls Clock.
+│   └── Invite.php            # v3.0.0 — extends BaseModel, invites table. No methods of its own: inherited tenant-scoped where()/find()/fill()/save()/delete() only. Never calls Clock.
 ├── Services/                 # Framework-owned business logic — return ServiceResult objects. Own all Clock calls.
 │   ├── Email/
-│   │   ├── EmailService.php        # SMTP dispatch via vendored PHPMailer — fromConfig(), the two framework send*() methods (sendLoginCode, sendPlatformOwnerSignupAlert)
+│   │   ├── EmailService.php        # SMTP dispatch via vendored PHPMailer — fromConfig(), the three framework send*() methods (sendLoginCode, sendInvite, sendPlatformOwnerSignupAlert), all built through the private sendTemplated()
+│   │   ├── EmailAddress.php        # v3.0.0 — the one place for email rules: static normalise() and isValid(). Callable from app code too
 │   │   ├── EmailMessage.php        # Value object passed to EmailService::send()
 │   │   ├── EmailResult.php         # Result object returned by EmailService::send()
-│   │   ├── Templates/               # Default templates for the two framework email flows (LoginCodeEmailTemplate, PlatformOwnerSignupAlertTemplate) — overridable per-app, see §16.8
+│   │   ├── Templates/               # Default templates for the three framework email flows (LoginCodeEmailTemplate, InviteEmailTemplate, PlatformOwnerSignupAlertTemplate) — overridable per-app, see §16.8
 │   │   └── PHPMailer/               # Vendored PHPMailer (no Composer) — see §16.8 for the version-maintenance note
 │   ├── LoginCodeService.php        # v3.0.0 — requestCode(), verifyCode(), acceptTerms(), isTermsStepOpen(), cleanupExpiredCodes(). Sign-in + sign-up by emailed 6-digit code; opt-in terms step (§11, §16.9)
+│   ├── AccountService.php          # v3.0.0 — create(): the one place a new account is created (sign-up and invites), in one transaction (§16.9, §16.11)
+│   ├── InviteService.php           # v3.0.0 — createInvite(), findOpenInvite(), acceptInvite(), termsRequired() (§16.11)
+│   ├── JoinTenantAsUser.php        # v3.0.0 — SignupTenantResolver for an owner's invite: the inviting tenant, role user (§16.11)
 │   ├── SignupTenantResolver.php    # Interface — policy point: which tenant + role a new person (unknown email, verified code) gets (v2.1.0, §16.9)
 │   ├── CreateTenantForSignup.php   # Default SignupTenantResolver — new tenant per new person, user becomes owner (v2.1.0)
 │   ├── TenantNameGenerator.php     # Pure helper — default tenant name + slug from the new person's email (v2.1.0)
@@ -121,7 +126,7 @@ framework/
 │   ├── schema.core.sql      # Auto-executed on first boot if users table missing. A fresh install starts EMPTY — no seed data (v3.0.0).
 │   └── migrations/          # Hand-run, idempotent SQL for EXISTING installs when a release changes framework tables (v2.1.0+). Shipped in release zips. See §16.6.
 │       ├── v2.1.0_signup_terms.sql
-│       └── v3.0.0_passwordless.sql   # Unique users.email, login_codes; drops password_hash, password_reset_tokens, signup_tokens. Stops if one email exists in two tenants.
+│       └── v3.0.0_passwordless.sql   # Unique users.email, login_codes, invites; drops password_hash, password_reset_tokens, signup_tokens. Stops if one email exists in two tenants.
 ├── tools/
 │   ├── build_release.php              # Builds a clean, framework-only dist/ zip for a GitHub Release update asset
 │   └── generate_release_manifest.php  # Diffs this release against the last one — file/route/schema changes — drafts RELEASE_MANIFEST.json
@@ -501,9 +506,12 @@ return $this->view('some/view', ['error' => $result->message]);
 | Method | Purpose |
 |--------|---------|
 | `sendLoginCode(email, code, expiryMinutes)` | The emailed 6-digit sign-in code (v3.0.0). One email for both sign-in and sign-up; code only, no link |
+| `sendInvite(email, inviteUrl, expiryDays)` | The invite email (v3.0.0). Called by `InviteService`, which builds the link `/invite/{tenant_id}/{token}`. One email for both kinds of invite (§16.11) |
 | `sendPlatformOwnerSignupAlert(triggeringEmail, event)` | Alerts the platform owner (`MAIL_SITE_ADMIN`) twice, as in v2: when an address with no account requests a code, and when the account is created |
 
-Each renders a default template shipped in `Services/Email/Templates/`. The template *class* — not this method — is what's overridable per-application, via `config('mail.templates')`, without editing this file. See §16.8, "Overriding Framework Email Templates."
+Each renders a default template shipped in `Services/Email/Templates/`. The template *class* — not this method — is what's overridable per-application, via `config('mail.templates')`, without editing this file. See §16.8, "Overriding Framework Email Templates." All three build their `EmailMessage` through one private helper, `sendTemplated(to, subject, htmlBody, textBody)`, which fills in the SMTP credentials, sender and reply-to from config (v3.0.0).
+
+**`EmailAddress`** *(v3.0.0)* — `Frank\Services\Email\EmailAddress`, the one place that defines email rules: `EmailAddress::normalise(email)` (trim, lower-case) and `EmailAddress::isValid(email)` (valid format, at most 255 characters — `users.email` size). Static, `final`. Used by `LoginCodeService`, `InviteService`, `TenantNameGenerator` and `EmailMessage::isValid()`. `users.email` is unique across the platform, so any code that compares or stores an address must go through it, never inline. App code may call it too.
 
 **Adding a new email type for application use:** do not add `send*()` methods to this framework-owned class. Write an application-owned service (e.g. `App\Services\NotificationService`) that constructs its own `EmailMessage` and calls the injected `EmailService::send()` directly — the same pattern as any other application-owned service.
 
@@ -535,10 +543,12 @@ Each renders a default template shipped in `Services/Email/Templates/`. The temp
 |---|---|---|
 | `EmailService::class` | singleton | Config-driven SMTP credentials; shared across all services |
 | `SignupTenantResolver::class` | singleton | New-account tenant-placement policy — default `CreateTenantForSignup`. Replace with `override()` (§16.9). v2.1.0 |
-| `LoginCodeService::class` | singleton | Depends on User model + EmailService + SignupTenantResolver + `$config['signup']` (§11, §16.9). v3.0.0 |
+| `AccountService::class` | singleton | The one place a new account is created (sign-up and invites). Depends on EmailService (§16.9, §16.11). v3.0.0 |
+| `LoginCodeService::class` | singleton | Depends on User model + EmailService + SignupTenantResolver + AccountService + `$config['signup']` (§11, §16.9). v3.0.0 |
 | `UserService::class` | singleton | Framework user business logic — recordLogin, saveSettings |
 | `TenantService::class` | singleton | Framework tenant business logic — saveSettings allowlist and null-coercion |
-| `AuthController::class` | bind | Needs LoginCodeService + UserService injected |
+| `InviteService::class` | singleton | Depends on EmailService + AccountService + TenantService + User model + `$config['signup']` (§16.11). v3.0.0 |
+| `AuthController::class` | bind | Needs LoginCodeService + UserService + InviteService injected |
 
 Controllers are registered with `bind()` (not `singleton()`) because a fresh controller instance per request is the correct behaviour.
 
@@ -867,7 +877,7 @@ When building or reviewing FrankPHP code:
 - **28 days, rolling.** The session and its cookie last 28 days from the person's last use, so staying logged in is renewed while they keep using the app. For a logged-in session the cookie is re-issued with a fresh 28-day expiry at most once an hour, and a session idle for more than 28 days is destroyed. Clearing cookies logs the person out.
 - **Own save path.** Session files live in `APP_BASE_DIR/app/private/sessions` (created on demand, mode 0700, git-ignored) and `session.gc_maxlifetime` is set to 28 days, so another site sharing the same PHP install cannot garbage-collect these sessions early.
 - Cookie flags: `HttpOnly`, `SameSite=Lax`, `Secure` when the request is HTTPS.
-- Session keys set by the framework: `user_id` (the login), `csrf_token`, and the in-flight sign-in state `login_email` / `login_terms`; `Session` keeps `_last_activity` and `_cookie_refreshed_at`.
+- Session keys set by the framework: `user_id` (the login), `csrf_token`, the in-flight sign-in state `login_email` / `login_terms`, and `invite` (an opened invite link, v3.0.0, §16.11); `Session` keeps `_last_activity` and `_cookie_refreshed_at`.
 - `Session` uses `time()` for cookie and idle arithmetic. This is PHP runtime session mechanics, not a persisted application timestamp, so it is the one sanctioned use outside `Clock` (§10); every timestamp written to the database still comes from `Clock` in a Service.
 
 **AuthMiddleware** on every protected route:
@@ -1015,7 +1025,7 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - No template engine — plain PHP views
 - No event system
 - No queue system
-- No framework-wide CSRF protection — the sign-in forms (§11) and the two settings save actions (`POST …/account/save`, `POST …/tenant-settings/save`, v3.0.0) check a per-session `csrf_token`. Other application forms must add their own
+- No framework-wide CSRF protection — the sign-in forms (§11), the invite accept form (§16.11) and the two settings save actions (`POST …/account/save`, `POST …/tenant-settings/save`, v3.0.0) check a per-session `csrf_token`. Other application forms must add their own
 - No general rate-limiting facility — only sign-in code requests are limited, per IP (§11)
 - No Composer — zero external dependencies
 - No external date/time library — UTC/local handling is provided by `Frank\Core\Clock` using native PHP date/time classes
@@ -1049,14 +1059,17 @@ You are reading CODEBASE.md. It describes the framework. Everything specific to 
 Before writing or modifying any code, classify the work:
 
 **Framework-owned (described in CODEBASE.md, Section 16):**
-- `tenants`, `users`, `login_codes` tables and any future framework auth tables
-- All models in `Models/User.php`, `Models/Tenant.php`
+- `tenants`, `users`, `login_codes`, `invites` tables and any future framework auth tables
+- All models in `Models/User.php`, `Models/Tenant.php`, `Models/Invite.php`
 - All controllers in `framework/Controllers/`: `AuthController.php`, `TenantSettingsController.php`, `AccountSettingsController.php`
 - All framework default routes (sign-in / verify / resend / terms, logout, tenant/account settings) — not the dashboard route, which is app-owned; see §16.4
 - The middleware stack (`AuthMiddleware`, `TenantMiddleware`, `JsonBodyParserMiddleware`, `ApiAuthMiddleware`)
 - `Core/Clock.php`, `Core/Container.php`, `Core/Session.php`, and the service bindings registered in `framework/bootstrap.php` for framework services
 - `Services/UserService.php` — framework service for user business logic
 - `Services/LoginCodeService.php` — framework service for passwordless sign-in / sign-up (v3.0.0)
+- `Services/AccountService.php` — framework service that creates every new account (v3.0.0)
+- `Services/InviteService.php` and `Services/JoinTenantAsUser.php` — framework invites (v3.0.0)
+- `Services/Email/EmailAddress.php` — framework email rules (v3.0.0)
 - `Services/TenantService.php` — framework service for tenant business logic
 
 **Do not modify framework-owned files when building application features.** If a feature appears to require a change to a framework-owned file, stop and flag this to the developer before proceeding. Framework changes require a deliberate upgrade decision — they are not routine feature work.
@@ -1141,12 +1154,12 @@ Adapt your documentation output to the mode you are operating in:
 
 Do not add the following to MYAPP.md — they belong in CODEBASE.md and are already documented there:
 
-- Framework table schemas (`tenants`, `users`, `login_codes`)
-- Framework default routes (sign-in, tenant/account settings) — not the dashboard route; that's app-owned and belongs in MYAPP.md, see §16.4
+- Framework table schemas (`tenants`, `users`, `login_codes`, `invites`)
+- Framework default routes (sign-in, invite link, tenant/account settings) — not the dashboard route; that's app-owned and belongs in MYAPP.md, see §16.4
 - Framework middleware descriptions
 - BaseModel, BaseController, Container, or core class behaviour
 - General framework conventions (these apply globally and are not re-stated per application)
-- EmailService's two framework-flow methods (sign-in code, platform owner signup alert)
+- EmailService's three framework-flow methods (sign-in code, invite, platform owner signup alert)
 
 If a feature depends on a framework-provided table or route, reference it by name in MYAPP.md where relevant (e.g. "foreign key to `users.id`") but do not re-document the framework schema.
 
@@ -1217,6 +1230,23 @@ One row per code request (sign-in, sign-up and resend all use it). Replaces `pas
 
 Indexes: `email`, `expires_at`, `(ip_address, created_at)`. All datetimes are written by `LoginCodeService` via `Clock`.
 
+#### `invites` *(v3.0.0)*
+
+One row per invite that has not been accepted yet. `tenant_id` is always the **sender's** tenant, so every row is tenant-scoped and is read only with BaseModel's inherited tenant-scoped methods.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | int PK AUTO_INCREMENT | |
+| tenant_id | int NOT NULL FK | the sender's tenant — tenants.id, CASCADE DELETE (deleting a tenant deletes its invites) |
+| email | varchar(255) NOT NULL | invited address, lowercase (`EmailAddress::normalise`) |
+| kind | varchar(20) NOT NULL | `join_tenant` (owner's invite: joins `tenant_id` as `user`) or `new_tenant` (platform invite: gets a new tenant as `owner`) |
+| invited_by_user_id | int NOT NULL | the sender |
+| token_hash | char(64) NOT NULL UNIQUE | SHA-256 of the link's token; the plain token exists only in the email |
+| expires_at | datetime NOT NULL | UTC — sent time + 7 days |
+| created_at | datetime NOT NULL | UTC |
+
+Indexes: `token_hash` (unique), `(tenant_id, email)`. There is no `used_at`: an accepted invite is **deleted** in the same transaction that creates the account. All datetimes are written by `InviteService` via `Clock`. Expired invites that were never used stay in the table; nothing cleans them up.
+
 **Schema initialisation:** If the `users` table does not exist on first boot, `sql/schema.core.sql` is executed automatically. A fresh install starts **empty** — no seeded tenant, no seeded users (v3.0.0). The first person to verify an emailed sign-in code creates the first tenant and becomes its owner.
 
 **Existing installs** do not re-run `schema.core.sql`. Columns added in a later release arrive via the hand-run script in `sql/migrations/` for that release (v2.1.0: `v2.1.0_signup_terms.sql`; v3.0.0: `v3.0.0_passwordless.sql`) — see §16.6.
@@ -1228,6 +1258,7 @@ Indexes: `email`, `expires_at`, `(ip_address, created_at)`. All datetimes are wr
 | Model | File | Notes |
 |-------|------|-------|
 | `User` | `Models/User.php` | Extends BaseModel. DB access only — never calls Clock. Methods accept pre-computed UTC timestamp strings from Services. Public methods: `findById()`, `findByEmail()`, `findApiKeyHash(hash)`. Users for a tenant are listed with the inherited `User::all(tenantId)` *(v3.0.0: `allByTenant()` removed)*. New users are created with the inherited `fill()` and `save()` *(v3.0.0: `insertUser()` removed)*. *v3.0.0 login-code methods (replace the password-reset and signup-token methods, and `updatePasswordHash()`; the `password_hash` property is gone):* `insertLoginCode(email, codeHash, expiresAt, createdAt, ip, userAgent)`, `invalidatePendingLoginCodes(email, usedAt)`, `markLoginCodeUsed(codeId, usedAt)` *(only updates an unused code and returns true for exactly one caller, so racing correct submissions cannot both win)*, `incrementLoginCodeAttempts(codeId, maxAttempts)` *(atomic; false once the code is used or at the cap)*, `findMostRecentPendingLoginCode(email, now)`, `countRecentLoginCodesByIp(ip, threshold)`, `deleteExpiredLoginCodes(cutoff)`. The terms columns `terms_accepted_at` and `terms_version` are public properties *(v3.0.0)*: `find()` loads them and `save()` writes them back as fetched. `findById()` / `findByEmail()` use `SELECT *`, so they return them too. |
+| `Invite` | `Models/Invite.php` | *v3.0.0.* Extends BaseModel, table `invites`. **No methods of its own** — read and written only through the inherited tenant-scoped `where()`, `find()`, `fill()`, `save()` and `delete()`. Never calls Clock. |
 | `Tenant` | `Models/Tenant.php` | Does **not** extend BaseModel. Standalone PDO class. DB access only — never calls Clock, applies no allowlist. Methods: `findById()`, `findAll()`, `slugExists(slug)` *(v2.1.0)*, `insertTenant(name, slug, companyEmail, createdAt)` *(v2.1.0 — throws PDOException 23000 on slug collision; `TenantService` owns the retry)*, `saveSettings(tenantId, columns, updatedAt)`, `deleteTenant(tenantId): bool` *(v3.0.0 — true when exactly one row was deleted; the `fk_users_tenant` foreign key's `ON DELETE CASCADE` removes the tenant's users, so no separate user delete is made)*. `$columns` is a pre-validated map from `TenantService`; `$updatedAt` is a UTC string from `TenantService`. |
 
 ---
@@ -1256,6 +1287,8 @@ These routes are registered in `framework/bootstrap.php` and are part of the fra
 | GET | /login/terms | AuthController@showTerms | none |
 | POST | /login/terms | AuthController@acceptTerms | json |
 | GET | /logout | AuthController@logout | none |
+| GET | /invite/{tenant_id}/{token} | AuthController@showInvite *(v3.0.0 — welcome screen; creates nothing)* | none |
+| POST | /invite/accept | AuthController@acceptInvite *(v3.0.0 — requires `csrf_token`; `terms_accepted=1` when terms are on)* | json |
 | GET | /tenant/{tenant_id}/tenant-settings | TenantSettingsController@index | tm, auth |
 | POST | /tenant/{tenant_id}/tenant-settings/save | TenantSettingsController@save (requires `csrf_token`, v3.0.0) | tm, auth, json |
 | GET | /tenant/{tenant_id}/account | AccountSettingsController@index | tm, auth |
@@ -1274,10 +1307,13 @@ These services are framework-owned and registered in the container by `framework
 | Service | Container type | Dependencies | Notes |
 |---------|---------------|--------------|-------|
 | `EmailService` | singleton | `$config['mail']` | SMTP gateway. All application email flows call `EmailService` send methods — never PHPMailer directly |
-| `LoginCodeService` | singleton | `User` model, `EmailService`, `SignupTenantResolver`, `$config['signup']` | *v3.0.0.* Passwordless sign-in and sign-up by emailed 6-digit code (replaces `SignupService` and `PasswordResetService`). Methods: `requestCode(email, ip, userAgent)` (validate, per-IP limit 5/hour, cancel earlier codes, store hashed, email, alert the platform owner when the address has no account; used for first request and resend), `verifyCode(email, code)` → success data `status` = `logged_in` (`user_id`, `tenant_id`, `email`) or `terms_required` (`email`, `verified_at`), `acceptTerms(email, verifiedAt, accepted)`, `isTermsStepOpen(verifiedAt)` (15-minute window), `cleanupExpiredCodes(olderThanDays = 7)` (cron). Owns every Clock call, `password_verify()` and every limit comparison; delegates all DB access to the `User` model. Unknown + correct code creates tenant + owner in `Database::transaction()` via the resolver, then alerts the platform owner. Constructor: `(userModel, emailService, tenantResolver, requireTerms = false, termsVersion = null, codeExpiryMinutes = 15, maxAttempts = 3, rateLimitRequests = 5, rateLimitMinutes = 60)`. The container factory reads `$config['signup'] ?? []` and, only when `require_terms` is on, verifies the v2.1.0 terms columns exist on `users` (throws `LogicException` naming the migration if not). §11, §16.9 |
+| `LoginCodeService` | singleton | `User` model, `EmailService`, `SignupTenantResolver`, `AccountService`, `$config['signup']` | *v3.0.0.* Passwordless sign-in and sign-up by emailed 6-digit code (replaces `SignupService` and `PasswordResetService`). Methods: `requestCode(email, ip, userAgent)` (validate, per-IP limit 5/hour, cancel earlier codes, store hashed, email, alert the platform owner when the address has no account; used for first request and resend), `verifyCode(email, code)` → success data `status` = `logged_in` (`user_id`, `tenant_id`, `email`) or `terms_required` (`email`, `verified_at`), `acceptTerms(email, verifiedAt, accepted)`, `isTermsStepOpen(verifiedAt)` (15-minute window), `cleanupExpiredCodes(olderThanDays = 7)` (cron). Owns every Clock call, `password_verify()` and every limit comparison; delegates all DB access to the `User` model. Unknown + correct code creates tenant + owner through `AccountService::create()`, placed by the resolver. Constructor: `(userModel, emailService, tenantResolver, requireTerms = false, termsVersion = null, codeExpiryMinutes = 15, maxAttempts = 3, rateLimitRequests = 5, rateLimitMinutes = 60, accountService = null)` — `accountService` is last so existing positional calls still work. The container factory reads `$config['signup'] ?? []` and, only when `require_terms` is on, verifies the v2.1.0 terms columns exist on `users` (throws `LogicException` naming the migration if not). §11, §16.9 |
+| `AccountService` | singleton | `EmailService` | *v3.0.0.* The one place a new account is created. `create(email, placement, now, termsAcceptedAt = null, termsVersion = null, alsoInTransaction = null, via = 'sign-in code')`: in one `Database::transaction()` — `placement->resolve()` (a `SignupTenantResolver`), the user `fill()`/`save()`, a read-back with the inherited `where()` for the new id, then the caller's `alsoInTransaction` (invites delete themselves there; throw to roll everything back). Stores `terms_version` trimmed to 50 characters (the column), only when `termsAcceptedAt` is set. Derives the display name from the email. After the commit sends the platform-owner alert ("created via {via}"). Success data `user_id`, `tenant_id`, `role`, `email`; failure `system`. No Clock — callers pass the timestamps. Used by `LoginCodeService` and `InviteService`. §16.9, §16.11 |
+| `InviteService` | singleton | `EmailService`, `AccountService`, `TenantService`, `User` model, `$config['signup']` | *v3.0.0.* Invites — see §16.11 for the rules. `createInvite(email, tenantId, kind, invitedByUserId)` (failure types `validation`, `account_exists`, `invite_open`, `email_failed`, `system`; saves the invite and sends the email in one transaction; the token is never returned), `findOpenInvite(tenantId, token)` (`invite_unusable` or data `invite_id`, `tenant_id`, `email`), `acceptInvite(tenantId, inviteId, accepted)` (`invite_unusable`, `terms_required`, `account_exists`, `system`, or `AccountService` success data), `termsRequired()`. Constants `KIND_JOIN_TENANT`, `KIND_NEW_TENANT`. Owns every Clock call for invites. Constructor: `(emailService, accountService, tenantService, userModel = null, requireTerms = false, termsVersion = null, expiryDays = 7)`. |
 | `SignupTenantResolver` | singleton | `TenantService` (default impl) | *v2.1.0.* Interface: `resolve(email, name): array{tenant_id, role, tenant_name?}`, called inside the account-creation transaction. Default `CreateTenantForSignup` — creates a tenant via `TenantNameGenerator` + `TenantService::create()` and returns role `owner`. Apps replace via `$container->override()`. §16.9 |
 | `UserService` | singleton | `User` model | Introduced v1.3.2. Owns business logic for the user record: `recordLogin(userId, tenantId)`, `saveSettings(userId, tenantId, data)`, and *(v3.0.0)* `deleteUser(tenantId, targetUserId)` and `changeRole(tenantId, targetUserId, newRole)` — see §16.10. Owns allowlist and null-coercion for user preferences; `saveSettings` allows `name` (v3.0.0) and `timezone` — never `email`. Computes timestamps via Clock and passes them to the User model. |
 | `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`, `create(name, baseSlug, companyEmail): int` *(v2.1.0 — owns slug uniqueness: suffixes `-2`, `-3`… with the UNIQUE index as final guard and retry on collision; safe inside a transaction)*, `deleteTenant(actingUser, tenantId)` *(v3.0.0 — the tenant's owner or a `platform` user, see §16.10)*. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
+| `JoinTenantAsUser` | not in container | none | *v3.0.0.* `SignupTenantResolver` for an owner's invite: `new JoinTenantAsUser(tenantId)` → `resolve()` returns `['tenant_id' => tenantId, 'role' => 'user']`. Writes nothing. Constructed by `InviteService::acceptInvite()`. |
 | `TenantNameGenerator` | not in container | none | *v2.1.0.* Pure helper (no DB, no Clock), constructed by `CreateTenantForSignup`. `fromEmail(email): array{name, slug}` — business domain → organisation name (`jane@acme-corp.com` → `Acme Corp` / `acme-corp`; two-part suffixes like `co.uk` handled); free-mail domain (`FREE_MAIL_DOMAINS`, extendable via constructor) → `"<Name>'s Workspace"`. `slugify()` is public static. Slug uniqueness is not its job. |
 
 ---
@@ -1342,7 +1378,7 @@ if (file_exists($appSchemaPath)) {
 
 ### 16.8 Overriding Framework Email Templates
 
-Two email flows are framework-owned because a framework-owned Service triggers them directly (`LoginCodeService` — see §16.5): the sign-in code and the platform-owner signup alert. Every application needs these to work, but the wording and branding inside them is exactly the kind of thing a real business wants in its own voice — this is a deliberate, narrow exception to "don't touch framework-owned files."
+Three email flows are framework-owned because a framework-owned Service triggers them directly (`LoginCodeService`, `InviteService`, `AccountService` — see §16.5): the sign-in code, the invite (v3.0.0) and the platform-owner signup alert. Every application needs these to work, but the wording and branding inside them is exactly the kind of thing a real business wants in its own voice — this is a deliberate, narrow exception to "don't touch framework-owned files."
 
 **The rule:** never edit `Services/Email/Templates/*.php` directly. Override the template *class* via config instead.
 
@@ -1353,6 +1389,7 @@ Two email flows are framework-owned because a framework-owned Service triggers t
     // ...existing keys...
     'templates' => [
         // 'login_code'                  => \App\Email\Templates\MyLoginCodeTemplate::class,
+        // 'invite'                      => \App\Email\Templates\MyInviteTemplate::class,
         // 'platform_owner_signup_alert'  => \App\Email\Templates\MyPlatformOwnerAlertTemplate::class,
     ],
 ],
@@ -1363,6 +1400,7 @@ An override class must implement the same static methods, with the same argument
 | Flow key | Required static signature |
 |----------|---------------------------|
 | `login_code` | `buildHtml(string $email, string $code, int $expiry): string` and `buildText(string $email, string $code, int $expiry): string` — the email carries the code only, never a link |
+| `invite` | `buildHtml(string $email, string $inviteUrl, int $expiryDays): string` and `buildText(string $email, string $inviteUrl, int $expiryDays): string` — *v3.0.0*; one template for both kinds of invite |
 | `platform_owner_signup_alert` | `buildHtml(string $email, string $event): string` and `buildText(string $email, string $event): string` |
 
 The override class can live anywhere under `App\`; it does not need to sit in any particular folder.
@@ -1382,8 +1420,8 @@ An unknown email that verifies its code creates a **new tenant** and the person 
 - **Tenant name** — derived from the email by `TenantNameGenerator`, no extra form field: business domain → organisation name (`jane@acme-corp.com` → "Acme Corp"); free-mail domain (gmail, outlook, icloud…) → "Jane's Workspace". The owner can rename it in Tenant Settings. The user's display name is derived from the email local part (`john.doe@…` → "John Doe").
 - **Slug** — from the name, made unique by `TenantService::create()` (`acme-corp`, `acme-corp-2`, …).
 - **`company_email`** — set to the email.
-- **Atomic** — tenant insert and user insert run in one `Database::transaction()`. Any failure rolls back both and the person sees "Account creation failed". The code is already spent at that point, so they request a new one.
-- Two people from the same company signing in separately get **two tenants** — joining an existing tenant needs an invite flow (not in the framework yet).
+- **Atomic** — tenant insert and user insert run in one `Database::transaction()` inside `AccountService::create()` (v3.0.0; invites use the same method). Any failure rolls back both and the person sees "Account creation failed". The code is already spent at that point, so they request a new one.
+- Two people from the same company signing in separately get **two tenants** — joining an existing tenant is done by an owner's invite (v3.0.0, §16.11).
 - There is no seeded tenant or user: a fresh install starts empty and the first person to sign in creates the first tenant.
 
 **Changing the policy** — replace the `SignupTenantResolver` binding in `app/bootstrap.php`:
@@ -1473,6 +1511,7 @@ When enabled, the framework enforces acceptance **server-side** and records **wh
 
 | Method | Pattern | Action | Example's rule |
 |---|---|---|---|
+| POST | /tenant/{tenant_id}/users/invite | `sendInvite` | owner (sends `join_tenant`) or platform (sends `new_tenant`); field `email`; `InviteService::createInvite()`; result shown in the Users screen banner (§16.11) |
 | POST | /tenant/{tenant_id}/account/delete | `deleteMyAccount` | role `user` only (User Settings shows it to no other role) |
 | GET | /tenant/{tenant_id}/tenant-delete | `showTenantDelete` | the warning screen, owner only |
 | POST | /tenant/{tenant_id}/tenant-delete | `deleteTenant` | owner only; the typed `tenant_name` must equal the tenant's name exactly (server-side check) |
@@ -1484,3 +1523,43 @@ When enabled, the framework enforces acceptance **server-side** and records **wh
 | POST | /tenant/{tenant_id}/tenants/delete | `deleteTenantAsPlatform` | platform only; the typed `tenant_name` must equal the tenant's name exactly, then `TenantService::deleteTenant()` |
 
 The example's friction: deleting your own account, or another user from Edit User, is one confirmation ("Are you sure? This cannot be undone"); a platform user deleting a tenant from Edit Tenant must type its name exactly (same server-side check); the owner deleting their own tenant gets a warning screen (the tenant and every user in it are lost, cannot be undone) and the final button only works once the tenant's name is typed exactly. After deleting your own account or the tenant the example calls `Session::destroy()` and redirects to `/login`. Every POST form on these screens, including the settings save forms, carries the `csrf_token` (partial `Views/partials/csrf-field.php`, `$_SESSION['csrf_token']`, compared with `hash_equals`, the same mechanism as the login forms). The example views are `settings/account-settings.php` (User Settings: editable name, Delete my account for role `user`), `settings/tenant-settings.php` (Tenant Settings: owner-only Delete tenant entry), `settings/tenant-delete.php`, `users/management-dashboard.php` (Your details card; an edit icon on every other row — owner rows open Edit Tenant, the rest Edit User), `users/user-edit.php` and `users/tenant-edit.php`.
+
+---
+
+### 16.11 Invites (v3.0.0)
+
+**What they are.** An invite brings a new person in by email, with no code to type. The framework supplies the operations (`InviteService`), the link and welcome screen (`AuthController`), and the email. Who may send which kind is the app's decision.
+
+| Kind | Typically sent by (template app) | The invited person gets |
+|---|---|---|
+| `join_tenant` (`InviteService::KIND_JOIN_TENANT`) | an `owner` | a user in the **sender's** tenant, role `user` (`JoinTenantAsUser`) |
+| `new_tenant` (`InviteService::KIND_NEW_TENANT`) | a `platform` user | a **new** tenant of their own, role `owner` (`CreateTenantForSignup`, the default sign-up placement — not the app's resolver) |
+
+Sign-up from `/login` is unchanged: a new tenant and owner.
+
+**Rules the framework enforces (`InviteService`):**
+
+- Refused if the address already has an account (`account_exists`, via `User::findByEmail()` — `users.email` is unique across the platform).
+- Refused if the address already has a live (not expired) invite **from the sender's tenant** (`invite_open`). Expired invites do not block. Two different tenants may each invite the same address; whichever link is used first creates the account, and the other link is then refused because the address has an account.
+- An invite lasts 7 days, works once and cannot be cancelled.
+- The invite is saved and the email sent in one transaction: if the email cannot be sent, nothing is saved (`email_failed`) and the sender can try again at once.
+- The token is 32 random bytes; only its SHA-256 hash is stored, and the token is never returned to the caller — it exists only in the email.
+
+**The link: `GET /invite/{tenant_id}/{token}`.** No code is needed: the link went only to the invited address, so opening it proves the address. `findOpenInvite()` looks the token's hash up with the inherited `where()` **within the tenant in the link**. Missing, used or expired → the expired screen (`auth/invite-expired`). Otherwise the invite is remembered in `$_SESSION['invite']` (`tenant_id`, `invite_id`, `email`) and the welcome screen opens (`auth/invite-welcome`). The address cannot be changed; someone who wants a different address uses the normal sign-up.
+
+**Nothing is created when the link is opened.** Company mail systems open links to scan them; they never press buttons. The account is created only when the person presses the welcome screen's button.
+
+**Accepting: `POST /invite/accept`.** Checks `csrf_token`. `acceptInvite()` re-reads the invite with the inherited `find()`; when `signup.require_terms` is on, `terms_accepted=1` must be posted (the welcome screen shows the same checkbox as sign-up). Then `AccountService::create()` creates the account by kind and **deletes the invite in the same transaction** — if the account fails, the invite stays. Two people pressing the button at once cannot both succeed: the unique key on `users.email` fails the second insert, which rolls back. On success the person is signed in (`completeLogin()`) and lands on their dashboard.
+
+| Outcome | Screen |
+|---|---|
+| `invite_unusable` (used or expired meanwhile) | expired screen |
+| `account_exists` (the address got an account meanwhile) | login screen, address filled in, "That email address already has an account. Please sign in." — the invite stays |
+| `terms_required`, `system` | welcome screen again with the error |
+| success | signed in, own dashboard |
+
+**Protocol contract (for app-owned views):** `auth/invite-welcome` receives `$csrfToken`, `$email`, `$requireTerms`, optional `$error`, and must post `csrf_token` (and `terms_accepted=1` when `$requireTerms`) to `/invite/accept`. `auth/invite-expired` receives nothing.
+
+**Not included:** cleaning up expired invites, cancelling an invite, a list of sent invites, and a record of who invited whom after acceptance (the invite row is deleted). If someone already signed in opens an invite for a different address and presses the button, they are signed in as the new account.
+
+**Template app (app-owned):** the Invite button on the Users screen's Total Users card opens a modal (`users/management-dashboard.php`) posting to `UserAdminController@sendInvite` (§16.10); results use the screen's standard banner (`?success=invited`, `?error=invalid_email|account_exists|invite_open|invite_email_failed|invite_failed|invalid_request`). Views `auth/invite-welcome.php` (button "Let me see") and `auth/invite-expired.php`.

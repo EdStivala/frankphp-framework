@@ -134,8 +134,19 @@ $container->singleton(
     }
 );
 
+// AccountService — v3.0.0. The one place a new account is created (sign-up
+// and invites). Depends on EmailService (platform-owner alert).
+$container->singleton(
+    \Frank\Services\AccountService::class,
+    function ($c) {
+        return new \Frank\Services\AccountService(
+            $c->make(\Frank\Services\Email\EmailService::class),
+        );
+    }
+);
+
 // LoginCodeService — v3.0.0 passwordless sign-in / sign-up. Depends on User
-// model, EmailService and SignupTenantResolver.
+// model, EmailService, SignupTenantResolver and AccountService.
 // v2.1.0 terms opt-in from $config['signup'] (missing = off). When the flag is
 // on, verify once — lazily, only when the service is first used — that the
 // v2.1.0 migration has been applied, and fail with a clear message if not.
@@ -166,6 +177,7 @@ $container->singleton(
             tenantResolver: $c->make(\Frank\Services\SignupTenantResolver::class),
             requireTerms:   $requireTerms,
             termsVersion:   isset($signup['terms_version']) ? (string) $signup['terms_version'] : null,
+            accountService: $c->make(\Frank\Services\AccountService::class),
         );
     }
 );
@@ -193,13 +205,34 @@ $container->singleton(
     }
 );
 
-// AuthController — needs LoginCodeService and UserService injected.
+// InviteService — v3.0.0. Creates invites ('join_tenant': join the sender's
+// tenant as 'user'; 'new_tenant': a new tenant as 'owner'). Who may send
+// which kind is the app's decision.
+// Terms come from the same $config['signup'] as sign-up.
+$container->singleton(
+    \Frank\Services\InviteService::class,
+    function ($c) use ($config) {
+        $signup = $config['signup'] ?? [];
+
+        return new \Frank\Services\InviteService(
+            emailService:   $c->make(\Frank\Services\Email\EmailService::class),
+            accountService: $c->make(\Frank\Services\AccountService::class),
+            tenantService:  $c->make(\Frank\Services\TenantService::class),
+            userModel:      new \Frank\Models\User(),
+            requireTerms:   (bool) ($signup['require_terms'] ?? false),
+            termsVersion:   isset($signup['terms_version']) ? (string) $signup['terms_version'] : null,
+        );
+    }
+);
+
+// AuthController — needs LoginCodeService, UserService and InviteService injected.
 $container->bind(
     \Frank\Controllers\AuthController::class,
     function ($c) {
         return new \Frank\Controllers\AuthController(
             $c->make(\Frank\Services\LoginCodeService::class),
             $c->make(\Frank\Services\UserService::class),
+            $c->make(\Frank\Services\InviteService::class),
         );
     }
 );
@@ -243,6 +276,8 @@ $router->add('POST', '/login/resend',  'Frank\\Controllers\\AuthController@resen
 $router->add('GET',  '/login/terms',   'Frank\\Controllers\\AuthController@showTerms',  []);
 $router->add('POST', '/login/terms',   'Frank\\Controllers\\AuthController@acceptTerms', [$json]);
 $router->add('GET',  '/logout',        'Frank\\Controllers\\AuthController@logout',     []);
+$router->add('GET',  '/invite/{tenant_id}/{token}', 'Frank\\Controllers\\AuthController@showInvite', []);
+$router->add('POST', '/invite/accept',              'Frank\\Controllers\\AuthController@acceptInvite', [$json]);
 
 // Tenant settings (owner only — enforced in the controller, not middleware)
 $router->add('GET',  '/tenant/{tenant_id}/tenant-settings',      'Frank\\Controllers\\TenantSettingsController@index', [$tm, $auth]);

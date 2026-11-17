@@ -10,6 +10,7 @@ namespace Frank\Services\Email;
 use Frank\Services\Email\PHPMailer\PHPMailer;
 use Frank\Services\Email\PHPMailer\Exception;
 use Frank\Services\Email\PHPMailer\SMTP;
+use Frank\Services\Email\Templates\InviteEmailTemplate;
 use Frank\Services\Email\Templates\LoginCodeEmailTemplate;
 use Frank\Services\Email\Templates\PlatformOwnerSignupAlertTemplate;
 
@@ -122,18 +123,25 @@ class EmailService
 		$htmlBody = $templateClass::buildHtml($email, $code, $expiryMinutes);
 		$textBody = $templateClass::buildText($email, $code, $expiryMinutes);
 
-		return $this->send(new EmailMessage(
-		credentialsUserName:   $this->username,
-		credentialsUserSecret: $this->password,
-		to:                    $email,
-		subject:               $subject,
-		htmlBody:              $htmlBody,
-		toName:                '',
-		textBody:              $textBody,
-		from:                  $this->fromEmail,
-		fromName:              $this->fromName,
-		replyTo:               $this->replyToEmail,
-		));
+		return $this->sendTemplated($email, $subject, $htmlBody, $textBody);
+	}
+
+	/**
+	* Send an invite (v3.0.0). Called by InviteService, which builds the
+	* link. One email for both kinds of invite.
+	*/
+	public function sendInvite(
+	string $email,
+	string $inviteUrl,
+	int    $expiryDays
+	): EmailResult
+	{
+		$subject  = "You've been invited";
+		$templateClass = $this->resolveTemplateClass('invite', InviteEmailTemplate::class);
+		$htmlBody = $templateClass::buildHtml($email, $inviteUrl, $expiryDays);
+		$textBody = $templateClass::buildText($email, $inviteUrl, $expiryDays);
+
+		return $this->sendTemplated($email, $subject, $htmlBody, $textBody);
 	}
 
 	/**
@@ -155,10 +163,26 @@ class EmailService
 		$htmlBody = $templateClass::buildHtml($triggeringEmail, $event);
 		$textBody = $templateClass::buildText($triggeringEmail, $event);
 
+		return $this->sendTemplated($this->adminEmail, $subject, $htmlBody, $textBody);
+	}
+
+	/**
+	* Shared by the send methods above: builds the EmailMessage from this
+	* service's own config (SMTP credentials, sender, reply-to) and sends it.
+	* Each send method supplies only what differs — recipient, subject and
+	* the two bodies from its template.
+	*/
+	private function sendTemplated(
+	string $to,
+	string $subject,
+	string $htmlBody,
+	string $textBody
+	): EmailResult
+	{
 		return $this->send(new EmailMessage(
 		credentialsUserName:   $this->username,
 		credentialsUserSecret: $this->password,
-		to:                    $this->adminEmail,
+		to:                    $to,
 		subject:               $subject,
 		htmlBody:              $htmlBody,
 		toName:                '',
