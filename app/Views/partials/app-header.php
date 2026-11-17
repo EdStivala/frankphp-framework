@@ -46,10 +46,6 @@
 					<a class="dropdown-item" href="/tenant/<?= (int) $tenant['id'] ?>/account">
 						<i class="bi bi-person-bounding-box"></i> Profile</a>
 				</li>
-				<li>
-					<a class="dropdown-item" href="#">
-						<i class="bi bi-sliders"></i> Account</a>
-				</li>
 				<li><hr class="dropdown-divider"></li>
 				<li>
 					<a class="dropdown-item text-danger" href="/logout">

@@ -63,10 +63,10 @@ item is the owner's call.
   nobody else; the dev database still has the old v2 demo users in it, and the
   owner said to ignore the demo data for now.
 - Users screen design — DONE as described above.
-- The top-bar user drop-down "Account" item still points nowhere (`href="#"`).
-- `admin`/`platform` (and any other non-`user` role) have no way to delete
-  their own account — by the owner's instruction for platform; not discussed
-  for others since `admin` was removed.
+- The top-bar user drop-down "Account" item pointed nowhere (`href="#"`) — DONE: removed.
+- Deleting your own account — DONE: every remaining role is covered. `user`
+  uses Delete my account (User Settings); `owner` deletes the tenant (Tenant
+  Settings); `platform` can never delete themself (owner's decision).
 - BitfitterV2: `workouts`, `workout_exercises` and `exercises` use
   `ON UPDATE CURRENT_TIMESTAMP` and their models declare `updated_at`. Their
   Services must set `updated_at`; to be handled at its migration (sprint 7).
@@ -96,20 +96,20 @@ Sprint 1 (committed):
 16. README.md and ROADMAP.md edited.
 
 Sprint 2 (in `0c7f09b`) — items 2–6 and 10 no longer exist (removed 2026-11-17):
-1. Single delete uses the browser's own confirm box, not the existing pop-up (still true for Delete my account and Edit User delete).
-7. Attempts by a role without access are sent to the dashboard with "forbidden".
-8. Name is its own form with its own "Save name" button.
-9. Name required, trimmed, max 255; a bad name shows the general "could not save" message.
-11. After deleting your own account you land on `/login`.
-12. Typed tenant name must match exactly, including capitals and spaces.
-13. Tenant delete entry is a link on Tenant Settings, owner only.
-14. Screen titled "Delete Organisation"; after the delete you land on `/login`.
-15. Refusal reason names (e.g. `owner_requires_tenant_delete`, `role_protected`).
-16. Role trimmed, 1–50 characters, owner/platform compared ignoring capitals; no list of valid roles.
-17. All on-screen wording and messages.
-18. Web addresses of the new actions and names of the new files.
-19. `app/MYAPP.md` only partly updated (roles section, 2026-11-17).
-20. A refused settings save shows "Invalid request. Please try again."
+1. Single delete uses the browser's own confirm box, not the existing pop-up (Delete my account and Edit User delete) — DECIDED: keep the browser box; each real app can change it.
+7. Attempts by a role without access are sent to the dashboard with "forbidden" — DECIDED: keep (framework convention, codebase.md §11).
+8. Name is its own form with its own "Save name" button — DECIDED: keep.
+9. Name required, trimmed, max 255; a bad name shows the general "could not save" message — DECIDED: keep.
+11. After deleting your own account you land on `/login` — DECIDED: keep.
+12. Typed tenant name must match exactly, including capitals and spaces — DECIDED: keep.
+13. Tenant delete entry is a link on Tenant Settings, owner only — DECIDED: keep.
+14. Screen titled "Delete Organisation"; after the delete you land on `/login` — DECIDED: keep (wording stays "Organisation").
+15. Refusal reason names (e.g. `owner_requires_tenant_delete`, `role_protected`) — DECIDED: keep.
+16. Role trimmed, 1–50 characters, owner/platform compared ignoring capitals; no list of valid roles — DECIDED: keep (`changeRole()` has no screen now; may be used later).
+17. All on-screen wording and messages — DECIDED: keep.
+18. Web addresses of the new actions and names of the new files — DECIDED: keep.
+19. `app/MYAPP.md` only partly updated (roles section, 2026-11-17) — DECIDED: leave it (routes, services and tree not recorded there).
+20. A refused settings save shows "Invalid request. Please try again." — DECIDED: keep.
 21. The CSRF check is written separately in three controllers.
 22. Stale `/signup` changelog line removed.
 
