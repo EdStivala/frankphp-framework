@@ -72,7 +72,7 @@ class UserAdminController extends BaseController
         }
 
         $data = $this->body($request);
-        if (!$this->validCsrf($data)) {
+        if (!Session::csrfValid($data)) {
             return Response::redirect($users . '?error=invalid_request');
         }
 
@@ -145,7 +145,7 @@ class UserAdminController extends BaseController
         $tenantId = $this->targetTenantId($user, $tenant, (int) ($data['user_tenant_id'] ?? 0));
         $edit     = "/tenant/{$tenant['id']}/users/edit?user_id={$userId}&user_tenant_id={$tenantId}";
 
-        if (!$this->validCsrf($data)) {
+        if (!Session::csrfValid($data)) {
             return Response::redirect($edit . '&error=invalid_request');
         }
 
@@ -169,7 +169,7 @@ class UserAdminController extends BaseController
         $tenantId = $this->targetTenantId($user, $tenant, (int) ($data['user_tenant_id'] ?? 0));
         $edit     = "/tenant/{$tenant['id']}/users/edit?user_id={$userId}&user_tenant_id={$tenantId}";
 
-        if (!$this->validCsrf($data)) {
+        if (!Session::csrfValid($data)) {
             return Response::redirect($edit . '&error=invalid_request');
         }
 
@@ -224,7 +224,7 @@ class UserAdminController extends BaseController
         $tenantId = (int) ($data['edit_tenant_id'] ?? 0);
         $edit     = "/tenant/{$tenant['id']}/tenants/edit?edit_tenant_id={$tenantId}";
 
-        if (!$this->validCsrf($data)) {
+        if (!Session::csrfValid($data)) {
             return Response::redirect($edit . '&error=invalid_request');
         }
 
@@ -248,7 +248,7 @@ class UserAdminController extends BaseController
         $tenantId = (int) ($data['edit_tenant_id'] ?? 0);
         $edit     = "/tenant/{$tenant['id']}/tenants/edit?edit_tenant_id={$tenantId}";
 
-        if (!$this->validCsrf($data)) {
+        if (!Session::csrfValid($data)) {
             return Response::redirect($edit . '&error=invalid_request');
         }
 
@@ -278,7 +278,7 @@ class UserAdminController extends BaseController
         $user    = $request->user;
         $account = "/tenant/{$tenant['id']}/account";
 
-        if (!$this->validCsrf($this->body($request))) {
+        if (!Session::csrfValid($this->body($request))) {
             return Response::redirect($account . '?error=invalid_request');
         }
 
@@ -326,7 +326,7 @@ class UserAdminController extends BaseController
         }
 
         $data = $this->body($request);
-        if (!$this->validCsrf($data)) {
+        if (!Session::csrfValid($data)) {
             return Response::redirect($screen . '?error=invalid_request');
         }
 
@@ -363,13 +363,5 @@ class UserAdminController extends BaseController
     private function body(Request $request): array
     {
         return $request->bodyParams ?? $request->post;
-    }
-
-    private function validCsrf(array $data): bool
-    {
-        Session::start();
-        $stored = $_SESSION['csrf_token'] ?? '';
-
-        return $stored !== '' && hash_equals($stored, (string) ($data['csrf_token'] ?? ''));
     }
 }

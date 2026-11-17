@@ -1,7 +1,7 @@
 <?php
 // One screen for sign-in and sign-up (FrankPHP 3.0). The person enters an
-// email address and is emailed a 6-digit code. $csrfToken is supplied by
-// AuthController.
+// email address and is emailed a 6-digit code. The CSRF field comes from
+// partials/csrf-field.php.
 $title = 'Sign in to FrankPHP';
 
 ob_start();
@@ -35,7 +35,7 @@ ob_start();
 			<form id="loginForm" method="post" action="/login">
 
 				<!-- CSRF Token -->
-				<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+				<?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
 
 				<!-- Email Input -->
 				<div class="mb-3">
@@ -57,6 +57,27 @@ ob_start();
 				<button type="submit" class="btn btn-primary w-100">Email me a code</button>
 
 			</form>
+
+			<!-- Google / Microsoft sign-in (sprint 4, provisional: buttons only, not wired yet) -->
+			<div class="d-flex align-items-center my-3">
+				<hr class="flex-grow-1">
+				<span class="px-2 text-muted" style="font-size: 0.875rem;">or</span>
+				<hr class="flex-grow-1">
+			</div>
+
+			<!-- A provider whose keys are not set ($config['oauth']) shows its button disabled. -->
+			<?php if (!empty($googleEnabled)) : ?>
+			<a href="/login/google" class="btn btn-outline-secondary w-100 mb-2">
+				<i class="bi bi-google me-2"></i>Continue with Google
+			</a>
+			<?php else : ?>
+			<button type="button" class="btn btn-outline-secondary w-100 mb-2" disabled>
+				<i class="bi bi-google me-2"></i>Continue with Google
+			</button>
+			<?php endif; ?>
+			<button type="button" class="btn btn-outline-secondary w-100" <?= empty($microsoftEnabled) ? 'disabled' : '' ?>>
+				<i class="bi bi-microsoft me-2"></i>Continue with Microsoft
+			</button>
 		</div>
 	</div>
 

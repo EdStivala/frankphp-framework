@@ -8,6 +8,7 @@ use Frank\Core\BaseController;
 use Frank\Core\Request;
 use Frank\Core\Response;
 use Frank\Core\Session;
+use Frank\Services\GoogleSignInService;
 use Frank\Services\InviteService;
 use Frank\Services\LoginCodeService;
 use Frank\Services\ServiceResult;
@@ -27,11 +28,15 @@ use Frank\Services\UserService;
  * - invite       — ['tenant_id', 'invite_id', 'email'] after a usable invite
  *                  link was opened (/invite/{tenant_id}/{token}); cleared
  *                  when the invite is accepted or turns out unusable
+ * - google_signin  — ['state', 'nonce'] while the person is at Google's
+ *                    sign-in page (/login/google), checked on the return
  *
  * Dependencies injected via container (bootstrap.php):
  * - LoginCodeService
  * - UserService    (recordLogin)
  * - InviteService  (invite link)
+ * - GoogleSignInService ("Continue with Google")
+ * - $config       ('oauth' keys: which Google / Microsoft buttons are enabled)
  *
  * Controller responsibility: orchestration only.
  * - Reads request input, calls services, redirects or renders views.
@@ -45,7 +50,9 @@ class AuthController extends BaseController
     public function __construct(
         private LoginCodeService $loginCodeService,
         private UserService      $userService,
-        private InviteService    $inviteService
+        private InviteService    $inviteService,
+        private GoogleSignInService $googleSignInService,
+        private array            $config = []
     ) {}
 
     // ----------------------------------------------------------------
@@ -55,7 +62,7 @@ class AuthController extends BaseController
     public function showLogin(Request $request, array $params): mixed
     {
         Session::start();
-        return $this->view('auth/login', ['csrfToken' => $this->csrfToken()]);
+        return $this->loginView();
     }
 
     /** POST /login — request a code. The redirect is the same for known and unknown emails. */
@@ -66,7 +73,7 @@ class AuthController extends BaseController
         $data  = $request->bodyParams ?? $_POST;
         $email = trim((string) ($data['email'] ?? ''));
 
-        if (!$this->validateCsrfToken((string) ($data['csrf_token'] ?? ''))) {
+        if (!Session::csrfValid($data)) {
             return $this->loginError(self::INVALID_REQUEST_MSG, $email);
         }
 
@@ -125,7 +132,7 @@ class AuthController extends BaseController
         }
 
         $data = $request->bodyParams ?? $_POST;
-        if (!$this->validateCsrfToken((string) ($data['csrf_token'] ?? ''))) {
+        if (!Session::csrfValid($data)) {
             return $this->inviteWelcomeView(self::INVALID_REQUEST_MSG);
         }
 
@@ -177,7 +184,7 @@ class AuthController extends BaseController
         }
 
         $data = $request->bodyParams ?? $_POST;
-        if (!$this->validateCsrfToken((string) ($data['csrf_token'] ?? ''))) {
+        if (!Session::csrfValid($data)) {
             return $this->verifyView(self::INVALID_REQUEST_MSG);
         }
 
@@ -190,16 +197,7 @@ class AuthController extends BaseController
             return $this->verifyView($result->message);
         }
 
-        if ($result->get('status') === 'terms_required') {
-            $_SESSION['login_terms'] = [
-                'email'       => $result->get('email'),
-                'verified_at' => $result->get('verified_at'),
-            ];
-            unset($_SESSION['login_email']);
-            Response::redirect('/login/terms');
-        }
-
-        return $this->completeLogin($result);
+        return $this->continueConfirmedEmail($result);
     }
 
     /** POST /login/resend — a new code; counts toward the per-IP limit. */
@@ -211,7 +209,7 @@ class AuthController extends BaseController
         }
 
         $data = $request->bodyParams ?? $_POST;
-        if (!$this->validateCsrfToken((string) ($data['csrf_token'] ?? ''))) {
+        if (!Session::csrfValid($data)) {
             return $this->verifyView(self::INVALID_REQUEST_MSG);
         }
 
@@ -236,7 +234,6 @@ class AuthController extends BaseController
         }
 
         return $this->view('auth/login-terms', [
-            'csrfToken' => $this->csrfToken(),
             'email'     => $_SESSION['login_terms']['email'],
         ]);
     }
@@ -252,7 +249,7 @@ class AuthController extends BaseController
         $data  = $request->bodyParams ?? $_POST;
         $state = $_SESSION['login_terms'];
 
-        if (!$this->validateCsrfToken((string) ($data['csrf_token'] ?? ''))) {
+        if (!Session::csrfValid($data)) {
             return $this->termsView($state['email'], self::INVALID_REQUEST_MSG);
         }
 
@@ -267,6 +264,55 @@ class AuthController extends BaseController
 
         unset($_SESSION['login_terms']);
         return $this->completeLogin($result);
+    }
+
+    // ----------------------------------------------------------------
+    // Continue with Google (v3.0.0) — /login/google
+    // ----------------------------------------------------------------
+
+    /** GET /login/google — send the person to Google's sign-in page. */
+    public function googleStart(Request $request, array $params): mixed
+    {
+        Session::start();
+        if (!$this->oauthKeysSet('google')) {
+            Response::redirect('/login');
+        }
+
+        $signIn = $this->googleSignInService->authorizationRequest();
+        $_SESSION['google_signin'] = ['state' => $signIn['state'], 'nonce' => $signIn['nonce']];
+
+        Response::redirect($signIn['url']);
+    }
+
+    /**
+     * GET /login/google/callback — Google sends the person back here. A
+     * confirmed address then goes the same way as a correct code: known
+     * address signed in; unknown address to the terms step or a new account.
+     */
+    public function googleCallback(Request $request, array $params): mixed
+    {
+        Session::start();
+
+        $saved = $_SESSION['google_signin'] ?? [];
+        unset($_SESSION['google_signin']);
+
+        $query = $request->get;
+        $state = (string) ($query['state'] ?? '');
+        if (empty($saved['state']) || !hash_equals((string) $saved['state'], $state) || isset($query['error'])) {
+            return $this->loginError(self::INVALID_REQUEST_MSG, '');
+        }
+
+        $result = $this->googleSignInService->exchangeCode((string) ($query['code'] ?? ''), (string) ($saved['nonce'] ?? ''));
+        if (!$result->success) {
+            return $this->loginError($result->isSystemError() ? self::INVALID_REQUEST_MSG : $result->message, '');
+        }
+
+        $signIn = $this->loginCodeService->signInConfirmedEmail((string) $result->get('email'));
+        if (!$signIn->success) {
+            return $this->loginError($signIn->message, '');
+        }
+
+        return $this->continueConfirmedEmail($signIn);
     }
 
     // ----------------------------------------------------------------
@@ -306,6 +352,24 @@ class AuthController extends BaseController
         Response::redirect("/tenant/{$tenantId}/dashboard");
     }
 
+    /**
+     * After an email is confirmed (correct code or Google): to the terms step
+     * when LoginCodeService says so, otherwise sign in.
+     */
+    private function continueConfirmedEmail(ServiceResult $result): mixed
+    {
+        if ($result->get('status') === 'terms_required') {
+            $_SESSION['login_terms'] = [
+                'email'       => $result->get('email'),
+                'verified_at' => $result->get('verified_at'),
+            ];
+            unset($_SESSION['login_email']);
+            Response::redirect('/login/terms');
+        }
+
+        return $this->completeLogin($result);
+    }
+
     private function termsStateIsOpen(): bool
     {
         $state = $_SESSION['login_terms'] ?? null;
@@ -319,7 +383,6 @@ class AuthController extends BaseController
     private function verifyView(?string $error = null, ?string $success = null): mixed
     {
         return $this->view('auth/login-verify', [
-            'csrfToken' => $this->csrfToken(),
             'email'     => $_SESSION['login_email'],
             'error'     => $error,
             'success'   => $success,
@@ -329,7 +392,6 @@ class AuthController extends BaseController
     private function termsView(string $email, string $error): mixed
     {
         return $this->view('auth/login-terms', [
-            'csrfToken' => $this->csrfToken(),
             'email'     => $email,
             'error'     => $error,
         ]);
@@ -338,7 +400,6 @@ class AuthController extends BaseController
     private function inviteWelcomeView(?string $error = null): mixed
     {
         return $this->view('auth/invite-welcome', [
-            'csrfToken'    => $this->csrfToken(),
             'email'        => $_SESSION['invite']['email'] ?? '',
             'requireTerms' => $this->inviteService->termsRequired(),
             'error'        => $error,
@@ -347,25 +408,26 @@ class AuthController extends BaseController
 
     private function loginError(string $message, string $submittedEmail): mixed
     {
-        return $this->view('auth/login', [
-            'csrfToken'      => $this->csrfToken(),
+        return $this->loginView([
             'error'          => $message,
             'submittedEmail' => $submittedEmail,
         ]);
     }
 
-    private function csrfToken(): string
+    /** The sign-in screen, with the values every render of it needs. */
+    private function loginView(array $extra = []): mixed
     {
-        if (empty($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
+        return $this->view('auth/login', [
+            'googleEnabled'    => $this->oauthKeysSet('google'),
+            'microsoftEnabled' => $this->oauthKeysSet('microsoft'),
+        ] + $extra);
     }
 
-    private function validateCsrfToken(string $submitted): bool
+    /** True when both the client ID and secret for $provider are set in $config['oauth']. */
+    private function oauthKeysSet(string $provider): bool
     {
-        $stored = $_SESSION['csrf_token'] ?? '';
-        return $stored !== '' && hash_equals($stored, $submitted);
+        $keys = $this->config['oauth'][$provider] ?? [];
+        return !empty($keys['client_id']) && !empty($keys['client_secret']);
     }
 
     private function clientIp(): string

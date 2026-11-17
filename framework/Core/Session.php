@@ -94,6 +94,30 @@ class Session
     }
 
     /**
+     * The session's CSRF token, made once per session. The one place the
+     * token is created; forms get it through Views/partials/csrf-field.php.
+     */
+    public static function csrfToken(): string
+    {
+        self::start();
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['csrf_token'];
+    }
+
+    /**
+     * True when the posted 'csrf_token' in $data matches the session's CSRF
+     * token. The one place the token is checked.
+     */
+    public static function csrfValid(array $data): bool
+    {
+        self::start();
+        $stored = $_SESSION['csrf_token'] ?? '';
+        return $stored !== '' && hash_equals($stored, (string) ($data['csrf_token'] ?? ''));
+    }
+
+    /**
      * Cookie parameters for session_set_cookie_params(). start() reuses the
      * array for setcookie() by swapping 'lifetime' for an absolute 'expires'.
      */
@@ -103,20 +127,10 @@ class Session
             'lifetime' => $lifetime,
             'path'     => '/',
             'domain'   => '',
-            'secure'   => self::isHttps(),
+            'secure'   => Url::isHttps(),
             'httponly' => true,
             'samesite' => 'Lax',
         ];
-    }
-
-    private static function isHttps(): bool
-    {
-        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-            return true;
-        }
-
-        return (string) ($_SERVER['SERVER_PORT'] ?? '') === '443'
-            || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
     }
 
     private static function useOwnSavePath(): void

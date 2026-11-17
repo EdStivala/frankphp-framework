@@ -1,6 +1,6 @@
 <?php
 // Enter the emailed 6-digit code (FrankPHP 3.0). Supplied by AuthController:
-// $csrfToken, $email, and optionally $error / $success.
+// $email, and optionally $error / $success.
 $title = 'Enter your code - FrankPHP';
 ob_start();
 ?>
@@ -45,7 +45,7 @@ ob_start();
 			<form id="verifyForm" method="post" action="/login/verify">
 
 				<!-- CSRF Token -->
-				<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+				<?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
 
 				<!-- 6-digit code -->
 				<div class="mb-4">
@@ -72,7 +72,7 @@ ob_start();
 
 			<!-- Resend — its own form, NOT nested inside the verify form -->
 			<form id="resendForm" method="post" action="/login/resend" class="text-center mb-2">
-				<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+				<?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
 				<button type="submit" class="btn btn-link btn-sm text-decoration-none p-0">
 					Didn't receive a code? Send a new one
 				</button>

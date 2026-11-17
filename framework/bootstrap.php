@@ -225,14 +225,33 @@ $container->singleton(
     }
 );
 
-// AuthController — needs LoginCodeService, UserService and InviteService injected.
+// GoogleSignInService — keys from $config['oauth']['google'] (optional); the
+// return address is built from the site address (Frank\Core\Url::baseUrl(),
+// the same source as invite links).
+$container->bind(
+    \Frank\Services\GoogleSignInService::class,
+    function ($c) use ($config) {
+        $google = $config['oauth']['google'] ?? [];
+        return new \Frank\Services\GoogleSignInService(
+            (string) ($google['client_id'] ?? ''),
+            (string) ($google['client_secret'] ?? ''),
+            \Frank\Core\Url::baseUrl() . '/login/google/callback',
+        );
+    }
+);
+
+// AuthController — needs LoginCodeService, UserService, InviteService and
+// GoogleSignInService injected, plus $config (its 'oauth' keys decide which
+// sign-in buttons are enabled).
 $container->bind(
     \Frank\Controllers\AuthController::class,
-    function ($c) {
+    function ($c) use ($config) {
         return new \Frank\Controllers\AuthController(
             $c->make(\Frank\Services\LoginCodeService::class),
             $c->make(\Frank\Services\UserService::class),
             $c->make(\Frank\Services\InviteService::class),
+            $c->make(\Frank\Services\GoogleSignInService::class),
+            $config,
         );
     }
 );
@@ -275,6 +294,8 @@ $router->add('POST', '/login/verify',  'Frank\\Controllers\\AuthController@verif
 $router->add('POST', '/login/resend',  'Frank\\Controllers\\AuthController@resend',     [$json]);
 $router->add('GET',  '/login/terms',   'Frank\\Controllers\\AuthController@showTerms',  []);
 $router->add('POST', '/login/terms',   'Frank\\Controllers\\AuthController@acceptTerms', [$json]);
+$router->add('GET',  '/login/google',  'Frank\\Controllers\\AuthController@googleStart', []);
+$router->add('GET',  '/login/google/callback', 'Frank\\Controllers\\AuthController@googleCallback', []);
 $router->add('GET',  '/logout',        'Frank\\Controllers\\AuthController@logout',     []);
 $router->add('GET',  '/invite/{tenant_id}/{token}', 'Frank\\Controllers\\AuthController@showInvite', []);
 $router->add('POST', '/invite/accept',              'Frank\\Controllers\\AuthController@acceptInvite', [$json]);

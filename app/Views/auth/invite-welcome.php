@@ -4,7 +4,7 @@
 // open links, they never press buttons). With terms on it asks for them as a
 // normal sign-up does; the server enforces acceptance — the required
 // attribute and disabled button are UX only.
-// Supplied by AuthController: $csrfToken, $email, $requireTerms, optional $error.
+// Supplied by AuthController: $email, $requireTerms, optional $error.
 // Same card layout as login.php / login-terms.php. Provisional wording.
 $title = 'Welcome - FrankPHP';
 ob_start();
@@ -43,7 +43,7 @@ ob_start();
 			<form id="inviteForm" method="post" action="/invite/accept">
 
 				<!-- CSRF Token -->
-				<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+				<?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
 
 				<?php if ($requireTerms) : ?>
 				<div class="form-check mb-4">

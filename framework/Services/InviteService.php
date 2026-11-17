@@ -6,6 +6,7 @@ namespace Frank\Services;
 
 use Frank\Core\Clock;
 use Frank\Core\Database;
+use Frank\Core\Url;
 use Frank\Models\Invite;
 use Frank\Models\User;
 use Frank\Services\Email\EmailAddress;
@@ -120,8 +121,7 @@ class InviteService
             'created_at'         => $now,
         ]);
 
-        // The link is built with EmailService::getBaseUrl() (v2 password-reset pattern).
-        $inviteUrl   = $this->emailService->getBaseUrl() . "/invite/{$tenantId}/{$token}";
+        $inviteUrl   = Url::baseUrl() . "/invite/{$tenantId}/{$token}";
         $emailFailed = false;
 
         // Save and send together (Database::transaction, as in LoginCodeService):

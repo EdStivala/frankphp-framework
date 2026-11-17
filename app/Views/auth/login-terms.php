@@ -3,7 +3,7 @@
 // $config['signup']['require_terms'] is on, to an email address that has just
 // verified its code and has no account yet. The server enforces acceptance —
 // the required attribute and disabled button below are UX only. Must post
-// terms_accepted=1. Supplied by AuthController: $csrfToken, $email, optional $error.
+// terms_accepted=1. Supplied by AuthController: $email, optional $error.
 $title = 'Terms & Conditions - FrankPHP';
 ob_start();
 ?>
@@ -37,7 +37,7 @@ ob_start();
 			<form id="termsForm" method="post" action="/login/terms">
 
 				<!-- CSRF Token -->
-				<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
+				<?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
 
 				<div class="form-check mb-4">
 					<input

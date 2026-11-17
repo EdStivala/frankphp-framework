@@ -68,7 +68,7 @@ class TenantSettingsController extends BaseController
             return $redirect;
         }
 
-        if (!$this->validCsrf($request->post)) {
+        if (!Session::csrfValid($request->post)) {
             return Response::redirect("/tenant/{$tenant['id']}/tenant-settings?error=invalid_request");
         }
 
@@ -78,14 +78,5 @@ class TenantSettingsController extends BaseController
             "/tenant/{$tenant['id']}/tenant-settings?" .
             ($ok ? 'success=1' : 'error=save_failed')
         );
-    }
-
-    /** Same check as the login forms: $_SESSION['csrf_token'] compared with hash_equals. */
-    private function validCsrf(array $data): bool
-    {
-        Session::start();
-        $stored = $_SESSION['csrf_token'] ?? '';
-
-        return $stored !== '' && hash_equals($stored, (string) ($data['csrf_token'] ?? ''));
     }
 }

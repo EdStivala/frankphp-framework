@@ -90,9 +90,10 @@ framework/
 │   ├── Request.php            # Wraps $_GET, $_POST, $_SERVER, rawBody, bodyParams, user, tenant
 │   ├── Response.php           # Static: json(), view(), redirect()
 │   ├── Router.php             # add(), override(), dispatch(), middleware pipeline builder — accepts Container
-│   └── Session.php            # v3.0.0 — the only place a session is started: Session::start() / destroy(). 28-day rolling session, own save path. See §11
+│   ├── Session.php            # v3.0.0 — the only place a session is started: Session::start() / destroy(). 28-day rolling session, own save path. Also the one place the CSRF token is made and checked: csrfToken() / csrfValid(). See §11
+│   └── Url.php                # v3.0.0 — the site's own address: static isHttps() and baseUrl(). Replaces EmailService::getBaseUrl(). See §16.3
 ├── Controllers/                        # Framework-owned only — no application controllers live here
-│   ├── AuthController.php              # v3.0.0 passwordless: the one sign-in/sign-up screen, code verify, resend, terms step, invite welcome + accept, logout — injects LoginCodeService + UserService + InviteService
+│   ├── AuthController.php              # v3.0.0 passwordless: the one sign-in/sign-up screen, code verify, resend, terms step, invite welcome + accept, Continue with Google, logout — injects LoginCodeService + UserService + InviteService + GoogleSignInService + $config
 │   ├── TenantSettingsController.php    # Tenant settings read/write — owner only
 │   └── AccountSettingsController.php   # Per-user account settings read/write
 ├── Middleware/
@@ -112,7 +113,8 @@ framework/
 │   │   ├── EmailResult.php         # Result object returned by EmailService::send()
 │   │   ├── Templates/               # Default templates for the three framework email flows (LoginCodeEmailTemplate, InviteEmailTemplate, PlatformOwnerSignupAlertTemplate) — overridable per-app, see §16.8
 │   │   └── PHPMailer/               # Vendored PHPMailer (no Composer) — see §16.8 for the version-maintenance note
-│   ├── LoginCodeService.php        # v3.0.0 — requestCode(), verifyCode(), acceptTerms(), isTermsStepOpen(), cleanupExpiredCodes(). Sign-in + sign-up by emailed 6-digit code; opt-in terms step (§11, §16.9)
+│   ├── LoginCodeService.php        # v3.0.0 — requestCode(), verifyCode(), signInConfirmedEmail(), acceptTerms(), isTermsStepOpen(), cleanupExpiredCodes(). Sign-in + sign-up by emailed 6-digit code (and, through signInConfirmedEmail(), by Google); opt-in terms step (§11, §16.9)
+│   ├── GoogleSignInService.php     # v3.0.0 — authorizationRequest(), exchangeCode(). "Continue with Google", no outside libraries (§11)
 │   ├── AccountService.php          # v3.0.0 — create(): the one place a new account is created (sign-up and invites), in one transaction (§16.9, §16.11)
 │   ├── InviteService.php           # v3.0.0 — createInvite(), findOpenInvite(), acceptInvite(), termsRequired() (§16.11)
 │   ├── JoinTenantAsUser.php        # v3.0.0 — SignupTenantResolver for an owner's invite: the inviting tenant, role user (§16.11)
@@ -140,11 +142,11 @@ framework/
 ```
 app/
 ├── .env                     # Real credentials — never committed (see project-root .gitignore)
-├── env.example              # Committed template — documents every required key, no real values
+├── env.example              # Committed template — documents every key, no real values (v3.0.0: optional GOOGLE_* / MICROSOFT_* sign-in keys, §11)
 ├── MYAPP.md                  # Application-owned record — see §15.1, the Two-File Contract
 ├── bootstrap.php             # Application routes and container bindings. $container, $router, $config already in scope. Returns $router.
 ├── Config/
-│   └── config.php            # Non-secret app options, reads from $_ENV populated by .env — returns array, including mail.templates overrides (§16.8) and the signup terms section (§16.9)
+│   └── config.php            # Non-secret app options, reads from $_ENV populated by .env — returns array, including mail.templates overrides (§16.8), the oauth section (Google / Microsoft keys, v3.0.0, §11) and the signup terms section (§16.9)
 ├── Controllers/
 │   ├── HomeController.php    # App-owned starter dashboard controller — replace with real application controllers
 │   ├── UserAdminController.php # App-owned worked EXAMPLE (v3.0.0) of the user/tenant operations — delete my account, delete the tenant (owner), edit or delete other users (platform, owner), edit or delete other tenants (platform). Change it freely. §16.10
@@ -157,7 +159,7 @@ app/
 │   ├── layouts/
 │   │   ├── app-main.php    # Authenticated app shell — topbar, sidebar nav, page-content-area. All authenticated views require this layout.
 │   │   └── authViews.php   # Unauthenticated shell. Used for the sign-in screens and terms.
-│   ├── auth/               # login.php (the one sign-in/sign-up screen), login-verify.php, login-terms.php, terms.php (placeholder — replace, §16.9)
+│   ├── auth/               # login.php (the one sign-in/sign-up screen; v3.0.0 Continue with Google / Microsoft buttons, disabled without keys), login-verify.php, login-terms.php, invite-welcome.php and invite-expired.php (v3.0.0 invite link screens, §16.11), terms.php (placeholder — replace, §16.9)
 │   ├── home/
 │   │   └── dashboard.php   # Default tenant dashboard — replace with application-specific content
 │   ├── users/
@@ -169,7 +171,7 @@ app/
 │   └── partials/
 │       ├── app-header.php  # Topbar HTML — included by app-main.php
 │       ├── app-nav.php     # Sidebar nav — included by app-main.php. Add new nav items here.
-│       ├── csrf-field.php  # v3.0.0 — hidden csrf_token input ($_SESSION['csrf_token']), included in the example POST forms
+│       ├── csrf-field.php  # v3.0.0 — hidden csrf_token input (Session::csrfToken()), included in every POST form, the sign-in screens too
 │       ├── gtm_head.html   # Google Tag Manager head snippet
 │       └── gtm_body.html   # Google Tag Manager body snippet
 ├── private/
@@ -317,8 +319,11 @@ A framework controller follows the identical pattern one namespace over: `namesp
 class AuthController extends BaseController
 {
     public function __construct(
-        private LoginCodeService $loginCodeService,
-        private UserService      $userService
+        private LoginCodeService    $loginCodeService,
+        private UserService         $userService,
+        private InviteService       $inviteService,
+        private GoogleSignInService $googleSignInService,
+        private array               $config = []
     ) {}
 }
 ```
@@ -548,7 +553,8 @@ Each renders a default template shipped in `Services/Email/Templates/`. The temp
 | `UserService::class` | singleton | Framework user business logic — recordLogin, saveSettings |
 | `TenantService::class` | singleton | Framework tenant business logic — saveSettings allowlist and null-coercion |
 | `InviteService::class` | singleton | Depends on EmailService + AccountService + TenantService + User model + `$config['signup']` (§16.11). v3.0.0 |
-| `AuthController::class` | bind | Needs LoginCodeService + UserService + InviteService injected |
+| `GoogleSignInService::class` | bind | Keys from `$config['oauth']['google']` (optional); return address `Url::baseUrl() . '/login/google/callback'` (§11). v3.0.0 |
+| `AuthController::class` | bind | Needs LoginCodeService + UserService + InviteService + GoogleSignInService injected, plus `$config` (its `oauth` keys decide which sign-in buttons are enabled) |
 
 Controllers are registered with `bind()` (not `singleton()`) because a fresh controller instance per request is the correct behaviour.
 
@@ -876,8 +882,8 @@ When building or reviewing FrankPHP code:
 
 - **28 days, rolling.** The session and its cookie last 28 days from the person's last use, so staying logged in is renewed while they keep using the app. For a logged-in session the cookie is re-issued with a fresh 28-day expiry at most once an hour, and a session idle for more than 28 days is destroyed. Clearing cookies logs the person out.
 - **Own save path.** Session files live in `APP_BASE_DIR/app/private/sessions` (created on demand, mode 0700, git-ignored) and `session.gc_maxlifetime` is set to 28 days, so another site sharing the same PHP install cannot garbage-collect these sessions early.
-- Cookie flags: `HttpOnly`, `SameSite=Lax`, `Secure` when the request is HTTPS.
-- Session keys set by the framework: `user_id` (the login), `csrf_token`, the in-flight sign-in state `login_email` / `login_terms`, and `invite` (an opened invite link, v3.0.0, §16.11); `Session` keeps `_last_activity` and `_cookie_refreshed_at`.
+- Cookie flags: `HttpOnly`, `SameSite=Lax`, `Secure` when the request is HTTPS (decided by `Url::isHttps()`, §16.3 — the same check that builds absolute links).
+- Session keys set by the framework: `user_id` (the login), `csrf_token`, the in-flight sign-in state `login_email` / `login_terms`, `invite` (an opened invite link, v3.0.0, §16.11) and `google_signin` (`state` and `nonce` while the person is at Google's sign-in page, v3.0.0); `Session` keeps `_last_activity` and `_cookie_refreshed_at`.
 - `Session` uses `time()` for cookie and idle arithmetic. This is PHP runtime session mechanics, not a persisted application timestamp, so it is the one sanctioned use outside `Clock` (§10); every timestamp written to the database still comes from `Clock` in a Service.
 
 **AuthMiddleware** on every protected route:
@@ -906,7 +912,15 @@ When building or reviewing FrankPHP code:
 3. `POST /login/resend` — a new code for the address in the session. It counts toward the limit and cancels earlier unused codes, exactly like step 1. The resend form is its own `<form>`, never nested inside the verify form.
 4. **On success** (`AuthController::completeLogin()`): `session_regenerate_id(true)`, `$_SESSION['user_id']` set, `UserService::recordLogin()` writes the UTC login timestamp via Clock (a failure is logged and does not block the person — the code is already spent), redirect to `/tenant/{tenant_id}/dashboard`.
 5. **Rate limit:** at most **5 code requests per hour per IP address** (requests and resends together; one `login_codes` row per request). The over-limit response re-renders `/login` with "Too many requests. Please try again later." and no email is sent.
-6. **CSRF:** every POST form in this flow carries a hidden `csrf_token` matching `$_SESSION['csrf_token']` (generated by the controller, compared with `hash_equals`); a mismatch re-renders the screen with "Invalid request. Please try again."
+6. **CSRF:** every POST form in this flow carries a hidden `csrf_token` (the partial `Views/partials/csrf-field.php`, which calls `Session::csrfToken()`); the controller checks it with `Session::csrfValid($data)`. A mismatch re-renders the screen with "Invalid request. Please try again." `Session` is the one place the token is made and checked — every framework and template controller uses it (v3.0.0).
+
+**Continue with Google (v3.0.0)** (`AuthController` + `GoogleSignInService`; Google's OpenID Connect server flow, written without outside libraries):
+
+- **Keys are optional.** `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (and `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET`) in `app/.env`, read with `Env::get()` into `$config['oauth']['google']` / `['microsoft']`. The sign-in screen always shows "Continue with Google" and "Continue with Microsoft"; a provider is enabled only when both its client ID and secret are set (`AuthController::oauthKeysSet()`), otherwise its button is shown disabled. The view receives `$googleEnabled` and `$microsoftEnabled`. Keys are per app; the return address `{site}/login/google/callback` must be registered with Google exactly (a production address is added to the same registration). **Microsoft is not built yet** — its button is always disabled.
+- `GET /login/google` (`googleStart`): when Google's keys are set, `GoogleSignInService::authorizationRequest()` builds Google's sign-in address (`scope=openid email`, a random `state` and `nonce`); the state and nonce are kept in `$_SESSION['google_signin']` and the person is redirected to Google. Without keys it redirects to `/login`.
+- `GET /login/google/callback` (`googleCallback`): the saved state and nonce are removed from the session (one use). A missing or wrong `state`, or an `error` from Google (e.g. the person pressed Cancel), re-renders `/login` with "Invalid request. Please try again." Otherwise `GoogleSignInService::exchangeCode()` posts the code to Google's token endpoint (curl, 10-second limit) and reads the ID token. Because the token comes straight from Google over https, Google says its signature need not be checked; issuer, audience (our client ID), expiry and nonce are checked.
+- **Same address = same account, when Google confirms the address** (the product rule). If `email_verified` is not true the sign-in is refused: "Google did not confirm this email address." Google's own guidance is to identify users by its `sub` claim rather than email; FrankPHP keys on the confirmed email address, by the product rule above.
+- A confirmed address then goes **exactly the same way as a correct code**: `LoginCodeService::signInConfirmedEmail()` (known address → signed in; unknown → the terms step when `signup.require_terms` is on, otherwise a new tenant + owner via `AccountService`) and `AuthController::continueConfirmedEmail()` → `completeLogin()`. The 5-per-hour code-request limit does not apply (no email is sent).
 
 `GET /logout` destroys the session (`Session::destroy()`) and redirects to `/login`.
 
@@ -1007,6 +1021,8 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - There are no passwords (v3.0.0). Sign-in codes are 6-digit, random (`random_int`), stored only as `password_hash()` hashes, valid 15 minutes, single-use, cancelled after 3 wrong guesses, and requests are limited to 5 per hour per IP (§11)
 - Known and unknown email addresses behave identically until a code is verified, so the sign-in screen does not reveal whether an address has an account. The person sees no difference; behind the scenes the platform owner is alerted when an address with no account requests a code
 - Sessions: 28-day rolling, `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, stored in `app/private/sessions` (§11)
+- CSRF: one per-session token, made by `Session::csrfToken()` and checked by `Session::csrfValid()` (`hash_equals`) — no controller has its own copy (v3.0.0)
+- Continue with Google (v3.0.0, §11): a random `state` (anti-forgery) and `nonce` (replay) per attempt, used once; the ID token's issuer, audience, expiry and nonce are checked; an address Google has not confirmed (`email_verified`) is refused. Google keys live only in `app/.env` and flow through `$config['oauth']`
 - `htmlspecialchars()` on all user-supplied output in views
 - Tenant isolation enforced at middleware level (route param vs session user) and at model level (tenant_id in all queries)
 - The single sanctioned cross-tenant read is the Users dashboard for role `platform` (v2.2.0). It is decided in the template app's `UserManagementService` (app-owned since v3.0.0) from the authenticated user's role, never from request input, and it is still built from tenant-scoped calls to the inherited `User::all()` (v3.0.0; previously `User::allByTenant()`). `owner` stays tenant-scoped. Role `user` is refused by the controller, and the app nav hides the link from it.
@@ -1025,9 +1041,9 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - No template engine — plain PHP views
 - No event system
 - No queue system
-- No framework-wide CSRF protection — the sign-in forms (§11), the invite accept form (§16.11) and the two settings save actions (`POST …/account/save`, `POST …/tenant-settings/save`, v3.0.0) check a per-session `csrf_token`. Other application forms must add their own
+- No automatic CSRF protection — nothing checks forms for you. The framework supplies the token and the check (`Session::csrfToken()`, `Session::csrfValid()`, partial `Views/partials/csrf-field.php`, v3.0.0); the sign-in forms (§11), the invite accept form (§16.11) and the two settings save actions (`POST …/account/save`, `POST …/tenant-settings/save`) use them. Other application forms must include the partial and call `Session::csrfValid()`
 - No general rate-limiting facility — only sign-in code requests are limited, per IP (§11)
-- No Composer — zero external dependencies
+- No Composer — zero external dependencies (Google sign-in is written with PHP's own curl and json, v3.0.0)
 - No external date/time library — UTC/local handling is provided by `Frank\Core\Clock` using native PHP date/time classes
 
 ---
@@ -1062,11 +1078,12 @@ Before writing or modifying any code, classify the work:
 - `tenants`, `users`, `login_codes`, `invites` tables and any future framework auth tables
 - All models in `Models/User.php`, `Models/Tenant.php`, `Models/Invite.php`
 - All controllers in `framework/Controllers/`: `AuthController.php`, `TenantSettingsController.php`, `AccountSettingsController.php`
-- All framework default routes (sign-in / verify / resend / terms, logout, tenant/account settings) — not the dashboard route, which is app-owned; see §16.4
+- All framework default routes (sign-in / verify / resend / terms, Google sign-in, invite link, logout, tenant/account settings) — not the dashboard route, which is app-owned; see §16.4
 - The middleware stack (`AuthMiddleware`, `TenantMiddleware`, `JsonBodyParserMiddleware`, `ApiAuthMiddleware`)
-- `Core/Clock.php`, `Core/Container.php`, `Core/Session.php`, and the service bindings registered in `framework/bootstrap.php` for framework services
+- `Core/Clock.php`, `Core/Container.php`, `Core/Session.php`, `Core/Url.php`, and the service bindings registered in `framework/bootstrap.php` for framework services
 - `Services/UserService.php` — framework service for user business logic
 - `Services/LoginCodeService.php` — framework service for passwordless sign-in / sign-up (v3.0.0)
+- `Services/GoogleSignInService.php` — framework "Continue with Google" (v3.0.0)
 - `Services/AccountService.php` — framework service that creates every new account (v3.0.0)
 - `Services/InviteService.php` and `Services/JoinTenantAsUser.php` — framework invites (v3.0.0)
 - `Services/Email/EmailAddress.php` — framework email rules (v3.0.0)
@@ -1268,7 +1285,8 @@ Indexes: `token_hash` (unique), `(tenant_id, email)`. There is no `used_at`: an 
 | Utility | File | Notes |
 |---------|------|-------|
 | `Clock` | `Core/Clock.php` | Stateless static date/time utility introduced in v1.3.0. Owns UTC timestamp generation, UTC/local conversion, timezone validation, timezone resolution, and UTC query boundary calculation. Loaded by PSR-4; no container binding required. Called from Services only — never from Models, Controllers, or Views. |
-| `Session` | `Core/Session.php` | *v3.0.0.* `Session::start()` is the only way a session is started (28-day rolling session, own save path `app/private/sessions`, `HttpOnly` / `SameSite=Lax` / `Secure` on HTTPS, hourly cookie refresh, idle-expiry destroy); `Session::destroy()` ends it. Used by `app/public/index.php`, `AuthMiddleware` and `AuthController`. See §11. |
+| `Session` | `Core/Session.php` | *v3.0.0.* `Session::start()` is the only way a session is started (28-day rolling session, own save path `app/private/sessions`, `HttpOnly` / `SameSite=Lax` / `Secure` on HTTPS, hourly cookie refresh, idle-expiry destroy); `Session::destroy()` ends it. Used by `app/public/index.php`, `AuthMiddleware` and `AuthController`. Also the one place the CSRF token is made and checked: `Session::csrfToken()` (made once per session, `bin2hex(random_bytes(32))`, used by the partial `Views/partials/csrf-field.php`) and `Session::csrfValid(array $data)` (compares `$data['csrf_token']` with `hash_equals`). Both start the session if needed. See §11. |
+| `Url` | `Core/Url.php` | *v3.0.0.* Static, not instantiable. `Url::isHttps()` — true when the server says https, the port is 443, or a proxy says so (`X-Forwarded-Proto`). `Url::baseUrl()` — the site's address, e.g. `https://yoursite.com`, built from `isHttps()` and the `Host` header. Used for absolute links (invite emails, the Google return address) and by `Session` for the `Secure` cookie flag, so they always agree. **Replaces `EmailService::getBaseUrl()`, removed in v3.0.0.** |
 | `Database::transaction()` | `Core/Database.php` | *v2.1.0.* Runs a callable in one transaction on the shared PDO connection; commit on return, rollback + rethrow on any Throwable. Called from Services. See §9. |
 
 ---
@@ -1286,6 +1304,8 @@ These routes are registered in `framework/bootstrap.php` and are part of the fra
 | POST | /login/resend | AuthController@resend | json |
 | GET | /login/terms | AuthController@showTerms | none |
 | POST | /login/terms | AuthController@acceptTerms | json |
+| GET | /login/google | AuthController@googleStart *(v3.0.0 — to Google's sign-in page; back to `/login` without keys)* | none |
+| GET | /login/google/callback | AuthController@googleCallback *(v3.0.0 — Google's return address)* | none |
 | GET | /logout | AuthController@logout | none |
 | GET | /invite/{tenant_id}/{token} | AuthController@showInvite *(v3.0.0 — welcome screen; creates nothing)* | none |
 | POST | /invite/accept | AuthController@acceptInvite *(v3.0.0 — requires `csrf_token`; `terms_accepted=1` when terms are on)* | json |
@@ -1307,9 +1327,10 @@ These services are framework-owned and registered in the container by `framework
 | Service | Container type | Dependencies | Notes |
 |---------|---------------|--------------|-------|
 | `EmailService` | singleton | `$config['mail']` | SMTP gateway. All application email flows call `EmailService` send methods — never PHPMailer directly |
-| `LoginCodeService` | singleton | `User` model, `EmailService`, `SignupTenantResolver`, `AccountService`, `$config['signup']` | *v3.0.0.* Passwordless sign-in and sign-up by emailed 6-digit code (replaces `SignupService` and `PasswordResetService`). Methods: `requestCode(email, ip, userAgent)` (validate, per-IP limit 5/hour, cancel earlier codes, store hashed, email, alert the platform owner when the address has no account; used for first request and resend), `verifyCode(email, code)` → success data `status` = `logged_in` (`user_id`, `tenant_id`, `email`) or `terms_required` (`email`, `verified_at`), `acceptTerms(email, verifiedAt, accepted)`, `isTermsStepOpen(verifiedAt)` (15-minute window), `cleanupExpiredCodes(olderThanDays = 7)` (cron). Owns every Clock call, `password_verify()` and every limit comparison; delegates all DB access to the `User` model. Unknown + correct code creates tenant + owner through `AccountService::create()`, placed by the resolver. Constructor: `(userModel, emailService, tenantResolver, requireTerms = false, termsVersion = null, codeExpiryMinutes = 15, maxAttempts = 3, rateLimitRequests = 5, rateLimitMinutes = 60, accountService = null)` — `accountService` is last so existing positional calls still work. The container factory reads `$config['signup'] ?? []` and, only when `require_terms` is on, verifies the v2.1.0 terms columns exist on `users` (throws `LogicException` naming the migration if not). §11, §16.9 |
+| `LoginCodeService` | singleton | `User` model, `EmailService`, `SignupTenantResolver`, `AccountService`, `$config['signup']` | *v3.0.0.* Passwordless sign-in and sign-up by emailed 6-digit code (replaces `SignupService` and `PasswordResetService`). Methods: `requestCode(email, ip, userAgent)` (validate, per-IP limit 5/hour, cancel earlier codes, store hashed, email, alert the platform owner when the address has no account; used for first request and resend), `verifyCode(email, code)` → success data `status` = `logged_in` (`user_id`, `tenant_id`, `email`) or `terms_required` (`email`, `verified_at`), `signInConfirmedEmail(email, now = null)` *(v3.0.0 — the person has proved the address, by a correct code or by Google: same success data as `verifyCode()`; `verifyCode()` ends by calling it)*, `acceptTerms(email, verifiedAt, accepted)`, `isTermsStepOpen(verifiedAt)` (15-minute window), `cleanupExpiredCodes(olderThanDays = 7)` (cron). Owns every Clock call, `password_verify()` and every limit comparison; delegates all DB access to the `User` model. Unknown + correct code creates tenant + owner through `AccountService::create()`, placed by the resolver. Constructor: `(userModel, emailService, tenantResolver, requireTerms = false, termsVersion = null, codeExpiryMinutes = 15, maxAttempts = 3, rateLimitRequests = 5, rateLimitMinutes = 60, accountService = null)` — `accountService` is last so existing positional calls still work. The container factory reads `$config['signup'] ?? []` and, only when `require_terms` is on, verifies the v2.1.0 terms columns exist on `users` (throws `LogicException` naming the migration if not). §11, §16.9 |
 | `AccountService` | singleton | `EmailService` | *v3.0.0.* The one place a new account is created. `create(email, placement, now, termsAcceptedAt = null, termsVersion = null, alsoInTransaction = null, via = 'sign-in code')`: in one `Database::transaction()` — `placement->resolve()` (a `SignupTenantResolver`), the user `fill()`/`save()`, a read-back with the inherited `where()` for the new id, then the caller's `alsoInTransaction` (invites delete themselves there; throw to roll everything back). Stores `terms_version` trimmed to 50 characters (the column), only when `termsAcceptedAt` is set. Derives the display name from the email. After the commit sends the platform-owner alert ("created via {via}"). Success data `user_id`, `tenant_id`, `role`, `email`; failure `system`. No Clock — callers pass the timestamps. Used by `LoginCodeService` and `InviteService`. §16.9, §16.11 |
 | `InviteService` | singleton | `EmailService`, `AccountService`, `TenantService`, `User` model, `$config['signup']` | *v3.0.0.* Invites — see §16.11 for the rules. `createInvite(email, tenantId, kind, invitedByUserId)` (failure types `validation`, `account_exists`, `invite_open`, `email_failed`, `system`; saves the invite and sends the email in one transaction; the token is never returned), `findOpenInvite(tenantId, token)` (`invite_unusable` or data `invite_id`, `tenant_id`, `email`), `acceptInvite(tenantId, inviteId, accepted)` (`invite_unusable`, `terms_required`, `account_exists`, `system`, or `AccountService` success data), `termsRequired()`. Constants `KIND_JOIN_TENANT`, `KIND_NEW_TENANT`. Owns every Clock call for invites. Constructor: `(emailService, accountService, tenantService, userModel = null, requireTerms = false, termsVersion = null, expiryDays = 7)`. |
+| `GoogleSignInService` | bind | `$config['oauth']['google']`, `Url::baseUrl()` | *v3.0.0.* "Continue with Google" without outside libraries. Constructor `(clientId, clientSecret, redirectUri)`. `authorizationRequest()` → `['url', 'state', 'nonce']` (32-character random state and nonce; `scope=openid email`). `exchangeCode(code, expectedNonce)` → success data `email` (normalised by `EmailAddress`); failure `system` with no message (the caller shows its own) when the exchange or any token check fails, or `validation` "Google did not confirm this email address." when `email_verified` is not true. Token endpoint call by curl, 10-second limit, failures logged with `error_log`. Uses `Clock` for the expiry check. §11 |
 | `SignupTenantResolver` | singleton | `TenantService` (default impl) | *v2.1.0.* Interface: `resolve(email, name): array{tenant_id, role, tenant_name?}`, called inside the account-creation transaction. Default `CreateTenantForSignup` — creates a tenant via `TenantNameGenerator` + `TenantService::create()` and returns role `owner`. Apps replace via `$container->override()`. §16.9 |
 | `UserService` | singleton | `User` model | Introduced v1.3.2. Owns business logic for the user record: `recordLogin(userId, tenantId)`, `saveSettings(userId, tenantId, data)`, and *(v3.0.0)* `deleteUser(tenantId, targetUserId)` and `changeRole(tenantId, targetUserId, newRole)` — see §16.10. Owns allowlist and null-coercion for user preferences; `saveSettings` allows `name` (v3.0.0) and `timezone` — never `email`. Computes timestamps via Clock and passes them to the User model. |
 | `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`, `create(name, baseSlug, companyEmail): int` *(v2.1.0 — owns slug uniqueness: suffixes `-2`, `-3`… with the UNIQUE index as final guard and retry on collision; safe inside a transaction)*, `deleteTenant(actingUser, tenantId)` *(v3.0.0 — the tenant's owner or a `platform` user, see §16.10)*. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
@@ -1456,7 +1477,7 @@ When enabled, the framework enforces acceptance **server-side** and records **wh
 
 **Protocol contract (for app-owned views):**
 
-- `POST /login/terms` must post a field named `terms_accepted` with value `1`, plus the `csrf_token` the controller supplies.
+- `POST /login/terms` must post a field named `terms_accepted` with value `1`, plus the `csrf_token` (include `Views/partials/csrf-field.php`).
 - Render `$error` (shown on rejection: "You must accept the Terms & Conditions to continue.") and `$email`.
 - A `required` attribute / disabled submit button is UX only — the server check is the enforcement.
 
@@ -1522,7 +1543,7 @@ When enabled, the framework enforces acceptance **server-side** and records **wh
 | POST | /tenant/{tenant_id}/tenants/save | `saveTenant` | platform only; `TenantService::saveSettings()` |
 | POST | /tenant/{tenant_id}/tenants/delete | `deleteTenantAsPlatform` | platform only; the typed `tenant_name` must equal the tenant's name exactly, then `TenantService::deleteTenant()` |
 
-The example's friction: deleting your own account, or another user from Edit User, is one confirmation ("Are you sure? This cannot be undone"); a platform user deleting a tenant from Edit Tenant must type its name exactly (same server-side check); the owner deleting their own tenant gets a warning screen (the tenant and every user in it are lost, cannot be undone) and the final button only works once the tenant's name is typed exactly. After deleting your own account or the tenant the example calls `Session::destroy()` and redirects to `/login`. Every POST form on these screens, including the settings save forms, carries the `csrf_token` (partial `Views/partials/csrf-field.php`, `$_SESSION['csrf_token']`, compared with `hash_equals`, the same mechanism as the login forms). The example views are `settings/account-settings.php` (User Settings: editable name, Delete my account for role `user`), `settings/tenant-settings.php` (Tenant Settings: owner-only Delete tenant entry), `settings/tenant-delete.php`, `users/management-dashboard.php` (Your details card; an edit icon on every other row — owner rows open Edit Tenant, the rest Edit User), `users/user-edit.php` and `users/tenant-edit.php`.
+The example's friction: deleting your own account, or another user from Edit User, is one confirmation ("Are you sure? This cannot be undone"); a platform user deleting a tenant from Edit Tenant must type its name exactly (same server-side check); the owner deleting their own tenant gets a warning screen (the tenant and every user in it are lost, cannot be undone) and the final button only works once the tenant's name is typed exactly. After deleting your own account or the tenant the example calls `Session::destroy()` and redirects to `/login`. Every POST form on these screens, including the settings save forms, carries the `csrf_token` (partial `Views/partials/csrf-field.php`, checked with `Session::csrfValid()`, the same mechanism as the login forms). The example views are `settings/account-settings.php` (User Settings: editable name, Delete my account for role `user`), `settings/tenant-settings.php` (Tenant Settings: owner-only Delete tenant entry), `settings/tenant-delete.php`, `users/management-dashboard.php` (Your details card; an edit icon on every other row — owner rows open Edit Tenant, the rest Edit User), `users/user-edit.php` and `users/tenant-edit.php`.
 
 ---
 
@@ -1558,7 +1579,7 @@ Sign-up from `/login` is unchanged: a new tenant and owner.
 | `terms_required`, `system` | welcome screen again with the error |
 | success | signed in, own dashboard |
 
-**Protocol contract (for app-owned views):** `auth/invite-welcome` receives `$csrfToken`, `$email`, `$requireTerms`, optional `$error`, and must post `csrf_token` (and `terms_accepted=1` when `$requireTerms`) to `/invite/accept`. `auth/invite-expired` receives nothing.
+**Protocol contract (for app-owned views):** `auth/invite-welcome` receives `$email`, `$requireTerms`, optional `$error`, and must post `csrf_token` (include `Views/partials/csrf-field.php`) (and `terms_accepted=1` when `$requireTerms`) to `/invite/accept`. `auth/invite-expired` receives nothing.
 
 **Not included:** cleaning up expired invites, cancelling an invite, a list of sent invites, and a record of who invited whom after acceptance (the invite row is deleted). If someone already signed in opens an invite for a different address and presses the button, they are signed in as the new account.
 

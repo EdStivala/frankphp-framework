@@ -10,6 +10,8 @@ item is the owner's call.
   - `08336c0` sprint 1: passwordless email-code login (tested and approved).
   - `0c7f09b` sprint 2 checkpoint.
   - `e9ca98c`, `3a7b807` sprint 2 completed (2026-11-17; tested by the owner).
+  - `99e9854` sprint 3: invites.
+  - Sprint 4 (Google) in progress, NOT committed (see the Sprint 4 section).
 - Approved plan: `/Users/edstivala/.claude/plans/this-is-a-planning-adaptive-mitten.md`.
 - Working rules are in the project memory (no choices without instruction,
   one small step at a time, the owner drives, check files rather than memory,
@@ -54,6 +56,70 @@ Reuse refactors this sprint: `EmailAddress` (email rules), `EmailService`
 
 Docs: codebase.md (§2, §8.1, §8.2, §11, §14, §15, §16.1–16.5, §16.8–16.11) and
 CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
+
+## Sprint 4 — Google and Microsoft (in progress, not committed)
+
+- Login screen (`app/Views/auth/login.php`): "Continue with Google" and
+  "Continue with Microsoft" buttons added below the email form, after an "or"
+  divider; grey outline buttons with Bootstrap Icons, Google above Microsoft.
+  Not wired yet (buttons do nothing). APPROVED by the owner 2026-11-17.
+- Keys (owner decisions 2026-11-17): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+  `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` in `app/.env` (placeholders
+  in `app/env.example`). Keys are per app; a domain change does not need new
+  keys, the production return address is added to the same registration.
+- Return addresses (owner decision): `/login/google/callback` and
+  `/login/microsoft/callback`.
+- Config block named `'oauth'` in `app/Config/config.php` (owner decision),
+  read with `Env::get()`.
+- Keys are optional (owner decision): neither provider is required. A provider
+  whose keys are not set keeps its button on the sign-in screen, greyed out
+  (disabled), to show the option exists but is unavailable.
+- Google keys obtained by the owner and set in `app/.env` (2026-11-17); the
+  Google button is enabled, Microsoft stays disabled.
+- Microsoft PARKED (owner decision 2026-11-17): the owner has no Azure account
+  to register the app. Build Google now; come back to Microsoft at the end of v3.
+- END OF SPRINT 4 — to investigate and amend (owner instruction 2026-11-17):
+  `EmailService::getBaseUrl()`. It lives in the email class but is used for
+  site addresses generally (invite links, the Google return address), and it
+  judges https differently from `Session` (ignores the proxy header), so
+  behind a proxy the Google return address could come out as `http://`.
+  RESOLVED 2026-11-17 (owner: a Core helper like Clock; no back-compat, v3 is
+  breaking): new `Frank\Core\Url` with `isHttps()` (moved from `Session`) and
+  `baseUrl()`. `Session`, `InviteService` and the Google binding use it;
+  `EmailService::getBaseUrl()` removed (apps calling it must switch to
+  `Url::baseUrl()` — migration guide, sprint 6). The `Host` header point was
+  set aside by the owner.
+- Login buttons wired: Google is a link to `/login/google` when its keys are
+  set; otherwise the disabled button. `AuthController` receives `$config`;
+  `loginView()` passes `googleEnabled` / `microsoftEnabled` (`oauthKeysSet()`:
+  both client ID and secret must be set).
+- CSRF made once (owner instruction): `Session::csrfToken()` /
+  `Session::csrfValid()`; every form uses `partials/csrf-field.php`; the four
+  controllers' own copies removed (sprint 2 item 21 resolved).
+- Google sign-in built without libraries (owner decision: FrankPHP keeps
+  minimal dependencies): `Frank\Services\GoogleSignInService`
+  (`authorizationRequest()`, `exchangeCode()`); routes `GET /login/google`
+  (`googleStart`) and `GET /login/google/callback` (`googleCallback`); state
+  and nonce in session key `google_signin`. A Google-confirmed address goes
+  the same way as a correct code via `LoginCodeService::signInConfirmedEmail()`
+  and `AuthController::continueConfirmedEmail()` (terms step, account
+  creation, sign-in all reused). Google says not to use email as the unique
+  identifier (`sub`); the owner's rule "same address = same account when the
+  provider confirms it" stands and is built on `email_verified`.
+- Agreed by the owner 2026-11-17 (were provisional): all names above plus
+  `Url`, `isHttps()`, `baseUrl()`; both keys needed to enable a button;
+  32-character state and nonce; 10-second limit on the token exchange; wording
+  "Google did not confirm this email address." and reuse of "Invalid request.
+  Please try again."; `signInConfirmedEmail()` living in `LoginCodeService`.
+- Tested and passed by the owner 2026-11-17: buttons, and greyed out without
+  keys; CSRF change; Google outbound step and Cancel at Google; Google sign-in
+  for an existing person and a new person (terms on); email-code login
+  re-test (known and unknown); invites and Google sign-in after the `Url`
+  change.
+- Not tested: an address Google did not confirm (hard to produce);
+  `/login/google` typed in with no keys set (should return to `/login`).
+- Still to do in sprint 4: `codebase.md`, `CHANGELOG.md`, and the docs-site
+  pages the plan names. Microsoft parked to the end of v3.
 
 ## Done in the 2026-11-17 session (committed, tested by the owner)
 
@@ -135,7 +201,10 @@ Sprint 2 (in `0c7f09b`) — items 2–6 and 10 no longer exist (removed 2026-11-
 18. Web addresses of the new actions and names of the new files — DECIDED: keep.
 19. `app/MYAPP.md` only partly updated (roles section, 2026-11-17) — DECIDED: leave it (routes, services and tree not recorded there).
 20. A refused settings save shows "Invalid request. Please try again." — DECIDED: keep.
-21. The CSRF check is written separately in three controllers.
+21. The CSRF check is written separately in three controllers — RESOLVED
+    2026-11-17 (owner: made once, in a consistent way): `Session::csrfToken()`
+    makes the token and `Session::csrfValid()` checks it; every form uses
+    `partials/csrf-field.php`; the four controllers' own copies are removed.
 22. Stale `/signup` changelog line removed.
 
 2026-11-17 session (committed):

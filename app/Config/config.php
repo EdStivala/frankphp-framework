@@ -70,6 +70,22 @@ return [
     ],
 
     // ----------------------------------------------------------------
+    // Google and Microsoft sign-in (FrankPHP 3.0). Optional: a provider
+    // whose keys are not set shows its button on the sign-in screen
+    // disabled.
+    // ----------------------------------------------------------------
+    'oauth' => [
+        'google' => [
+            'client_id'     => Env::get('GOOGLE_CLIENT_ID'),
+            'client_secret' => Env::get('GOOGLE_CLIENT_SECRET'),
+        ],
+        'microsoft' => [
+            'client_id'     => Env::get('MICROSOFT_CLIENT_ID'),
+            'client_secret' => Env::get('MICROSOFT_CLIENT_SECRET'),
+        ],
+    ],
+
+    // ----------------------------------------------------------------
     // Terms & Conditions acceptance for new accounts (FrankPHP 2.1+, see
     // codebase.md §16.9). Opt-in: omit this section (or set require_terms
     // to false) to leave the feature off.

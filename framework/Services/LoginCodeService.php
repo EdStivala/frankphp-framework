@@ -176,13 +176,29 @@ class LoginCodeService
             );
         }
 
+        return $this->signInConfirmedEmail($email, $now);
+    }
+
+    /**
+     * The person has proved they own $email — by a correct code (verifyCode)
+     * or because Google confirmed it ("Continue with Google"). Known address:
+     * signed in. Unknown address: the terms step when require_terms is on,
+     * otherwise the account is created and signed in.
+     *
+     * @param string|null $now  UTC time of the proof; defaults to now
+     */
+    public function signInConfirmedEmail(string $email, ?string $now = null): ServiceResult
+    {
+        $email = EmailAddress::normalise($email);
+        $now ??= Clock::nowUtcString();
+
         $user = $this->userModel->findByEmail($email);
         if ($user) {
             return $this->loggedIn((int) $user['id'], (int) $user['tenant_id'], $email);
         }
 
         if ($this->requireTerms) {
-            return ServiceResult::success('Code verified.', [
+            return ServiceResult::success('Email confirmed.', [
                 'status'      => 'terms_required',
                 'email'       => $email,
                 'verified_at' => $now,
