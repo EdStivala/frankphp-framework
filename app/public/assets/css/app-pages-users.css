@@ -159,11 +159,6 @@
     color: var(--brand-primary);
 }
 
-.role-badge--admin {
-    background: rgba(16, 185, 129, 0.1);
-    color: #065F46;
-}
-
 .role-badge--user {
     background: var(--grey-100);
     color: var(--grey-600);

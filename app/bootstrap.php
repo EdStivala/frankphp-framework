@@ -35,9 +35,21 @@ $container->bind(\App\Controllers\LegalController::class, function ($c) use ($co
 });
 $router->add('GET', '/terms', 'App\\Controllers\\LegalController@terms', []);
 
+// Users screen — app-owned (moved from the framework in v3.0.0). Change who
+// sees it and what it shows freely.
+$container->singleton(\App\Services\UserManagementService::class, function ($c) {
+    return new \App\Services\UserManagementService(new \Frank\Models\Tenant());
+});
+$container->bind(\App\Controllers\UserManagementController::class, function ($c) use ($config) {
+    return new \App\Controllers\UserManagementController(
+        $c->make(\App\Services\UserManagementService::class),
+        $config,
+    );
+});
+$router->add('GET', '/tenant/{tenant_id}/users', 'App\\Controllers\\UserManagementController@index', [$tm, $auth]);
+
 // User and tenant administration — a worked example of the framework's user and
-// tenant operations (delete a user, change a role, delete my account, delete the
-// tenant). App-owned: change the rules, screens and friction freely. See
+// tenant operations (delete my account, delete the tenant). App-owned: change the rules, screens and friction freely. See
 // Controllers/UserAdminController.php.
 $container->bind(\App\Controllers\UserAdminController::class, function ($c) {
     return new \App\Controllers\UserAdminController(
@@ -45,8 +57,12 @@ $container->bind(\App\Controllers\UserAdminController::class, function ($c) {
         $c->make(\Frank\Services\TenantService::class),
     );
 });
+$router->add('GET',  '/tenant/{tenant_id}/users/edit',      'App\\Controllers\\UserAdminController@showUserEdit',     [$tm, $auth]);
+$router->add('POST', '/tenant/{tenant_id}/users/save',      'App\\Controllers\\UserAdminController@saveUser',         [$tm, $auth, $json]);
 $router->add('POST', '/tenant/{tenant_id}/users/delete',    'App\\Controllers\\UserAdminController@deleteUser',       [$tm, $auth, $json]);
-$router->add('POST', '/tenant/{tenant_id}/users/role',      'App\\Controllers\\UserAdminController@changeRole',       [$tm, $auth, $json]);
+$router->add('GET',  '/tenant/{tenant_id}/tenants/edit',    'App\\Controllers\\UserAdminController@showTenantEdit',   [$tm, $auth]);
+$router->add('POST', '/tenant/{tenant_id}/tenants/save',    'App\\Controllers\\UserAdminController@saveTenant',       [$tm, $auth, $json]);
+$router->add('POST', '/tenant/{tenant_id}/tenants/delete',  'App\\Controllers\\UserAdminController@deleteTenantAsPlatform', [$tm, $auth, $json]);
 $router->add('POST', '/tenant/{tenant_id}/account/delete',  'App\\Controllers\\UserAdminController@deleteMyAccount',  [$tm, $auth, $json]);
 $router->add('GET',  '/tenant/{tenant_id}/tenant-delete',   'App\\Controllers\\UserAdminController@showTenantDelete', [$tm, $auth]);
 $router->add('POST', '/tenant/{tenant_id}/tenant-delete',   'App\\Controllers\\UserAdminController@deleteTenant',     [$tm, $auth, $json]);

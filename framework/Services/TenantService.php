@@ -86,18 +86,20 @@ class TenantService
      * Delete a tenant and, through the users foreign key's ON DELETE CASCADE,
      * every user in it. Cannot be undone.
      *
-     * Refuses unless the acting user is the owner of that same tenant:
-     * $actingUser['role'] must be 'owner' and $actingUser['tenant_id'] must
-     * equal $tenantId. Nothing else is checked here — confirmation, friction
-     * and clean-up of app data belong to the app.
+     * Refuses unless the acting user is the owner of that same tenant
+     * ($actingUser['role'] is 'owner' and $actingUser['tenant_id'] equals
+     * $tenantId) or a 'platform' user. Nothing else is checked here —
+     * confirmation, friction and clean-up of app data belong to the app.
      *
      * Failure types: 'forbidden', 'not_found', 'system'.
      */
     public function deleteTenant(array $actingUser, int $tenantId): ServiceResult
     {
-        if (($actingUser['role'] ?? null) !== 'owner'
-            || (int) ($actingUser['tenant_id'] ?? 0) !== $tenantId) {
-            return ServiceResult::failure('Only the owner can delete the tenant.', 'forbidden');
+        $role       = $actingUser['role'] ?? null;
+        $ownsTenant = $role === 'owner' && (int) ($actingUser['tenant_id'] ?? 0) === $tenantId;
+
+        if (!$ownsTenant && $role !== 'platform') {
+            return ServiceResult::failure('Only the owner or a platform user can delete the tenant.', 'forbidden');
         }
 
         if ($this->tenantModel->findById($tenantId) === null) {

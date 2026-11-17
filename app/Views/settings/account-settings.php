@@ -1,12 +1,12 @@
 <?php
 $pageTag = 'AccountSettings';
-$title   = 'Account Settings';
+$title   = 'User Settings';
 ob_start();
 ?>
 
 <div class="page-header d-flex align-items-center justify-content-between">
     <div>
-        <h4 class="mb-0">Account Settings</h4>
+        <h4 class="mb-0">User Settings</h4>
         <p class="text-muted mb-0" style="font-size:0.8125rem;"><?= htmlspecialchars($settings['name'] ?? '') ?></p>
     </div>
 </div>
@@ -81,23 +81,17 @@ ob_start();
             </form>
         </div>
 
+        <?php if (($user['role'] ?? '') === 'user') : ?>
         <div class="settings-group">
             <div class="settings-group-title">Delete my account</div>
-            <?php if (($user['role'] ?? '') === 'owner') : ?>
-                <div class="settings-group-description">You are the owner of this organisation. Your account can only be removed by deleting the whole organisation, so this takes you to the delete organisation screen.</div>
-                <form method="post" action="/tenant/<?= (int) $tenant['id'] ?>/account/delete">
-                    <?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
-                    <button type="submit" class="btn btn-outline-danger">Delete my account</button>
-                </form>
-            <?php else : ?>
-                <div class="settings-group-description">Permanently deletes your account. This cannot be undone.</div>
-                <form method="post" action="/tenant/<?= (int) $tenant['id'] ?>/account/delete"
-                    onsubmit="return confirm('Are you sure? This cannot be undone.');">
-                    <?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
-                    <button type="submit" class="btn btn-outline-danger">Delete my account</button>
-                </form>
-            <?php endif; ?>
+            <div class="settings-group-description">Permanently deletes your account. This cannot be undone.</div>
+            <form method="post" action="/tenant/<?= (int) $tenant['id'] ?>/account/delete"
+                onsubmit="return confirm('Are you sure? This cannot be undone.');">
+                <?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
+                <button type="submit" class="btn btn-outline-danger">Delete my account</button>
+            </form>
         </div>
+        <?php endif; ?>
 
     </div>
 

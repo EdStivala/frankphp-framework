@@ -20,19 +20,18 @@
 
 ## Roles
 
-The framework provides `role` on the `users` table with values `platform`, `owner`, `admin`, `user`. From FrankPHP 3.0 there are no passwords: one sign-in screen emails a 6-digit code, and an email address with no account yet gets its own tenant and becomes its `owner` (CODEBASE.md §16.9). If this app places new accounts differently, record the `SignupTenantResolver` override under Known Deviations.
+The framework provides `role` on the `users` table with values `platform`, `owner`, `user`. From FrankPHP 3.0 there are no passwords: one sign-in screen emails a 6-digit code, and an email address with no account yet gets its own tenant and becomes its `owner` (CODEBASE.md §16.9). If this app places new accounts differently, record the `SignupTenantResolver` override under Known Deviations.
 
 This app uses roles as follows:
 
 | Role | Permissions |
 |------|-------------|
 | `owner` | [Describe what an owner can do in this application. By default, the person who signed up and created the tenant] |
-| `admin` | [Same as owner, or describe any difference] |
 | `user` | [Describe what a standard user can do] |
 
 Role checks follow the framework pattern — done in controllers, not middleware:
 ```php
-if (!in_array($user['role'] ?? '', ['admin', 'owner'], true)) {
+if (($user['role'] ?? '') !== 'owner') {
     return Response::redirect('/tenant/' . $tenant['id'] . '/dashboard?error=forbidden');
 }
 ```

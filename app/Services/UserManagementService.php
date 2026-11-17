@@ -2,18 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Frank\Services;
+namespace App\Services;
 
 use Frank\Core\Clock;
 use Frank\Models\Tenant;
 use Frank\Models\User;
+use Frank\Services\ServiceResult;
 
 /**
  * UserManagementService
  *
- * Framework service introduced in v1.4.
+ * App-owned (template app) — introduced in the framework in v1.4, moved to
+ * the app in v3.0.0 so an app can change what the Users screen shows.
  *
- * Provides the data payload for the admin/owner user management dashboard.
+ * Provides the data payload for the user management dashboard.
  * Owns all Clock calls for this feature. Formats all display values so the
  * view receives flat, named scalars and performs no computation.
  *
@@ -74,6 +76,7 @@ class UserManagementService
         $neverLoggedIn      = 0;
         $inactiveThirtyDays = 0;
         $users              = [];
+        $me                 = null;
 
         foreach ($members as $m) {
             $member      = $m['user'];
@@ -88,7 +91,7 @@ class UserManagementService
                 }
             }
 
-            $users[] = [
+            $row = [
                 'id'             => $member->id,
                 'email'          => $member->email,
                 'name'           => $member->name,
@@ -101,12 +104,21 @@ class UserManagementService
                     : 'Never logged in',
                 'hasLoggedIn'    => $hasLoggedIn,
             ];
+
+            // The logged-in person is shown in their own card, not in the table.
+            // They are still counted in the stats above.
+            if ((int) $member->id === (int) ($user['id'] ?? 0)) {
+                $me = $row;
+            } else {
+                $users[] = $row;
+            }
         }
 
         $activePercent = $totalUsers > 0 ? (int) round($activeCount / $totalUsers * 100) : 0;
 
         return ServiceResult::success('', [
             'users'              => $users,
+            'me'                 => $me,
             'totalUsers'         => $totalUsers,
             'activePercent'      => $activePercent,
             'neverLoggedIn'      => $neverLoggedIn,

@@ -18,7 +18,7 @@
 					<i class="bi bi-folder2-open"></i> Files</a>
 			</li>
 			<li>
-				<a class="dropdown-item" href="#">
+				<a class="dropdown-item" href="/tenant/<?= (int) $tenant['id'] ?>/tenant-settings">
 					<i class="bi bi-gear"></i> Settings</a>
 			</li>
 			
@@ -26,7 +26,7 @@
 				<a class="dropdown-item" href="#">
 					<i class="bi bi-credit-card"></i> Subscription &amp; Billing</a>
 			</li>
-			<?php if (in_array($user['role'] ?? '', ['platform', 'admin', 'owner'], true)) : ?>
+			<?php if (in_array($user['role'] ?? '', ['platform', 'owner'], true)) : ?>
 			<li><hr class="dropdown-divider"></li>
 			<li>
 				<a class="dropdown-item" href="/tenant/<?= $tenant['id'] ?>/users">
@@ -43,7 +43,7 @@
 			</button>
 			<ul class="dropdown-menu dropdown-menu-end">
 				<li>
-					<a class="dropdown-item" href="#">
+					<a class="dropdown-item" href="/tenant/<?= (int) $tenant['id'] ?>/account">
 						<i class="bi bi-person-bounding-box"></i> Profile</a>
 				</li>
 				<li>

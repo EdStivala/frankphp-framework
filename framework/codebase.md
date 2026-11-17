@@ -93,9 +93,8 @@ framework/
 │   └── Session.php            # v3.0.0 — the only place a session is started: Session::start() / destroy(). 28-day rolling session, own save path. See §11
 ├── Controllers/                        # Framework-owned only — no application controllers live here
 │   ├── AuthController.php              # v3.0.0 passwordless: the one sign-in/sign-up screen, code verify, resend, terms step, logout — injects LoginCodeService + UserService
-│   ├── TenantSettingsController.php    # Tenant settings read/write — admin/owner only
-│   ├── AccountSettingsController.php   # Per-user account settings read/write
-│   └── UserManagementController.php    # User management dashboard (platform/admin/owner) — injects UserManagementService + config (v1.4; platform cross-tenant v2.2.0)
+│   ├── TenantSettingsController.php    # Tenant settings read/write — owner only
+│   └── AccountSettingsController.php   # Per-user account settings read/write
 ├── Middleware/
 │   ├── AuthMiddleware.php           # Starts the session via Session::start(), checks it, loads $request->user
 │   ├── TenantMiddleware.php         # Resolves tenant_id param, loads $request->tenant
@@ -117,7 +116,6 @@ framework/
 │   ├── TenantNameGenerator.php     # Pure helper — default tenant name + slug from the new person's email (v2.1.0)
 │   ├── UserService.php             # recordLogin(), saveSettings() — framework user business logic
 │   ├── TenantService.php           # saveSettings(), create() (v2.1.0) — framework tenant business logic
-│   ├── UserManagementService.php   # getUserDashboard() — user dashboard KPIs and user list; platform role spans all tenants (v1.4, v2.2.0)
 │   └── ServiceResult.php           # Standardised result object for all services
 ├── sql/
 │   ├── schema.core.sql      # Auto-executed on first boot if users table missing. A fresh install starts EMPTY — no seed data (v3.0.0).
@@ -127,7 +125,7 @@ framework/
 ├── tools/
 │   ├── build_release.php              # Builds a clean, framework-only dist/ zip for a GitHub Release update asset
 │   └── generate_release_manifest.php  # Diffs this release against the last one — file/route/schema changes — drafts RELEASE_MANIFEST.json
-├── tests/                   # Pre-release checks (plain PHP CLI). boot_layout_test.php verifies the APP_BASE_DIR contract; login_code_test.php (v3.0.0) exercises LoginCodeService against a scratch database `frank_v3_test` that it creates and drops; user_tenant_operations_test.php (v3.0.0) does the same for the user and tenant operations of §16.10. Excluded from release zips.
+├── tests/                   # Pre-release checks (plain PHP CLI). boot_layout_test.php verifies the APP_BASE_DIR contract. Excluded from release zips.
 ├── releases/                # Historical per-version snapshots, used by generate_release_manifest.php for diffing. Excluded from release zips.
 └── Versions/                 # Per-release migration notes (e.g. FrankPHP_v2.1.0_migration_notes.md). Shipped in release zips from v2.1.0 so upgraders receive the notes with the SQL.
 ```
@@ -144,10 +142,11 @@ app/
 │   └── config.php            # Non-secret app options, reads from $_ENV populated by .env — returns array, including mail.templates overrides (§16.8) and the signup terms section (§16.9)
 ├── Controllers/
 │   ├── HomeController.php    # App-owned starter dashboard controller — replace with real application controllers
-│   ├── UserAdminController.php # App-owned worked EXAMPLE (v3.0.0) of the user/tenant operations — delete a user, change a role, delete my account, delete the tenant. Change it freely. §16.10
+│   ├── UserAdminController.php # App-owned worked EXAMPLE (v3.0.0) of the user/tenant operations — delete my account, delete the tenant (owner), edit or delete other users (platform, owner), edit or delete other tenants (platform). Change it freely. §16.10
+│   ├── UserManagementController.php # App-owned Users screen (platform/owner) — moved from the framework in v3.0.0. Change it freely.
 │   └── LegalController.php   # App-owned starter — GET /terms placeholder page (v2.1.0, §16.9)
 ├── Models/                   # Empty — application's own models. See §16.7 to extend Tenant/User via composition.
-├── Services/                  # Empty — application's own business logic.
+├── Services/                  # Application's own business logic. Ships UserManagementService.php (Users screen data — moved from the framework in v3.0.0).
 ├── Presenters/                 # Empty — application's own presenters, if used. See Core/BasePresenter.php.
 ├── Views/
 │   ├── layouts/
@@ -157,7 +156,9 @@ app/
 │   ├── home/
 │   │   └── dashboard.php   # Default tenant dashboard — replace with application-specific content
 │   ├── users/
-│   │   └── management-dashboard.php # Admin/owner user management dashboard (v1.4). v3.0.0: per-row role selector and Delete for owners/admins (example, §16.10)
+│   │   ├── management-dashboard.php # Platform/owner Users screen (v1.4). v3.0.0: "Your details" card beside the stats; edit icon on every other row (§16.10)
+│   │   ├── user-edit.php   # v3.0.0 example — edit a user's name or delete the user (platform, owner)
+│   │   └── tenant-edit.php # v3.0.0 example — edit a tenant's details or delete it, type-the-name friction (platform)
 │   ├── settings/           # Tenant settings and account settings views; tenant-delete.php is the v3.0.0 example warning + type-the-name screen (§16.10)
 │   ├── modals/             # Reusable modal partial views
 │   └── partials/
@@ -204,7 +205,7 @@ app/public/index.php (entry point)
         └── APP_VIEWS_DIR and FRANK_VERSION constants defined
         └── Container created → framework services registered as singletons
         └── Router created → receives Container
-        └── framework routes registered (sign-in / verify / terms / logout, tenant/account settings, user management)
+        └── framework routes registered (sign-in / verify / terms / logout, tenant/account settings)
         └── hard-requires app/bootstrap.php as its final step, passing $container/$router/$config already in scope
               └── app/bootstrap.php registers application routes and container bindings, returns $router
   └── $router->dispatch(new Request())
@@ -537,9 +538,7 @@ Each renders a default template shipped in `Services/Email/Templates/`. The temp
 | `LoginCodeService::class` | singleton | Depends on User model + EmailService + SignupTenantResolver + `$config['signup']` (§11, §16.9). v3.0.0 |
 | `UserService::class` | singleton | Framework user business logic — recordLogin, saveSettings |
 | `TenantService::class` | singleton | Framework tenant business logic — saveSettings allowlist and null-coercion |
-| `UserManagementService::class` | singleton | Admin user dashboard data service — introduced v1.4 |
 | `AuthController::class` | bind | Needs LoginCodeService + UserService injected |
-| `UserManagementController::class` | bind | Needs UserManagementService + $config injected — introduced v1.4 |
 
 Controllers are registered with `bind()` (not `singleton()`) because a fresh controller instance per request is the correct behaviour.
 
@@ -905,7 +904,7 @@ Apps that need a different placement model (e.g. invite into an existing tenant)
 
 **Role checking** is done in controllers, not middleware. Pattern used in `TenantSettingsController`:
 ```php
-if (!in_array($user['role'] ?? '', ['admin', 'owner'], true)) {
+if (($user['role'] ?? '') !== 'owner') {
     return Response::redirect('/tenant/{id}/somewhere?error=forbidden');
 }
 ```
@@ -1000,7 +999,7 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - Sessions: 28-day rolling, `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, stored in `app/private/sessions` (§11)
 - `htmlspecialchars()` on all user-supplied output in views
 - Tenant isolation enforced at middleware level (route param vs session user) and at model level (tenant_id in all queries)
-- The single sanctioned cross-tenant read is the Users dashboard for role `platform` (v2.2.0). It is decided in `UserManagementService` from the authenticated user's role, never from request input, and it is still built from tenant-scoped calls to the inherited `User::all()` (v3.0.0; previously `User::allByTenant()`). `admin` and `owner` stay tenant-scoped. Role `user` is refused by the controller, and the app nav hides the link from it.
+- The single sanctioned cross-tenant read is the Users dashboard for role `platform` (v2.2.0). It is decided in the template app's `UserManagementService` (app-owned since v3.0.0) from the authenticated user's role, never from request input, and it is still built from tenant-scoped calls to the inherited `User::all()` (v3.0.0; previously `User::allByTenant()`). `owner` stays tenant-scoped. Role `user` is refused by the controller, and the app nav hides the link from it.
 - `saveSettings()` methods in both `User` and `Tenant` maintain explicit column allowlists — arbitrary columns cannot be written via settings forms
 - Multi-statement PDO mode is disabled after schema import
 - SMTP credentials live exclusively in `.env` and flow through `config['mail']` → `EmailService::fromConfig()` → the container singleton. They are never present in any service or controller file.
@@ -1052,14 +1051,13 @@ Before writing or modifying any code, classify the work:
 **Framework-owned (described in CODEBASE.md, Section 16):**
 - `tenants`, `users`, `login_codes` tables and any future framework auth tables
 - All models in `Models/User.php`, `Models/Tenant.php`
-- All controllers in `framework/Controllers/`: `AuthController.php`, `TenantSettingsController.php`, `AccountSettingsController.php`, `UserManagementController.php`
-- All framework default routes (sign-in / verify / resend / terms, logout, tenant/account settings, user management) — not the dashboard route, which is app-owned; see §16.4
+- All controllers in `framework/Controllers/`: `AuthController.php`, `TenantSettingsController.php`, `AccountSettingsController.php`
+- All framework default routes (sign-in / verify / resend / terms, logout, tenant/account settings) — not the dashboard route, which is app-owned; see §16.4
 - The middleware stack (`AuthMiddleware`, `TenantMiddleware`, `JsonBodyParserMiddleware`, `ApiAuthMiddleware`)
 - `Core/Clock.php`, `Core/Container.php`, `Core/Session.php`, and the service bindings registered in `framework/bootstrap.php` for framework services
 - `Services/UserService.php` — framework service for user business logic
 - `Services/LoginCodeService.php` — framework service for passwordless sign-in / sign-up (v3.0.0)
 - `Services/TenantService.php` — framework service for tenant business logic
-- `Services/UserManagementService.php` — framework service for the admin user management dashboard (v1.4)
 
 **Do not modify framework-owned files when building application features.** If a feature appears to require a change to a framework-owned file, stop and flag this to the developer before proceeding. Framework changes require a deliberate upgrade decision — they are not routine feature work.
 
@@ -1144,7 +1142,7 @@ Adapt your documentation output to the mode you are operating in:
 Do not add the following to MYAPP.md — they belong in CODEBASE.md and are already documented there:
 
 - Framework table schemas (`tenants`, `users`, `login_codes`)
-- Framework default routes (sign-in, tenant/account settings, user management) — not the dashboard route; that's app-owned and belongs in MYAPP.md, see §16.4
+- Framework default routes (sign-in, tenant/account settings) — not the dashboard route; that's app-owned and belongs in MYAPP.md, see §16.4
 - Framework middleware descriptions
 - BaseModel, BaseController, Container, or core class behaviour
 - General framework conventions (these apply globally and are not re-stated per application)
@@ -1192,7 +1190,7 @@ MYAPP.md exists precisely to eliminate guessing. If it is incomplete, the right 
 | tenant_id | int NOT NULL FK | tenants.id — CASCADE DELETE |
 | email | varchar(255) NOT NULL | **globally unique** (`uq_users_email`, v3.0.0) — one email = one user = one tenant. Stored lowercase |
 | name | varchar(255) NOT NULL | |
-| role | varchar(50) NOT NULL | `owner`, `admin`, `user`, `platform` — default `user`. From v2.1.0 a new person (v3.0.0: an unknown email that verified its sign-in code) gets their own tenant and is its `owner` (§16.9) |
+| role | varchar(50) NOT NULL | `owner`, `user`, `platform` — default `user`. From v2.1.0 a new person (v3.0.0: an unknown email that verified its sign-in code) gets their own tenant and is its `owner` (§16.9) |
 | api_key_hash | char(64) | nullable — hashed API key for apiAuth middleware |
 | timezone | varchar(100) | nullable — inherits from tenant if null |
 | created_at | datetime NOT NULL | UTC |
@@ -1262,9 +1260,8 @@ These routes are registered in `framework/bootstrap.php` and are part of the fra
 | POST | /tenant/{tenant_id}/tenant-settings/save | TenantSettingsController@save (requires `csrf_token`, v3.0.0) | tm, auth, json |
 | GET | /tenant/{tenant_id}/account | AccountSettingsController@index | tm, auth |
 | POST | /tenant/{tenant_id}/account/save | AccountSettingsController@save (requires `csrf_token`, v3.0.0) | tm, auth, json |
-| GET | /tenant/{tenant_id}/users | UserManagementController@index | tm, auth |
 
-`GET /` and `GET /tenant/{tenant_id}/dashboard` are deliberately not in this table — they're registered in `app/bootstrap.php` against `App\Controllers\HomeController`, not here. `HomeController` ships as app-owned starter content specifically so an application can replace it freely; see `app/bootstrap.php`'s own comments. Likewise `GET /terms` (v2.1.0, `App\Controllers\LegalController@terms`) is registered in the starter's `app/bootstrap.php`, not here — see §16.9.
+`GET /` and `GET /tenant/{tenant_id}/dashboard` are deliberately not in this table — they're registered in `app/bootstrap.php` against `App\Controllers\HomeController`, not here. `HomeController` ships as app-owned starter content specifically so an application can replace it freely; see `app/bootstrap.php`'s own comments. Likewise `GET /terms` (v2.1.0, `App\Controllers\LegalController@terms`) and the Users screen `GET /tenant/{tenant_id}/users` (v3.0.0, `App\Controllers\UserManagementController@index`) are registered in the starter's `app/bootstrap.php`, not here — see §16.9.
 
 `POST /login` and `POST /login/resend` request a code and are the only routes subject to the 5-per-hour-per-IP limit. The v2 `/signup`, `/signup/*`, `/forgot-password` and `/reset-password` routes no longer exist (v3.0.0).
 
@@ -1280,9 +1277,8 @@ These services are framework-owned and registered in the container by `framework
 | `LoginCodeService` | singleton | `User` model, `EmailService`, `SignupTenantResolver`, `$config['signup']` | *v3.0.0.* Passwordless sign-in and sign-up by emailed 6-digit code (replaces `SignupService` and `PasswordResetService`). Methods: `requestCode(email, ip, userAgent)` (validate, per-IP limit 5/hour, cancel earlier codes, store hashed, email, alert the platform owner when the address has no account; used for first request and resend), `verifyCode(email, code)` → success data `status` = `logged_in` (`user_id`, `tenant_id`, `email`) or `terms_required` (`email`, `verified_at`), `acceptTerms(email, verifiedAt, accepted)`, `isTermsStepOpen(verifiedAt)` (15-minute window), `cleanupExpiredCodes(olderThanDays = 7)` (cron). Owns every Clock call, `password_verify()` and every limit comparison; delegates all DB access to the `User` model. Unknown + correct code creates tenant + owner in `Database::transaction()` via the resolver, then alerts the platform owner. Constructor: `(userModel, emailService, tenantResolver, requireTerms = false, termsVersion = null, codeExpiryMinutes = 15, maxAttempts = 3, rateLimitRequests = 5, rateLimitMinutes = 60)`. The container factory reads `$config['signup'] ?? []` and, only when `require_terms` is on, verifies the v2.1.0 terms columns exist on `users` (throws `LogicException` naming the migration if not). §11, §16.9 |
 | `SignupTenantResolver` | singleton | `TenantService` (default impl) | *v2.1.0.* Interface: `resolve(email, name): array{tenant_id, role, tenant_name?}`, called inside the account-creation transaction. Default `CreateTenantForSignup` — creates a tenant via `TenantNameGenerator` + `TenantService::create()` and returns role `owner`. Apps replace via `$container->override()`. §16.9 |
 | `UserService` | singleton | `User` model | Introduced v1.3.2. Owns business logic for the user record: `recordLogin(userId, tenantId)`, `saveSettings(userId, tenantId, data)`, and *(v3.0.0)* `deleteUser(tenantId, targetUserId)` and `changeRole(tenantId, targetUserId, newRole)` — see §16.10. Owns allowlist and null-coercion for user preferences; `saveSettings` allows `name` (v3.0.0) and `timezone` — never `email`. Computes timestamps via Clock and passes them to the User model. |
-| `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`, `create(name, baseSlug, companyEmail): int` *(v2.1.0 — owns slug uniqueness: suffixes `-2`, `-3`… with the UNIQUE index as final guard and retry on collision; safe inside a transaction)*, `deleteTenant(actingUser, tenantId)` *(v3.0.0 — owner-only, see §16.10)*. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
+| `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`, `create(name, baseSlug, companyEmail): int` *(v2.1.0 — owns slug uniqueness: suffixes `-2`, `-3`… with the UNIQUE index as final guard and retry on collision; safe inside a transaction)*, `deleteTenant(actingUser, tenantId)` *(v3.0.0 — the tenant's owner or a `platform` user, see §16.10)*. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
 | `TenantNameGenerator` | not in container | none | *v2.1.0.* Pure helper (no DB, no Clock), constructed by `CreateTenantForSignup`. `fromEmail(email): array{name, slug}` — business domain → organisation name (`jane@acme-corp.com` → `Acme Corp` / `acme-corp`; two-part suffixes like `co.uk` handled); free-mail domain (`FREE_MAIL_DOMAINS`, extendable via constructor) → `"<Name>'s Workspace"`. `slugify()` is public static. Slug uniqueness is not its job. |
-| `UserManagementService` | singleton | `Tenant` model *(v3.0.0: the `User` model is no longer injected)* | Introduced v1.4. Provides the full data payload for the user management dashboard: `getUserDashboard(tenantId, user, tenant, config)`. Owns all Clock calls for the feature (timezone resolution, 30-day inactivity cutoff via `Clock::utcOffsetString`, display-value formatting). All four KPI stats (`totalUsers`, `activePercent`, `neverLoggedIn`, `inactiveThirtyDays`) are derived from the `User` objects already fetched with the inherited `User::all()` — no extra queries. *v2.2.0:* scope follows the viewer's role. `admin`/`owner` get their own tenant only. `platform` gets every tenant: the service reuses `Tenant::findAll()` and calls `User::all()` once per tenant, so no unscoped User query exists. Each row carries `tenantName` and *(v3.0.0)* `tenantId`, and the result carries `crossTenant` (bool). |
 
 ---
 
@@ -1461,26 +1457,30 @@ When enabled, the framework enforces acceptance **server-side** and records **wh
 | | the target's current role is `owner` or `platform` | `role_protected` |
 | | `$newRole` is `owner` or `platform` | `role_not_assignable` |
 | | `$newRole` is empty or longer than 50 characters (the column size) | `validation` |
-| `TenantService::deleteTenant(array $actingUser, int $tenantId): ServiceResult` | `$actingUser['role'] !== 'owner'` or `$actingUser['tenant_id'] !== $tenantId` | `forbidden` |
+| `TenantService::deleteTenant(array $actingUser, int $tenantId): ServiceResult` | the acting user is neither the owner of that tenant (`role` `owner` and the same `tenant_id`) nor a `platform` user | `forbidden` |
 | | the tenant does not exist | `not_found` |
 | `UserService::saveSettings(userId, tenantId, data): bool` | `name` is present but not a string, empty after trimming, or longer than 255 characters — the whole save fails and nothing is written | returns `false` |
 
 - `changeRole()` trims `$newRole` and compares `owner` / `platform` case-insensitively, so `" Owner"` cannot slip through. It does **not** check the role against a list: which roles exist is the app's business. The roles `owner` and `platform` are only ever set or removed by hand in the database.
-- `deleteUser()` and `changeRole()` use the methods `User` inherits from `BaseModel`: `User::find(id, tenantId)` to load the user (tenant-scoped), then `delete()` or, after setting `role`, `save()`. The `User` model has no delete or role functions of its own.
+- `deleteUser()` and `changeRole()` use the methods `User` inherits from `BaseModel`: `User::find(id, tenantId)` to load the user (tenant-scoped), then `delete()` or, after setting `role` and `updated_at` (`Clock::nowUtcString()`), `save()`. The `User` model has no delete or role functions of its own.
 - `TenantService::deleteTenant()` deletes the tenant row; the foreign key `fk_users_tenant ... ON DELETE CASCADE` removes every user in it. No separate user deletes are made.
 - `saveSettings()` accepts `name` (trimmed) and `timezone`. Timezone behaviour is unchanged (empty string becomes NULL). `email` is not writable: a person cannot change their email, and nobody changes another person's name.
 - Both services take the *tenant id explicitly* and every model query is tenant-scoped, so using one tenant's id with another tenant's user is refused, never executed.
 
-**What the framework does NOT decide (the app's job):** who may call an operation (owner/admin deleting users, "delete my own account", who may change roles), confirmation and warning screens, what happens to the app's own data that references a deleted user or tenant, ending the session after a self-delete, and where to redirect. `Frank\Core\Session::destroy()` is available for the session part.
+**What the framework does NOT decide (the app's job):** who may call an operation (owner deleting users, "delete my own account", who may change roles), confirmation and warning screens, what happens to the app's own data that references a deleted user or tenant, ending the session after a self-delete, and where to redirect. `Frank\Core\Session::destroy()` is available for the session part.
 
 **The template app's example (app-owned, not framework behaviour).** `app/Controllers/UserAdminController.php`, bound and routed in `app/bootstrap.php` with `[$tm, $auth, $json]`, is one worked example. A developer may change or delete it.
 
 | Method | Pattern | Action | Example's rule |
 |---|---|---|---|
-| POST | /tenant/{tenant_id}/users/delete | `deleteUser` | owner/admin in their own tenant, or a `platform` user in any tenant (the form posts the row's `tenant_id`); refuses your own id (use Account Settings); the owner is refused by the service |
-| POST | /tenant/{tenant_id}/users/role | `changeRole` | owner/admin in their own tenant, or a `platform` user in any tenant (the form posts the row's `tenant_id`); offers `user` and `admin` only |
-| POST | /tenant/{tenant_id}/account/delete | `deleteMyAccount` | anyone; an owner is redirected into the tenant-delete flow |
+| POST | /tenant/{tenant_id}/account/delete | `deleteMyAccount` | role `user` only (User Settings shows it to no other role) |
 | GET | /tenant/{tenant_id}/tenant-delete | `showTenantDelete` | the warning screen, owner only |
 | POST | /tenant/{tenant_id}/tenant-delete | `deleteTenant` | owner only; the typed `tenant_name` must equal the tenant's name exactly (server-side check) |
+| GET | /tenant/{tenant_id}/users/edit | `showUserEdit` | platform (any tenant, `user_tenant_id` from the row) or owner (own tenant); query `user_id`, `user_tenant_id` |
+| POST | /tenant/{tenant_id}/users/save | `saveUser` | as above; saves the name only, via `UserService::saveSettings()` |
+| POST | /tenant/{tenant_id}/users/delete | `deleteUser` | as above; `UserService::deleteUser()` (the owner is refused by the service) |
+| GET | /tenant/{tenant_id}/tenants/edit | `showTenantEdit` | platform only; query `edit_tenant_id` |
+| POST | /tenant/{tenant_id}/tenants/save | `saveTenant` | platform only; `TenantService::saveSettings()` |
+| POST | /tenant/{tenant_id}/tenants/delete | `deleteTenantAsPlatform` | platform only; the typed `tenant_name` must equal the tenant's name exactly, then `TenantService::deleteTenant()` |
 
-The example's friction: deleting a single user (someone else, or your own account) is one confirmation ("Are you sure? This cannot be undone"); deleting the tenant is a warning screen (the tenant and every user in it are lost, cannot be undone) and the final button only works once the tenant's name is typed exactly. After deleting your own account or the tenant the example calls `Session::destroy()` and redirects to `/login`. Every POST form on these screens, including the settings save forms, carries the `csrf_token` (partial `Views/partials/csrf-field.php`, `$_SESSION['csrf_token']`, compared with `hash_equals`, the same mechanism as the login forms). The example views are `users/management-dashboard.php` (per-row role selector and Delete), `settings/account-settings.php` (editable name, Delete my account), `settings/tenant-settings.php` (owner-only Delete tenant entry) and `settings/tenant-delete.php`.
+The example's friction: deleting your own account, or another user from Edit User, is one confirmation ("Are you sure? This cannot be undone"); a platform user deleting a tenant from Edit Tenant must type its name exactly (same server-side check); the owner deleting their own tenant gets a warning screen (the tenant and every user in it are lost, cannot be undone) and the final button only works once the tenant's name is typed exactly. After deleting your own account or the tenant the example calls `Session::destroy()` and redirects to `/login`. Every POST form on these screens, including the settings save forms, carries the `csrf_token` (partial `Views/partials/csrf-field.php`, `$_SESSION['csrf_token']`, compared with `hash_equals`, the same mechanism as the login forms). The example views are `settings/account-settings.php` (User Settings: editable name, Delete my account for role `user`), `settings/tenant-settings.php` (Tenant Settings: owner-only Delete tenant entry), `settings/tenant-delete.php`, `users/management-dashboard.php` (Your details card; an edit icon on every other row — owner rows open Edit Tenant, the rest Edit User), `users/user-edit.php` and `users/tenant-edit.php`.

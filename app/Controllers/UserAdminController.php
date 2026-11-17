@@ -8,6 +8,8 @@ use Frank\Core\BaseController;
 use Frank\Core\Request;
 use Frank\Core\Response;
 use Frank\Core\Session;
+use Frank\Models\Tenant;
+use Frank\Models\User;
 use Frank\Services\TenantService;
 use Frank\Services\UserService;
 
@@ -15,35 +17,26 @@ use Frank\Services\UserService;
  * UserAdminController (v3.0.0 template app — a worked EXAMPLE, app-owned)
  *
  * Shows how an app uses the framework's user and tenant operations:
- *   UserService::deleteUser(), UserService::changeRole(),
- *   TenantService::deleteTenant().
+ *   UserService::deleteUser(), TenantService::deleteTenant().
  * The framework enforces the data rules inside those operations (the owner is
- * never deleted or re-roled by them, only the owner can delete the tenant).
+ * never deleted by them, only the owner can delete the tenant).
  * Everything else here — who may call them, the confirmations, the warnings,
  * the redirects — is this app's decision. Change it freely.
  *
  * The example's rules:
- *   - owner or admin: delete a user in their own tenant, change a user's role
- *   - platform: the same two actions on user and admin rows in every tenant
- *   - anyone: delete their own account (an owner is sent into the tenant-delete
- *     flow instead — the owner's account only goes with the whole tenant)
+ *   - user: delete their own account (Account Settings shows it to role user only)
  *   - owner: delete the tenant (warning screen, type the tenant's name, then delete)
  *
  * Every POST here checks the CSRF token ($_SESSION['csrf_token'], hash_equals),
  * the same mechanism as the login forms.
  *
  * Routes (registered in app/bootstrap.php with [$tm, $auth, $json]):
- *   POST /tenant/{tenant_id}/users/delete
- *   POST /tenant/{tenant_id}/users/role
  *   POST /tenant/{tenant_id}/account/delete
  *   GET  /tenant/{tenant_id}/tenant-delete
  *   POST /tenant/{tenant_id}/tenant-delete
  */
 class UserAdminController extends BaseController
 {
-    /** The roles this app lets an owner/admin assign (the role selector offers the same two). */
-    private const ASSIGNABLE_ROLES = ['user', 'admin'];
-
     public function __construct(
         private UserService   $userService,
         private TenantService $tenantService
@@ -51,81 +44,174 @@ class UserAdminController extends BaseController
     }
 
     // ----------------------------------------------------------------
-    // Users screen actions (owner / admin)
+    // Edit a user (platform / owner)
     // ----------------------------------------------------------------
 
-    /** POST /tenant/{tenant_id}/users/delete — field: user_id */
+    /** GET /tenant/{tenant_id}/users/edit?user_id=…&user_tenant_id=… */
+    public function showUserEdit(Request $request, array $params): mixed
+    {
+        $tenant = $request->tenant;
+        $user   = $request->user;
+
+        if (!$this->canEditUsers($user)) {
+            return Response::redirect("/tenant/{$tenant['id']}/dashboard?error=forbidden");
+        }
+
+        $targetTenantId = $this->targetTenantId($user, $tenant, (int) ($request->get['user_tenant_id'] ?? 0));
+
+        $target = User::find((int) ($request->get['user_id'] ?? 0), $targetTenantId);
+        if ($target === null) {
+            return Response::redirect("/tenant/{$tenant['id']}/users");
+        }
+
+        return $this->view('users/user-edit', [
+            'title'   => 'Edit User',
+            'pageTag' => 'Users',
+            'tenant'  => $tenant,
+            'user'    => $user,
+            'target'  => $target,
+        ]);
+    }
+
+    /** POST /tenant/{tenant_id}/users/save — fields: user_id, user_tenant_id, name */
+    public function saveUser(Request $request, array $params): mixed
+    {
+        $tenant = $request->tenant;
+        $user   = $request->user;
+
+        if (!$this->canEditUsers($user)) {
+            return Response::redirect("/tenant/{$tenant['id']}/dashboard?error=forbidden");
+        }
+
+        $data     = $this->body($request);
+        $userId   = (int) ($data['user_id'] ?? 0);
+        $tenantId = $this->targetTenantId($user, $tenant, (int) ($data['user_tenant_id'] ?? 0));
+        $edit     = "/tenant/{$tenant['id']}/users/edit?user_id={$userId}&user_tenant_id={$tenantId}";
+
+        if (!$this->validCsrf($data)) {
+            return Response::redirect($edit . '&error=invalid_request');
+        }
+
+        $ok = $this->userService->saveSettings($userId, $tenantId, ['name' => $data['name'] ?? '']);
+
+        return Response::redirect($edit . ($ok ? '&success=1' : '&error=save_failed'));
+    }
+
+    /** POST /tenant/{tenant_id}/users/delete — fields: user_id, user_tenant_id */
     public function deleteUser(Request $request, array $params): mixed
     {
         $tenant = $request->tenant;
         $user   = $request->user;
-        $users  = "/tenant/{$tenant['id']}/users";
 
-        if (!$this->canManageUsers($user)) {
+        if (!$this->canEditUsers($user)) {
             return Response::redirect("/tenant/{$tenant['id']}/dashboard?error=forbidden");
         }
 
-        $data = $this->body($request);
+        $data     = $this->body($request);
+        $userId   = (int) ($data['user_id'] ?? 0);
+        $tenantId = $this->targetTenantId($user, $tenant, (int) ($data['user_tenant_id'] ?? 0));
+        $edit     = "/tenant/{$tenant['id']}/users/edit?user_id={$userId}&user_tenant_id={$tenantId}";
+
         if (!$this->validCsrf($data)) {
-            return Response::redirect($users . '?error=invalid_request');
+            return Response::redirect($edit . '&error=invalid_request');
         }
 
-        $targetId = (int) ($data['user_id'] ?? 0);
-
-        // Deleting your own account lives on the account screen.
-        if ($targetId === (int) $user['id']) {
-            return Response::redirect($users . '?error=use_account_settings');
-        }
-
-        $result = $this->userService->deleteUser($this->targetTenantId($user, $tenant, $data), $targetId);
+        $result = $this->userService->deleteUser($tenantId, $userId);
 
         if (!$result->success) {
-            return Response::redirect($users . '?error=' . match ($result->errorType) {
-                'owner_requires_tenant_delete' => 'owner_cannot_be_deleted',
-                'not_found'                    => 'user_not_found',
-                default                        => 'delete_failed',
-            });
+            return Response::redirect($edit . '&error=delete_failed');
         }
 
-        return Response::redirect($users . '?success=user_deleted');
-    }
-
-    /** POST /tenant/{tenant_id}/users/role — fields: user_id, role */
-    public function changeRole(Request $request, array $params): mixed
-    {
-        $tenant = $request->tenant;
-        $user   = $request->user;
-        $users  = "/tenant/{$tenant['id']}/users";
-
-        if (!$this->canManageUsers($user)) {
-            return Response::redirect("/tenant/{$tenant['id']}/dashboard?error=forbidden");
-        }
-
-        $data = $this->body($request);
-        if (!$this->validCsrf($data)) {
-            return Response::redirect($users . '?error=invalid_request');
-        }
-
-        $role = (string) ($data['role'] ?? '');
-        if (!in_array($role, self::ASSIGNABLE_ROLES, true)) {
-            return Response::redirect($users . '?error=role_invalid');
-        }
-
-        $result = $this->userService->changeRole($this->targetTenantId($user, $tenant, $data), (int) ($data['user_id'] ?? 0), $role);
-
-        if (!$result->success) {
-            return Response::redirect($users . '?error=' . match ($result->errorType) {
-                'not_found'      => 'user_not_found',
-                'role_protected' => 'role_protected',
-                default          => 'role_failed',
-            });
-        }
-
-        return Response::redirect($users . '?success=role_changed');
+        return Response::redirect("/tenant/{$tenant['id']}/users");
     }
 
     // ----------------------------------------------------------------
-    // Delete my own account (anyone)
+    // Edit a tenant (platform)
+    // ----------------------------------------------------------------
+
+    /** GET /tenant/{tenant_id}/tenants/edit?edit_tenant_id=… — platform only */
+    public function showTenantEdit(Request $request, array $params): mixed
+    {
+        $tenant = $request->tenant;
+        $user   = $request->user;
+
+        if (($user['role'] ?? '') !== 'platform') {
+            return Response::redirect("/tenant/{$tenant['id']}/dashboard?error=forbidden");
+        }
+
+        $target = (new Tenant())->findById((int) ($request->get['edit_tenant_id'] ?? 0));
+        if ($target === null) {
+            return Response::redirect("/tenant/{$tenant['id']}/users");
+        }
+
+        return $this->view('users/tenant-edit', [
+            'title'   => 'Edit Tenant',
+            'pageTag' => 'Users',
+            'tenant'  => $tenant,
+            'user'    => $user,
+            'target'  => $target,
+        ]);
+    }
+
+    /** POST /tenant/{tenant_id}/tenants/save — fields: edit_tenant_id, name, company_email, timezone, date_format */
+    public function saveTenant(Request $request, array $params): mixed
+    {
+        $tenant = $request->tenant;
+        $user   = $request->user;
+
+        if (($user['role'] ?? '') !== 'platform') {
+            return Response::redirect("/tenant/{$tenant['id']}/dashboard?error=forbidden");
+        }
+
+        $data     = $this->body($request);
+        $tenantId = (int) ($data['edit_tenant_id'] ?? 0);
+        $edit     = "/tenant/{$tenant['id']}/tenants/edit?edit_tenant_id={$tenantId}";
+
+        if (!$this->validCsrf($data)) {
+            return Response::redirect($edit . '&error=invalid_request');
+        }
+
+        // TenantService::saveSettings() keeps only its allowed columns.
+        $ok = $this->tenantService->saveSettings($tenantId, $data);
+
+        return Response::redirect($edit . ($ok ? '&success=1' : '&error=save_failed'));
+    }
+
+    /** POST /tenant/{tenant_id}/tenants/delete — fields: edit_tenant_id, tenant_name (must match exactly) */
+    public function deleteTenantAsPlatform(Request $request, array $params): mixed
+    {
+        $tenant = $request->tenant;
+        $user   = $request->user;
+
+        if (($user['role'] ?? '') !== 'platform') {
+            return Response::redirect("/tenant/{$tenant['id']}/dashboard?error=forbidden");
+        }
+
+        $data     = $this->body($request);
+        $tenantId = (int) ($data['edit_tenant_id'] ?? 0);
+        $edit     = "/tenant/{$tenant['id']}/tenants/edit?edit_tenant_id={$tenantId}";
+
+        if (!$this->validCsrf($data)) {
+            return Response::redirect($edit . '&error=invalid_request');
+        }
+
+        // Same friction as the owner's flow: the typed name must equal the tenant's name exactly.
+        $target = (new Tenant())->findById($tenantId);
+        if ($target === null || !hash_equals((string) $target['name'], (string) ($data['tenant_name'] ?? ''))) {
+            return Response::redirect($edit . '&error=name_mismatch');
+        }
+
+        $result = $this->tenantService->deleteTenant($user, $tenantId);
+
+        if (!$result->success) {
+            return Response::redirect($edit . '&error=delete_failed');
+        }
+
+        return Response::redirect("/tenant/{$tenant['id']}/users");
+    }
+
+    // ----------------------------------------------------------------
+    // Delete my own account (role user only — the screen shows it to no other role)
     // ----------------------------------------------------------------
 
     /** POST /tenant/{tenant_id}/account/delete */
@@ -137,11 +223,6 @@ class UserAdminController extends BaseController
 
         if (!$this->validCsrf($this->body($request))) {
             return Response::redirect($account . '?error=invalid_request');
-        }
-
-        // The owner's account only goes with the whole tenant: same path, same screens.
-        if (($user['role'] ?? '') === 'owner') {
-            return Response::redirect("/tenant/{$tenant['id']}/tenant-delete");
         }
 
         $result = $this->userService->deleteUser((int) $tenant['id'], (int) $user['id']);
@@ -211,23 +292,15 @@ class UserAdminController extends BaseController
     // Helpers
     // ----------------------------------------------------------------
 
-    private function canManageUsers(array $user): bool
+    private function canEditUsers(array $user): bool
     {
-        return in_array($user['role'] ?? '', ['owner', 'admin', 'platform'], true);
+        return in_array($user['role'] ?? '', ['platform', 'owner'], true);
     }
 
-    /**
-     * The tenant the target user belongs to. An owner or admin only ever acts in
-     * their own tenant. A platform user acts across all tenants, so the Users
-     * screen posts the row's tenant id and that one is used.
-     */
-    private function targetTenantId(array $user, array $tenant, array $data): int
+    /** Platform edits users in any tenant; an owner only in their own. */
+    private function targetTenantId(array $user, array $tenant, int $requested): int
     {
-        if (($user['role'] ?? '') === 'platform') {
-            return (int) ($data['tenant_id'] ?? 0);
-        }
-
-        return (int) $tenant['id'];
+        return ($user['role'] ?? '') === 'platform' ? $requested : (int) $tenant['id'];
     }
 
     private function body(Request $request): array

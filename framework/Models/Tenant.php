@@ -21,6 +21,12 @@ use PDO;
  *   return a result.
  *
  * Note: Tenant does not extend BaseModel — it is a standalone PDO class.
+ *
+ * Why: BaseModel is built for records that belong to a tenant. Its finders
+ * find(), all() and where() always add "AND tenant_id = ...". The tenants
+ * table has no tenant_id column, because a tenant is the thing other records
+ * belong to, so those inherited methods would fail on it. Tenant therefore
+ * has its own methods for each operation below.
  */
 class Tenant
 {
@@ -31,6 +37,10 @@ class Tenant
         $this->db = $pdo ?? Database::getPdo();
     }
 
+    /**
+     * Load a tenant by id. Its own method because BaseModel::find() adds
+     * "AND tenant_id = ..." and the tenants table has no tenant_id.
+     */
     public function findById(int $id): ?array
     {
         $stmt = $this->db->prepare('SELECT * FROM tenants WHERE id = :id');
@@ -38,6 +48,10 @@ class Tenant
         return $stmt->fetch() ?: null;
     }
 
+    /**
+     * Load every tenant. Its own method because BaseModel::all() lists the
+     * records of one tenant, and the tenants table has no tenant_id.
+     */
     public function findAll(): array
     {
         $stmt = $this->db->query('SELECT * FROM tenants ORDER BY name ASC');
@@ -53,6 +67,12 @@ class Tenant
 
     /**
      * Insert a new tenant row and return its id.
+     *
+     * Its own method: Tenant does not extend BaseModel (see the class comment),
+     * so there is no inherited save(). BaseModel::save() would not suit this
+     * anyway: it is INSERT ... ON DUPLICATE KEY UPDATE, so a slug that collides
+     * would overwrite the existing tenant instead of failing, and
+     * TenantService::create() relies on that failure to try the next slug.
      *
      * $slug must already be resolved to a unique value by TenantService.
      * A PDOException (SQLSTATE 23000) is thrown if it collides — the service
@@ -88,6 +108,9 @@ class Tenant
     /**
      * Persist a pre-filtered, pre-validated set of tenant settings columns.
      *
+     * Its own method: Tenant does not extend BaseModel (see the class comment),
+     * so there is no inherited save().
+     *
      * The $columns array must already be filtered to the allowlist and have
      * nullable fields resolved by TenantService::saveSettings() before this
      * method is called. This model applies no allowlist and makes no
@@ -119,7 +142,10 @@ class Tenant
     }
 
     /**
-     * Delete a tenant row. The foreign key fk_users_tenant (ON DELETE CASCADE)
+     * Delete a tenant row. Its own method: Tenant does not extend BaseModel
+     * (see the class comment), so there is no inherited delete().
+     *
+     * The foreign key fk_users_tenant (ON DELETE CASCADE)
      * removes every user in the tenant, so no separate user delete is made.
      * DB access only — who may delete a tenant is decided by
      * TenantService::deleteTenant().

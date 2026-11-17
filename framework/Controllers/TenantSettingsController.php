@@ -24,9 +24,9 @@ class TenantSettingsController extends BaseController
     {
     }
 
-    private function requireAdmin(array $user, array $tenant): mixed
+    private function requireOwner(array $user, array $tenant): mixed
     {
-        if (!in_array($user['role'] ?? '', ['admin', 'owner'], true)) {
+        if (($user['role'] ?? '') !== 'owner') {
             return Response::redirect(
                 "/tenant/{$tenant['id']}/dashboard?error=forbidden"
             );
@@ -42,7 +42,7 @@ class TenantSettingsController extends BaseController
         $tenant = $request->tenant;
         $user   = $request->user;
 
-        if ($redirect = $this->requireAdmin($user, $tenant)) {
+        if ($redirect = $this->requireOwner($user, $tenant)) {
             return $redirect;
         }
 
@@ -64,7 +64,7 @@ class TenantSettingsController extends BaseController
         $tenant = $request->tenant;
         $user   = $request->user;
 
-        if ($redirect = $this->requireAdmin($user, $tenant)) {
+        if ($redirect = $this->requireOwner($user, $tenant)) {
             return $redirect;
         }
 

@@ -224,27 +224,6 @@ $container->bind(
     }
 );
 
-// UserManagementService — v1.4 framework service for the admin user dashboard
-$container->singleton(
-    \Frank\Services\UserManagementService::class,
-    function ($c) {
-        return new \Frank\Services\UserManagementService(
-            tenantModel: new \Frank\Models\Tenant(),
-        );
-    }
-);
-
-// UserManagementController — injects service and config
-$container->bind(
-    \Frank\Controllers\UserManagementController::class,
-    function ($c) use ($config) {
-        return new \Frank\Controllers\UserManagementController(
-            $c->make(\Frank\Services\UserManagementService::class),
-            $config,
-        );
-    }
-);
-
 // ----------------------------------------------------------------
 // 6. Router — receives the container
 // ----------------------------------------------------------------
@@ -265,10 +244,7 @@ $router->add('GET',  '/login/terms',   'Frank\\Controllers\\AuthController@showT
 $router->add('POST', '/login/terms',   'Frank\\Controllers\\AuthController@acceptTerms', [$json]);
 $router->add('GET',  '/logout',        'Frank\\Controllers\\AuthController@logout',     []);
 
-// Tenant-scoped UI
-$router->add('GET', '/tenant/{tenant_id}/users', 'Frank\\Controllers\\UserManagementController@index', [$tm, $auth]);
-
-// Tenant settings (admin/owner only — enforced in the controller, not middleware)
+// Tenant settings (owner only — enforced in the controller, not middleware)
 $router->add('GET',  '/tenant/{tenant_id}/tenant-settings',      'Frank\\Controllers\\TenantSettingsController@index', [$tm, $auth]);
 $router->add('POST', '/tenant/{tenant_id}/tenant-settings/save', 'Frank\\Controllers\\TenantSettingsController@save',  [$tm, $auth, $json]);
 

@@ -20,7 +20,7 @@
 			
 			<hr>
 
-			<?php if (in_array($user['role'] ?? '', ['platform', 'admin', 'owner'], true)) : ?>
+			<?php if (in_array($user['role'] ?? '', ['platform', 'owner'], true)) : ?>
 			<li class="nav-item" data-menu="users" role="none">
 				<a
 					href="/tenant/<?= $tenant['id'] ?>/users"
@@ -45,7 +45,7 @@
 							<i class="bi bi-building-gear"></i>
 						</span>
 						<span class="side-label">
-							<span class="side-label-text">Organisation Settings</span>
+							<span class="side-label-text">Tenant Settings</span>
 						</span>
 				</a>
 			</li>
@@ -59,7 +59,7 @@
 							<i class="bi bi-person-gear"></i>
 						</span>
 						<span class="side-label">
-							<span class="side-label-text">Account</span>
+							<span class="side-label-text">User Settings</span>
 						</span>
 				</a>
 			</li>

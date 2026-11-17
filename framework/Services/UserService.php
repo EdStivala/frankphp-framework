@@ -142,7 +142,7 @@ class UserService
      * 'owner_requires_tenant_delete' — an owner is only removed by deleting
      * the whole tenant, TenantService::deleteTenant()).
      *
-     * Does NOT decide who may delete users (owner/admin, or "your own
+     * Does NOT decide who may delete users (owner, or "your own
      * account"): that check belongs to the calling app.
      */
     public function deleteUser(int $tenantId, int $targetUserId): ServiceResult
@@ -212,7 +212,8 @@ class UserService
         }
 
         // Inherited from BaseModel: save() writes the object's fields.
-        $target->role = $newRole;
+        $target->role       = $newRole;
+        $target->updated_at = Clock::nowUtcString();
         if (!$target->save()) {
             return ServiceResult::failure('The role could not be changed.', 'system');
         }

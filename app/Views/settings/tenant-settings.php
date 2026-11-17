@@ -1,12 +1,12 @@
 <?php
 $pageTag = 'TenantSettings';
-$title   = 'Organisation Settings';
+$title   = 'Tenant Settings';
 ob_start();
 ?>
 
 <div class="page-header d-flex align-items-center justify-content-between">
     <div>
-        <h4 class="mb-0">Organisation Settings</h4>
+        <h4 class="mb-0">Tenant Settings</h4>
         <p class="text-muted mb-0" style="font-size:0.8125rem;"><?= htmlspecialchars($tenant['name'] ?? '') ?></p>
     </div>
 </div>
