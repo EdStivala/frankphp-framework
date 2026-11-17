@@ -58,7 +58,7 @@ ob_start();
 
 			</form>
 
-			<!-- Google / Microsoft sign-in (sprint 4, provisional: buttons only, not wired yet) -->
+			<!-- Continue with Google (v3.0.0). Microsoft is not built yet; its button is commented out below. -->
 			<div class="d-flex align-items-center my-3">
 				<hr class="flex-grow-1">
 				<span class="px-2 text-muted" style="font-size: 0.875rem;">or</span>
@@ -75,9 +75,12 @@ ob_start();
 				<i class="bi bi-google me-2"></i>Continue with Google
 			</button>
 			<?php endif; ?>
+			<?php /* Continue with Microsoft — not built in v3.0.0 (future enhancement).
+			   Hidden so that setting the MICROSOFT_* keys does not enable a button that does nothing.
 			<button type="button" class="btn btn-outline-secondary w-100" <?= empty($microsoftEnabled) ? 'disabled' : '' ?>>
 				<i class="bi bi-microsoft me-2"></i>Continue with Microsoft
 			</button>
+			*/ ?>
 		</div>
 	</div>
 

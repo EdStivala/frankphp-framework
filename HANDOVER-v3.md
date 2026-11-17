@@ -11,7 +11,8 @@ item is the owner's call.
   - `0c7f09b` sprint 2 checkpoint.
   - `e9ca98c`, `3a7b807` sprint 2 completed (2026-11-17; tested by the owner).
   - `99e9854` sprint 3: invites.
-  - Sprint 4 (Google) in progress, NOT committed (see the Sprint 4 section).
+  - `37a263e` sprint 4 (in progress): Google sign-in, CSRF in Session, Url
+    helper. Later sprint 4 changes are not committed (see the Sprint 4 section).
 - Approved plan: `/Users/edstivala/.claude/plans/this-is-a-planning-adaptive-mitten.md`.
 - Working rules are in the project memory (no choices without instruction,
   one small step at a time, the owner drives, check files rather than memory,
@@ -57,7 +58,7 @@ Reuse refactors this sprint: `EmailAddress` (email rules), `EmailService`
 Docs: codebase.md (§2, §8.1, §8.2, §11, §14, §15, §16.1–16.5, §16.8–16.11) and
 CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
 
-## Sprint 4 — Google and Microsoft (in progress, not committed)
+## Sprint 4 — Google and Microsoft (in progress; committed to 37a263e, later changes not committed)
 
 - Login screen (`app/Views/auth/login.php`): "Continue with Google" and
   "Continue with Microsoft" buttons added below the email form, after an "or"
@@ -78,6 +79,16 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
   Google button is enabled, Microsoft stays disabled.
 - Microsoft PARKED (owner decision 2026-11-17): the owner has no Azure account
   to register the app. Build Google now; come back to Microsoft at the end of v3.
+  SUPERSEDED 2026-11-17 — Microsoft is LEFT OUT OF v3 (owner decision): a
+  Microsoft registration needs an Entra tenant; the free Azure route needs a
+  payment card (owner will not use it), Entra's "Try for free" has been
+  withdrawn, and the M365 developer sandbox is gated. Tidy-up (owner
+  instruction): the `MICROSOFT_*` key stubs stay in `app/env.example` (and the
+  `microsoft` entry in config `oauth`); the Microsoft button is commented out
+  in `app/Views/auth/login.php` (PHP comment, not sent to the browser) so a
+  developer who sets the keys does not get a button that does nothing.
+  `AuthController` still passes `microsoftEnabled` (unused for now).
+  DOCS SITE (sprint 6): list Continue with Microsoft as a future enhancement.
 - END OF SPRINT 4 — to investigate and amend (owner instruction 2026-11-17):
   `EmailService::getBaseUrl()`. It lives in the email class but is used for
   site addresses generally (invite links, the Google return address), and it
@@ -118,8 +129,9 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
   change.
 - Not tested: an address Google did not confirm (hard to produce);
   `/login/google` typed in with no keys set (should return to `/login`).
-- Still to do in sprint 4: `codebase.md`, `CHANGELOG.md`, and the docs-site
-  pages the plan names. Microsoft parked to the end of v3.
+- `codebase.md` and `CHANGELOG.md` updated for sprint 4 (2026-11-17).
+- Still to do in sprint 4: the docs-site pages the plan names. Microsoft is
+  out of v3 (see above).
 
 ## Done in the 2026-11-17 session (committed, tested by the owner)
 

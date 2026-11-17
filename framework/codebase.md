@@ -142,7 +142,7 @@ framework/
 ```
 app/
 ├── .env                     # Real credentials — never committed (see project-root .gitignore)
-├── env.example              # Committed template — documents every key, no real values (v3.0.0: optional GOOGLE_* / MICROSOFT_* sign-in keys, §11)
+├── env.example              # Committed template — documents every key, no real values (v3.0.0: optional GOOGLE_* sign-in keys, plus MICROSOFT_* stubs for a future release, §11)
 ├── MYAPP.md                  # Application-owned record — see §15.1, the Two-File Contract
 ├── bootstrap.php             # Application routes and container bindings. $container, $router, $config already in scope. Returns $router.
 ├── Config/
@@ -159,7 +159,7 @@ app/
 │   ├── layouts/
 │   │   ├── app-main.php    # Authenticated app shell — topbar, sidebar nav, page-content-area. All authenticated views require this layout.
 │   │   └── authViews.php   # Unauthenticated shell. Used for the sign-in screens and terms.
-│   ├── auth/               # login.php (the one sign-in/sign-up screen; v3.0.0 Continue with Google / Microsoft buttons, disabled without keys), login-verify.php, login-terms.php, invite-welcome.php and invite-expired.php (v3.0.0 invite link screens, §16.11), terms.php (placeholder — replace, §16.9)
+│   ├── auth/               # login.php (the one sign-in/sign-up screen; v3.0.0 Continue with Google button, disabled without keys; the Microsoft button is commented out — not built yet), login-verify.php, login-terms.php, invite-welcome.php and invite-expired.php (v3.0.0 invite link screens, §16.11), terms.php (placeholder — replace, §16.9)
 │   ├── home/
 │   │   └── dashboard.php   # Default tenant dashboard — replace with application-specific content
 │   ├── users/
@@ -916,7 +916,7 @@ When building or reviewing FrankPHP code:
 
 **Continue with Google (v3.0.0)** (`AuthController` + `GoogleSignInService`; Google's OpenID Connect server flow, written without outside libraries):
 
-- **Keys are optional.** `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (and `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET`) in `app/.env`, read with `Env::get()` into `$config['oauth']['google']` / `['microsoft']`. The sign-in screen always shows "Continue with Google" and "Continue with Microsoft"; a provider is enabled only when both its client ID and secret are set (`AuthController::oauthKeysSet()`), otherwise its button is shown disabled. The view receives `$googleEnabled` and `$microsoftEnabled`. Keys are per app; the return address `{site}/login/google/callback` must be registered with Google exactly (a production address is added to the same registration). **Microsoft is not built yet** — its button is always disabled.
+- **Keys are optional.** `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (and `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET`) in `app/.env`, read with `Env::get()` into `$config['oauth']['google']` / `['microsoft']`. The sign-in screen always shows "Continue with Google"; it is enabled only when both its client ID and secret are set (`AuthController::oauthKeysSet()`), otherwise it is shown disabled. The view receives `$googleEnabled` and `$microsoftEnabled`. Keys are per app; the return address `{site}/login/google/callback` must be registered with Google exactly (a production address is added to the same registration). **Continue with Microsoft is not built in v3.0.0 (future enhancement).** Its key stubs and `oauth` entry are in place, but its button is commented out in `auth/login.php`, so setting the `MICROSOFT_*` keys enables nothing.
 - `GET /login/google` (`googleStart`): when Google's keys are set, `GoogleSignInService::authorizationRequest()` builds Google's sign-in address (`scope=openid email`, a random `state` and `nonce`); the state and nonce are kept in `$_SESSION['google_signin']` and the person is redirected to Google. Without keys it redirects to `/login`.
 - `GET /login/google/callback` (`googleCallback`): the saved state and nonce are removed from the session (one use). A missing or wrong `state`, or an `error` from Google (e.g. the person pressed Cancel), re-renders `/login` with "Invalid request. Please try again." Otherwise `GoogleSignInService::exchangeCode()` posts the code to Google's token endpoint (curl, 10-second limit) and reads the ID token. Because the token comes straight from Google over https, Google says its signature need not be checked; issuer, audience (our client ID), expiry and nonce are checked.
 - **Same address = same account, when Google confirms the address** (the product rule). If `email_verified` is not true the sign-in is refused: "Google did not confirm this email address." Google's own guidance is to identify users by its `sub` claim rather than email; FrankPHP keys on the confirmed email address, by the product rule above.
