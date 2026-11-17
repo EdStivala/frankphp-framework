@@ -1,0 +1,20 @@
+[
+    "GET /invite/{tenant_id}/{token} => Frank\\\\Controllers\\\\AuthController@showInvite []",
+    "GET /login => Frank\\\\Controllers\\\\AuthController@showLogin []",
+    "GET /login/google => Frank\\\\Controllers\\\\AuthController@googleStart []",
+    "GET /login/google/callback => Frank\\\\Controllers\\\\AuthController@googleCallback []",
+    "GET /login/terms => Frank\\\\Controllers\\\\AuthController@showTerms []",
+    "GET /login/verify => Frank\\\\Controllers\\\\AuthController@showVerify []",
+    "GET /logout => Frank\\\\Controllers\\\\AuthController@logout []",
+    "GET /tenant/{tenant_id}/account => Frank\\\\Controllers\\\\AccountSettingsController@index [$tm, $auth]",
+    "GET /tenant/{tenant_id}/tenant-settings => Frank\\\\Controllers\\\\TenantSettingsController@index [$tm, $auth]",
+    "POST /invite/accept => Frank\\\\Controllers\\\\AuthController@acceptInvite [$json]",
+    "POST /login => Frank\\\\Controllers\\\\AuthController@login [$json]",
+    "POST /login/resend => Frank\\\\Controllers\\\\AuthController@resend [$json]",
+    "POST /login/terms => Frank\\\\Controllers\\\\AuthController@acceptTerms [$json]",
+    "POST /login/verify => Frank\\\\Controllers\\\\AuthController@verify [$json]",
+    "POST /tenant/{tenant_id}/account/save => Frank\\\\Controllers\\\\AccountSettingsController@save [$tm, $auth, $json]",
+    "POST /tenant/{tenant_id}/support/start => Frank\\\\Controllers\\\\AuthController@supportStart [$tm, $auth, $json]",
+    "POST /tenant/{tenant_id}/support/stop => Frank\\\\Controllers\\\\AuthController@supportStop [$tm, $auth, $json]",
+    "POST /tenant/{tenant_id}/tenant-settings/save => Frank\\\\Controllers\\\\TenantSettingsController@save [$tm, $auth, $json]"
+]

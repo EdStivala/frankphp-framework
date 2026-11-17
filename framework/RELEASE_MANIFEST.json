@@ -1,40 +1,111 @@
 {
-    "version": "2.2.0",
-    "release_date": "2026-10-19",
-    "summary": "Platform cross-tenant Users dashboard. A user with role 'platform' now sees users from every tenant on GET /tenant/{tenant_id}/users, with a Tenant column. 'owner' and 'admin' remain limited to their own tenant, and role 'user' is still refused. UserManagementService reuses Tenant::findAll() and User::allByTenant(), so no new model method and no unscoped User query exist. The app template views hide the Users links from role 'user'. codebase.md gains the 'Reuse Before You Add' principle. No schema or route changes. Full detail in CHANGELOG.md [2.2.0].",
-    "previous_version": "2.1.1",
+    "version": "3.0.0",
+    "release_date": "2026-11-17",
+    "summary": "v3 is all about removing friction - The User Release. It meets the need for a faster, low friction, sign up process to support PLG funnels with minimal dropout during the transition from unknown to known. Passwords are gone and we now validate users with an emailed 6-digit code and support for Google Authentication. We retain T&C acceptance optionally. Inside the platform we are shipping an updated app template to help developers build with our new features. Platform owner can Capture a tenant and act as their owner for support. New Invite features strengthen routes for attracting and growing user bases. Platform can invite Owners. Owners can invite Users",
+    "previous_version": "2.2.0",
     "changes": {
         "added": [
-            "Versions/FrankPHP_v2.2.0_upgrade_notes.md"
+            "Core/Session.php",
+            "Core/Url.php",
+            "Models/Invite.php",
+            "Services/AccountService.php",
+            "Services/Email/EmailAddress.php",
+            "Services/Email/Templates/InviteEmailTemplate.php",
+            "Services/Email/Templates/LoginCodeEmailTemplate.php",
+            "Services/GoogleSignInService.php",
+            "Services/InviteService.php",
+            "Services/JoinTenantAsUser.php",
+            "Services/LoginCodeService.php",
+            "sql/migrations/v3.0.0_passwordless.sql"
         ],
         "changed": [
             "CHANGELOG.md",
-            "Controllers/UserManagementController.php",
+            "Controllers/AccountSettingsController.php",
+            "Controllers/AuthController.php",
+            "Controllers/TenantSettingsController.php",
+            "Core/BaseModel.php",
+            "Core/Container.php",
+            "Core/Database.php",
+            "Middleware/AuthMiddleware.php",
+            "Models/Tenant.php",
+            "Models/User.php",
             "RELEASE_MANIFEST.json",
-            "Services/UserManagementService.php",
+            "Services/Email/EmailMessage.php",
+            "Services/Email/EmailService.php",
+            "Services/SignupTenantResolver.php",
+            "Services/TenantNameGenerator.php",
+            "Services/TenantService.php",
+            "Services/UserService.php",
             "VERSION",
+            "Versions/FrankPHP_v2.2.0_upgrade_notes.md",
             "bootstrap.php",
-            "codebase.md"
+            "codebase.md",
+            "sql/schema.core.sql"
         ],
-        "removed": []
+        "removed": [
+            "Controllers/SignupController.php",
+            "Controllers/UserManagementController.php",
+            "Services/Email/Templates/PasswordResetEmailTemplate.php",
+            "Services/Email/Templates/SignupVerificationEmailTemplate.php",
+            "Services/PasswordResetService.php",
+            "Services/SignupService.php",
+            "Services/UserManagementService.php"
+        ]
     },
     "route_changes": {
-        "added": [],
-        "removed": []
+        "added": [
+            "GET /invite/{tenant_id}/{token} => Frank\\\\Controllers\\\\AuthController@showInvite []",
+            "GET /login/google => Frank\\\\Controllers\\\\AuthController@googleStart []",
+            "GET /login/google/callback => Frank\\\\Controllers\\\\AuthController@googleCallback []",
+            "GET /login/terms => Frank\\\\Controllers\\\\AuthController@showTerms []",
+            "GET /login/verify => Frank\\\\Controllers\\\\AuthController@showVerify []",
+            "POST /invite/accept => Frank\\\\Controllers\\\\AuthController@acceptInvite [$json]",
+            "POST /login/resend => Frank\\\\Controllers\\\\AuthController@resend [$json]",
+            "POST /login/terms => Frank\\\\Controllers\\\\AuthController@acceptTerms [$json]",
+            "POST /login/verify => Frank\\\\Controllers\\\\AuthController@verify [$json]",
+            "POST /tenant/{tenant_id}/support/start => Frank\\\\Controllers\\\\AuthController@supportStart [$tm, $auth, $json]",
+            "POST /tenant/{tenant_id}/support/stop => Frank\\\\Controllers\\\\AuthController@supportStop [$tm, $auth, $json]"
+        ],
+        "removed": [
+            "GET /forgot-password => Frank\\\\Controllers\\\\AuthController@showForgotPassword []",
+            "GET /reset-password => Frank\\\\Controllers\\\\AuthController@showResetPassword []",
+            "GET /signup => Frank\\\\Controllers\\\\SignupController@showSignup []",
+            "GET /signup/verify => Frank\\\\Controllers\\\\SignupController@showVerify []",
+            "GET /tenant/{tenant_id}/users => Frank\\\\Controllers\\\\UserManagementController@index [$tm, $auth]",
+            "POST /forgot-password => Frank\\\\Controllers\\\\AuthController@sendPasswordReset []",
+            "POST /reset-password => Frank\\\\Controllers\\\\AuthController@resetPassword []",
+            "POST /signup => Frank\\\\Controllers\\\\SignupController@initiateSignup [$json]",
+            "POST /signup/resend => Frank\\\\Controllers\\\\SignupController@resendCode [$json]",
+            "POST /signup/verify => Frank\\\\Controllers\\\\SignupController@completeSignup [$json]"
+        ]
     },
     "database_changes": {
-        "tables_added": [],
-        "tables_removed": [],
+        "tables_added": [
+            "invites",
+            "login_codes"
+        ],
+        "tables_removed": [
+            "password_reset_tokens",
+            "signup_tokens"
+        ],
         "alter_statements_added": []
     },
     "breaking_changes": [
-        "UserManagementService::__construct() now requires a second argument, tenantModel (Frank\\Models\\Tenant). The framework's own container binding passes it. Only apps that construct the service themselves must add the argument."
+        "The database must be migrated: run sql/migrations/v3.0.0_passwordless.sql (hand-run, idempotent). It adds the unique key on users.email first and stops if one email exists in two tenants; then it creates login_codes and invites and drops users.password_hash, password_reset_tokens and signup_tokens. Nobody can sign in with a password afterwards. The code is not safe on an un-migrated database.",
+        "Passwords and the /signup, /forgot-password and /reset-password routes are gone. Apps must copy the new auth views (login, login-verify, login-terms, invite-welcome, invite-expired), delete the old password and sign-up views, and remove links to them.",
+        "app/public/index.php must call \\Frank\\Core\\Session::start() instead of session_start(); sessions move to app/private/sessions, so everyone is signed out once.",
+        "Every app form that posts to AccountSettingsController@save or TenantSettingsController@save must include the csrf_token field (Views/partials/csrf-field.php), or the save is refused. Own copies of the sign-in views must use the partial instead of $csrfToken.",
+        "UserManagementController and UserManagementService moved from the framework to the app template, with their route and bindings. Apps that use the Users screen must copy both files, the route and the two bindings into app/.",
+        "Removed: EmailService::getBaseUrl() (use Frank\\Core\\Url::baseUrl()); User::insertUser(), saveSettings(), updateLastAccessed(), allByTenant() (use the inherited find()/fill()/save()/all()); the admin role's access (Tenant Settings is owner only; existing admins get no more access than user); mail.templates keys signup_verification (now login_code) and password_reset.",
+        "BaseModel::save() now writes updated_at back as fetched. A model that declares updated_at on a table using ON UPDATE CURRENT_TIMESTAMP no longer gets it updated by MySQL; the Service must set it with Clock."
     ],
     "ai_notes": [
-        "The cross-tenant scope is decided in UserManagementService::getUserDashboard() from the authenticated user's role ('platform'), never from request input. It loops Tenant::findAll() and calls the tenant-scoped User::allByTenant() once per tenant.",
-        "The service result gains crossTenant (bool), and each user row gains tenantName. UserManagementController passes crossTenant to the view.",
-        "App template changes (app/Views/users/management-dashboard.php, app/Views/partials/app-nav.php, app/Views/partials/app-header.php) are not in the release zip. Versions/FrankPHP_v2.2.0_upgrade_notes.md has the snippets to copy.",
-        "The UserManagementController access gate is unchanged: platform, admin and owner are allowed, and role user is redirected with ?error=forbidden."
+        "Session::start() is the only place a session starts (28-day rolling, own save path); Session::csrfToken()/csrfValid() are the only CSRF token functions; Url::baseUrl() builds every absolute link.",
+        "LoginCodeService::signInConfirmedEmail() is the single path once an address is proved (correct code or Google). AccountService::create() is the single place an account is created (sign-up and invites), in one transaction.",
+        "Every framework table read uses BaseModel's inherited tenant-scoped methods, except the three documented User finders used before the tenant is known (findById, findByEmail, findApiKeyHash). Invite has no methods of its own.",
+        "Support access: POST /tenant/{tenant_id}/support/start|stop. Session key 'support' holds the platform user's user_id and tenant_id; Session::supportAccess() tells views. recordLogin is not called. AuthController::switchSessionUser() is the one place the signed-in person changes.",
+        "App template changes (auth views, Users screen, UserAdminController, Edit User / Edit Tenant, the red support-access top bar) are not in the release zip. CHANGELOG.md [3.0.0] Upgrade notes list what to copy.",
+        "The manifest generator reports 0 ALTERs because it does not read sql/migrations/; the v3.0.0 migration does alter users (unique email key, password_hash dropped)."
     ],
     "manual_review_required": [
         "summary",
@@ -43,7 +114,7 @@
     ],
     "generator": {
         "name": "generate_release_manifest.php",
-        "generated_at": "2026-10-19T12:22:22+00:00",
-        "comparison_basis": "Compared against release snapshot 2.1.1"
+        "generated_at": "2026-11-17T22:05:26+00:00",
+        "comparison_basis": "Compared against release snapshot 2.2.0"
     }
 }

@@ -1,0 +1,9 @@
+{
+    "tables": [
+        "invites",
+        "login_codes",
+        "tenants",
+        "users"
+    ],
+    "alter_statements": []
+}

@@ -9,8 +9,8 @@
 > 
 > *"I am using FrankPHP. Based on this CODEBASE.md, help me scaffold a new Controller for [Your Feature] that handles [X] and uses the [Y] middleware. Ensure it follows the hydration and response patterns defined in the core."*
 
-> Framework version: 2.2.0
-> Last updated: 2026/10/19
+> Framework version: 3.0.0
+> Last updated: 2026/11/17
 > 
 > **How to use this file:** Paste it at the start of any Claude conversation before describing your task.
 > Add your application-specific section at the bottom as you build. Keep it accurate — Claude trusts this document.

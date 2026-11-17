@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased] 3.0.0
+## [3.0.0] - 2026-11-17
 
-> **BREAKING RELEASE.** Passwords are removed. One screen signs people in and signs new people up with an emailed 6-digit code. The database must be migrated (`sql/migrations/v3.0.0_passwordless.sql`) and `app/` views, routes and config that mention passwords or `/signup` must be updated. Not yet released: `VERSION` and `RELEASE_MANIFEST.json` are unchanged.
+> **BREAKING RELEASE.** Passwords are removed. One screen signs people in and signs new people up with an emailed 6-digit code. The database must be migrated (`sql/migrations/v3.0.0_passwordless.sql`) and `app/` views, routes and config that mention passwords or `/signup` must be updated.
 
 ### Human-readable summary
 
