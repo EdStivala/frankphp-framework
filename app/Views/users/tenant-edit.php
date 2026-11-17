@@ -6,12 +6,23 @@ $title   = 'Edit Tenant';
 ob_start();
 ?>
 
-<div class="page-header d-flex align-items-center justify-content-between">
-    <div>
-        <h4 class="mb-0">Edit Tenant</h4>
-        <p class="text-muted mb-0" style="font-size:0.8125rem;"><?= htmlspecialchars($target['name'] ?? '') ?></p>
-    </div>
-    <a href="/tenant/<?= (int) $tenant['id'] ?>/users" class="btn btn-outline-secondary">Back to Users</a>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="/tenant/<?= (int) $tenant['id'] ?>/users" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Users
+    </a>
+    <?php // Support access (v3.0.0): the framework's POST /tenant/{tenant_id}/support/start ?>
+    <form method="post" action="/tenant/<?= (int) $tenant['id'] ?>/support/start" class="m-0">
+        <?php include APP_VIEWS_DIR . '/partials/csrf-field.php'; ?>
+        <input type="hidden" name="target_tenant_id" value="<?= (int) $target['id'] ?>">
+        <button type="submit" class="btn btn-outline-primary">
+            Capture Tenant<i class="bi bi-box-arrow-in-right ms-1"></i>
+        </button>
+    </form>
+</div>
+
+<div class="page-header">
+    <h4 class="mb-0">Edit Tenant</h4>
+    <p class="text-muted mb-0" style="font-size:0.8125rem;"><?= htmlspecialchars($target['name'] ?? '') ?></p>
 </div>
 
 <?php if (($_GET['success'] ?? '') === '1') : ?>

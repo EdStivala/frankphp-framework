@@ -300,6 +300,10 @@ $router->add('GET',  '/logout',        'Frank\\Controllers\\AuthController@logou
 $router->add('GET',  '/invite/{tenant_id}/{token}', 'Frank\\Controllers\\AuthController@showInvite', []);
 $router->add('POST', '/invite/accept',              'Frank\\Controllers\\AuthController@acceptInvite', [$json]);
 
+// Support access (v3.0.0) — a platform user logs in as a tenant owner
+$router->add('POST', '/tenant/{tenant_id}/support/start', 'Frank\\Controllers\\AuthController@supportStart', [$tm, $auth, $json]);
+$router->add('POST', '/tenant/{tenant_id}/support/stop',  'Frank\\Controllers\\AuthController@supportStop',  [$tm, $auth, $json]);
+
 // Tenant settings (owner only — enforced in the controller, not middleware)
 $router->add('GET',  '/tenant/{tenant_id}/tenant-settings',      'Frank\\Controllers\\TenantSettingsController@index', [$tm, $auth]);
 $router->add('POST', '/tenant/{tenant_id}/tenant-settings/save', 'Frank\\Controllers\\TenantSettingsController@save',  [$tm, $auth, $json]);

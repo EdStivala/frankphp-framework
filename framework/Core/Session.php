@@ -118,6 +118,16 @@ class Session
     }
 
     /**
+     * True while a platform user is logged in as a tenant owner (support
+     * access, v3.0.0). AuthController sets and clears session key 'support'.
+     */
+    public static function supportAccess(): bool
+    {
+        self::start();
+        return !empty($_SESSION['support']);
+    }
+
+    /**
      * Cookie parameters for session_set_cookie_params(). start() reuses the
      * array for setcookie() by swapping 'lifetime' for an absolute 'expires'.
      */

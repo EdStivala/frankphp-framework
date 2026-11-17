@@ -220,4 +220,56 @@ class UserService
 
         return ServiceResult::success('Role changed.', ['role' => $newRole]);
     }
+
+    // ----------------------------------------------------------------
+    // Support access (v3.0.0)
+    // ----------------------------------------------------------------
+
+    /**
+     * The owner a 'platform' user logs in as for support access.
+     *
+     * Refuses (failure type in brackets):
+     * - the acting user is not 'platform' ('forbidden');
+     * - the tenant has no owner ('not_found').
+     *
+     * Success data: user_id, tenant_id (the owner's). Writes nothing: the
+     * caller signs in as the owner and keeps no record (product rule).
+     * Uses the inherited, tenant-scoped User::where().
+     */
+    public function ownerForSupportAccess(array $actingUser, int $tenantId): ServiceResult
+    {
+        if (($actingUser['role'] ?? null) !== 'platform') {
+            return ServiceResult::failure('Only a platform user can log in as an owner.', 'forbidden');
+        }
+
+        $owners = User::where($tenantId, 'role', 'owner');
+        if ($owners === []) {
+            return ServiceResult::failure('This tenant has no owner.', 'not_found');
+        }
+
+        return ServiceResult::success('', [
+            'user_id'   => $owners[0]->id,
+            'tenant_id' => $owners[0]->tenant_id,
+        ]);
+    }
+
+    /**
+     * The platform user returning from support access ("Release Tenant").
+     *
+     * Refuses ('forbidden') when the user is no longer in $tenantId or is no
+     * longer 'platform'. Success data: user_id, tenant_id. Writes nothing.
+     * Uses the inherited, tenant-scoped User::find().
+     */
+    public function platformUserForSupportReturn(int $userId, int $tenantId): ServiceResult
+    {
+        $user = User::find($userId, $tenantId);
+        if ($user === null || $user->role !== 'platform') {
+            return ServiceResult::failure('Only a platform user can return from support access.', 'forbidden');
+        }
+
+        return ServiceResult::success('', [
+            'user_id'   => $user->id,
+            'tenant_id' => $user->tenant_id,
+        ]);
+    }
 }

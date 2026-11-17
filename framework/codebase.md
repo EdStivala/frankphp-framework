@@ -90,10 +90,10 @@ framework/
 │   ├── Request.php            # Wraps $_GET, $_POST, $_SERVER, rawBody, bodyParams, user, tenant
 │   ├── Response.php           # Static: json(), view(), redirect()
 │   ├── Router.php             # add(), override(), dispatch(), middleware pipeline builder — accepts Container
-│   ├── Session.php            # v3.0.0 — the only place a session is started: Session::start() / destroy(). 28-day rolling session, own save path. Also the one place the CSRF token is made and checked: csrfToken() / csrfValid(). See §11
+│   ├── Session.php            # v3.0.0 — the only place a session is started: Session::start() / destroy(). 28-day rolling session, own save path. Also the one place the CSRF token is made and checked: csrfToken() / csrfValid(); and supportAccess() (true while a platform user acts as a tenant owner). See §11
 │   └── Url.php                # v3.0.0 — the site's own address: static isHttps() and baseUrl(). Replaces EmailService::getBaseUrl(). See §16.3
 ├── Controllers/                        # Framework-owned only — no application controllers live here
-│   ├── AuthController.php              # v3.0.0 passwordless: the one sign-in/sign-up screen, code verify, resend, terms step, invite welcome + accept, Continue with Google, logout — injects LoginCodeService + UserService + InviteService + GoogleSignInService + $config
+│   ├── AuthController.php              # v3.0.0 passwordless: the one sign-in/sign-up screen, code verify, resend, terms step, invite welcome + accept, Continue with Google, support access start / stop, logout — injects LoginCodeService + UserService + InviteService + GoogleSignInService + $config
 │   ├── TenantSettingsController.php    # Tenant settings read/write — owner only
 │   └── AccountSettingsController.php   # Per-user account settings read/write
 ├── Middleware/
@@ -121,7 +121,7 @@ framework/
 │   ├── SignupTenantResolver.php    # Interface — policy point: which tenant + role a new person (unknown email, verified code) gets (v2.1.0, §16.9)
 │   ├── CreateTenantForSignup.php   # Default SignupTenantResolver — new tenant per new person, user becomes owner (v2.1.0)
 │   ├── TenantNameGenerator.php     # Pure helper — default tenant name + slug from the new person's email (v2.1.0)
-│   ├── UserService.php             # recordLogin(), saveSettings() — framework user business logic
+│   ├── UserService.php             # recordLogin(), saveSettings(), deleteUser(), changeRole(), ownerForSupportAccess(), platformUserForSupportReturn() — framework user business logic
 │   ├── TenantService.php           # saveSettings(), create() (v2.1.0) — framework tenant business logic
 │   └── ServiceResult.php           # Standardised result object for all services
 ├── sql/
@@ -157,7 +157,7 @@ app/
 ├── Presenters/                 # Empty — application's own presenters, if used. See Core/BasePresenter.php.
 ├── Views/
 │   ├── layouts/
-│   │   ├── app-main.php    # Authenticated app shell — topbar, sidebar nav, page-content-area. All authenticated views require this layout.
+│   │   ├── app-main.php    # Authenticated app shell — topbar, sidebar nav, page-content-area. All authenticated views require this layout. v3.0.0: the topbar gets class topbar--support (red) during support access (§11)
 │   │   └── authViews.php   # Unauthenticated shell. Used for the sign-in screens and terms.
 │   ├── auth/               # login.php (the one sign-in/sign-up screen; v3.0.0 Continue with Google button, disabled without keys; the Microsoft button is commented out — not built yet), login-verify.php, login-terms.php, invite-welcome.php and invite-expired.php (v3.0.0 invite link screens, §16.11), terms.php (placeholder — replace, §16.9)
 │   ├── home/
@@ -165,11 +165,11 @@ app/
 │   ├── users/
 │   │   ├── management-dashboard.php # Platform/owner Users screen (v1.4). v3.0.0: "Your details" card beside the stats; edit icon on every other row (§16.10)
 │   │   ├── user-edit.php   # v3.0.0 example — edit a user's name or delete the user (platform, owner)
-│   │   └── tenant-edit.php # v3.0.0 example — edit a tenant's details or delete it, type-the-name friction (platform)
+│   │   └── tenant-edit.php # v3.0.0 example — edit a tenant's details or delete it, type-the-name friction; Capture Tenant button (support access, §11) (platform)
 │   ├── settings/           # Tenant settings and account settings views; tenant-delete.php is the v3.0.0 example warning + type-the-name screen (§16.10)
 │   ├── modals/             # Reusable modal partial views
 │   └── partials/
-│       ├── app-header.php  # Topbar HTML — included by app-main.php
+│       ├── app-header.php  # Topbar HTML — included by app-main.php. v3.0.0: during support access, Release Tenant + "Acting as Tenant Owner" chip, centred (§11)
 │       ├── app-nav.php     # Sidebar nav — included by app-main.php. Add new nav items here.
 │       ├── csrf-field.php  # v3.0.0 — hidden csrf_token input (Session::csrfToken()), included in every POST form, the sign-in screens too
 │       ├── gtm_head.html   # Google Tag Manager head snippet
@@ -883,7 +883,7 @@ When building or reviewing FrankPHP code:
 - **28 days, rolling.** The session and its cookie last 28 days from the person's last use, so staying logged in is renewed while they keep using the app. For a logged-in session the cookie is re-issued with a fresh 28-day expiry at most once an hour, and a session idle for more than 28 days is destroyed. Clearing cookies logs the person out.
 - **Own save path.** Session files live in `APP_BASE_DIR/app/private/sessions` (created on demand, mode 0700, git-ignored) and `session.gc_maxlifetime` is set to 28 days, so another site sharing the same PHP install cannot garbage-collect these sessions early.
 - Cookie flags: `HttpOnly`, `SameSite=Lax`, `Secure` when the request is HTTPS (decided by `Url::isHttps()`, §16.3 — the same check that builds absolute links).
-- Session keys set by the framework: `user_id` (the login), `csrf_token`, the in-flight sign-in state `login_email` / `login_terms`, `invite` (an opened invite link, v3.0.0, §16.11) and `google_signin` (`state` and `nonce` while the person is at Google's sign-in page, v3.0.0); `Session` keeps `_last_activity` and `_cookie_refreshed_at`.
+- Session keys set by the framework: `user_id` (the login), `csrf_token`, the in-flight sign-in state `login_email` / `login_terms`, `invite` (an opened invite link, v3.0.0, §16.11), `google_signin` (`state` and `nonce` while the person is at Google's sign-in page, v3.0.0) and `support` (`user_id` and `tenant_id` of the platform user while they act as a tenant owner, v3.0.0 — see Support access below); `Session` keeps `_last_activity` and `_cookie_refreshed_at`.
 - `Session` uses `time()` for cookie and idle arithmetic. This is PHP runtime session mechanics, not a persisted application timestamp, so it is the one sanctioned use outside `Clock` (§10); every timestamp written to the database still comes from `Clock` in a Service.
 
 **AuthMiddleware** on every protected route:
@@ -922,7 +922,16 @@ When building or reviewing FrankPHP code:
 - **Same address = same account, when Google confirms the address** (the product rule). If `email_verified` is not true the sign-in is refused: "Google did not confirm this email address." Google's own guidance is to identify users by its `sub` claim rather than email; FrankPHP keys on the confirmed email address, by the product rule above.
 - A confirmed address then goes **exactly the same way as a correct code**: `LoginCodeService::signInConfirmedEmail()` (known address → signed in; unknown → the terms step when `signup.require_terms` is on, otherwise a new tenant + owner via `AccountService`) and `AuthController::continueConfirmedEmail()` → `completeLogin()`. The 5-per-hour code-request limit does not apply (no email is sent).
 
-`GET /logout` destroys the session (`Session::destroy()`) and redirects to `/login`.
+**Support access (v3.0.0)** (`AuthController` + `UserService`). The product rule: a `platform` user logs in as a tenant owner at will; no record is kept; nothing more.
+
+- `POST /tenant/{tenant_id}/support/start` (`supportStart`, field `target_tenant_id`, CSRF-checked): `UserService::ownerForSupportAccess()` refuses anyone who is not `platform` and a tenant with no owner, and finds the owner with the inherited, tenant-scoped `User::where()`. The platform user's own `user_id` and `tenant_id` are kept in `$_SESSION['support']`, `user_id` becomes the owner's, and the person lands on the owner's dashboard. From then on they are the owner in every respect (`AuthMiddleware` is unchanged: the user really is the owner), including everything the owner may do.
+- `POST /tenant/{tenant_id}/support/stop` (`supportStop`, CSRF-checked) — the Release Tenant button: `UserService::platformUserForSupportReturn()` re-reads the kept user with the inherited, tenant-scoped `User::find()` and checks they are still `platform`; `user_id` becomes theirs again and `support` is cleared, landing on their own dashboard. If they are no longer a `platform` user the session is destroyed and they go to `/login`.
+- **No record.** Neither step calls `UserService::recordLogin()`, so the owner's (and the platform user's) `accessed_at` is untouched. Nothing is written to the database.
+- Every refusal (bad CSRF token, not `platform`, no owner, no support session) redirects to the person's own dashboard with `?error=forbidden` (the §11 convention).
+- Every change of signed-in person — each sign-in, support start and stop — goes through one private helper, `AuthController::switchSessionUser()` (new session id, in-flight sign-in keys cleared, `support` set or cleared). Any normal sign-in therefore ends support access.
+- `Session::supportAccess()` is true while `support` is set. The template app's layout and top bar call it: the whole top bar turns red (`.topbar--support`, `app-header.css`) and shows a Release Tenant button and an "Acting as Tenant Owner" chip, centred. The Capture Tenant button is on the template's Edit Tenant screen (platform only). These screens are app-owned; the framework supplies the two routes, the two `UserService` operations and `Session::supportAccess()`.
+
+`GET /logout` destroys the session (`Session::destroy()`) and redirects to `/login`. During support access that ends the platform user's session too.
 
 Apps that need a different placement model (e.g. invite into an existing tenant) replace the `SignupTenantResolver` — see §16.9.
 
@@ -962,7 +971,7 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 | File | Scope |
 |------|-------|
 | `app-core.css` | Design tokens (`--brand-primary`, `--grey-*` scale), global components: cards, buttons, forms, tabs, task components, modals |
-| `app-header.css` | Topbar, logo, dropdown menus, header icon buttons |
+| `app-header.css` | Topbar, logo, dropdown menus, header icon buttons; `.topbar--support` (red top bar during support access, v3.0.0) |
 | `app-nav.css` | Sidebar navigation layout, collapse/expand states, popout submenus |
 | `app-icons.css` | Custom icon font classes (`icon-*`) |
 | `app-pages-settings.css` | Settings vnav, content panels, toggle rows, scope badges, settings alerts |
@@ -1023,6 +1032,7 @@ Any new role-gated controller/view pair must follow both halves of this pattern 
 - Sessions: 28-day rolling, `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, stored in `app/private/sessions` (§11)
 - CSRF: one per-session token, made by `Session::csrfToken()` and checked by `Session::csrfValid()` (`hash_equals`) — no controller has its own copy (v3.0.0)
 - Continue with Google (v3.0.0, §11): a random `state` (anti-forgery) and `nonce` (replay) per attempt, used once; the ID token's issuer, audience, expiry and nonce are checked; an address Google has not confirmed (`email_verified`) is refused. Google keys live only in `app/.env` and flow through `$config['oauth']`
+- Support access (v3.0.0, §11): only a `platform` user can start it (checked server-side in `UserService`); the owner is found and the platform user re-checked with tenant-scoped inherited finders; both steps are CSRF-checked POSTs that regenerate the session id. By the product rule no record of support access is kept
 - `htmlspecialchars()` on all user-supplied output in views
 - Tenant isolation enforced at middleware level (route param vs session user) and at model level (tenant_id in all queries)
 - The single sanctioned cross-tenant read is the Users dashboard for role `platform` (v2.2.0). It is decided in the template app's `UserManagementService` (app-owned since v3.0.0) from the authenticated user's role, never from request input, and it is still built from tenant-scoped calls to the inherited `User::all()` (v3.0.0; previously `User::allByTenant()`). `owner` stays tenant-scoped. Role `user` is refused by the controller, and the app nav hides the link from it.
@@ -1078,7 +1088,7 @@ Before writing or modifying any code, classify the work:
 - `tenants`, `users`, `login_codes`, `invites` tables and any future framework auth tables
 - All models in `Models/User.php`, `Models/Tenant.php`, `Models/Invite.php`
 - All controllers in `framework/Controllers/`: `AuthController.php`, `TenantSettingsController.php`, `AccountSettingsController.php`
-- All framework default routes (sign-in / verify / resend / terms, Google sign-in, invite link, logout, tenant/account settings) — not the dashboard route, which is app-owned; see §16.4
+- All framework default routes (sign-in / verify / resend / terms, Google sign-in, invite link, support access, logout, tenant/account settings) — not the dashboard route, which is app-owned; see §16.4
 - The middleware stack (`AuthMiddleware`, `TenantMiddleware`, `JsonBodyParserMiddleware`, `ApiAuthMiddleware`)
 - `Core/Clock.php`, `Core/Container.php`, `Core/Session.php`, `Core/Url.php`, and the service bindings registered in `framework/bootstrap.php` for framework services
 - `Services/UserService.php` — framework service for user business logic
@@ -1285,7 +1295,7 @@ Indexes: `token_hash` (unique), `(tenant_id, email)`. There is no `used_at`: an 
 | Utility | File | Notes |
 |---------|------|-------|
 | `Clock` | `Core/Clock.php` | Stateless static date/time utility introduced in v1.3.0. Owns UTC timestamp generation, UTC/local conversion, timezone validation, timezone resolution, and UTC query boundary calculation. Loaded by PSR-4; no container binding required. Called from Services only — never from Models, Controllers, or Views. |
-| `Session` | `Core/Session.php` | *v3.0.0.* `Session::start()` is the only way a session is started (28-day rolling session, own save path `app/private/sessions`, `HttpOnly` / `SameSite=Lax` / `Secure` on HTTPS, hourly cookie refresh, idle-expiry destroy); `Session::destroy()` ends it. Used by `app/public/index.php`, `AuthMiddleware` and `AuthController`. Also the one place the CSRF token is made and checked: `Session::csrfToken()` (made once per session, `bin2hex(random_bytes(32))`, used by the partial `Views/partials/csrf-field.php`) and `Session::csrfValid(array $data)` (compares `$data['csrf_token']` with `hash_equals`). Both start the session if needed. See §11. |
+| `Session` | `Core/Session.php` | *v3.0.0.* `Session::start()` is the only way a session is started (28-day rolling session, own save path `app/private/sessions`, `HttpOnly` / `SameSite=Lax` / `Secure` on HTTPS, hourly cookie refresh, idle-expiry destroy); `Session::destroy()` ends it. Used by `app/public/index.php`, `AuthMiddleware` and `AuthController`. Also the one place the CSRF token is made and checked: `Session::csrfToken()` (made once per session, `bin2hex(random_bytes(32))`, used by the partial `Views/partials/csrf-field.php`) and `Session::csrfValid(array $data)` (compares `$data['csrf_token']` with `hash_equals`). `Session::supportAccess()` — true while a platform user acts as a tenant owner (session key `support`); used by the template app's layout and top bar. All three start the session if needed. See §11. |
 | `Url` | `Core/Url.php` | *v3.0.0.* Static, not instantiable. `Url::isHttps()` — true when the server says https, the port is 443, or a proxy says so (`X-Forwarded-Proto`). `Url::baseUrl()` — the site's address, e.g. `https://yoursite.com`, built from `isHttps()` and the `Host` header. Used for absolute links (invite emails, the Google return address) and by `Session` for the `Secure` cookie flag, so they always agree. **Replaces `EmailService::getBaseUrl()`, removed in v3.0.0.** |
 | `Database::transaction()` | `Core/Database.php` | *v2.1.0.* Runs a callable in one transaction on the shared PDO connection; commit on return, rollback + rethrow on any Throwable. Called from Services. See §9. |
 
@@ -1309,6 +1319,8 @@ These routes are registered in `framework/bootstrap.php` and are part of the fra
 | GET | /logout | AuthController@logout | none |
 | GET | /invite/{tenant_id}/{token} | AuthController@showInvite *(v3.0.0 — welcome screen; creates nothing)* | none |
 | POST | /invite/accept | AuthController@acceptInvite *(v3.0.0 — requires `csrf_token`; `terms_accepted=1` when terms are on)* | json |
+| POST | /tenant/{tenant_id}/support/start | AuthController@supportStart *(v3.0.0 — support access; platform only; field `target_tenant_id`; requires `csrf_token`)* | tm, auth, json |
+| POST | /tenant/{tenant_id}/support/stop | AuthController@supportStop *(v3.0.0 — Release Tenant; requires `csrf_token`)* | tm, auth, json |
 | GET | /tenant/{tenant_id}/tenant-settings | TenantSettingsController@index | tm, auth |
 | POST | /tenant/{tenant_id}/tenant-settings/save | TenantSettingsController@save (requires `csrf_token`, v3.0.0) | tm, auth, json |
 | GET | /tenant/{tenant_id}/account | AccountSettingsController@index | tm, auth |
@@ -1332,7 +1344,7 @@ These services are framework-owned and registered in the container by `framework
 | `InviteService` | singleton | `EmailService`, `AccountService`, `TenantService`, `User` model, `$config['signup']` | *v3.0.0.* Invites — see §16.11 for the rules. `createInvite(email, tenantId, kind, invitedByUserId)` (failure types `validation`, `account_exists`, `invite_open`, `email_failed`, `system`; saves the invite and sends the email in one transaction; the token is never returned), `findOpenInvite(tenantId, token)` (`invite_unusable` or data `invite_id`, `tenant_id`, `email`), `acceptInvite(tenantId, inviteId, accepted)` (`invite_unusable`, `terms_required`, `account_exists`, `system`, or `AccountService` success data), `termsRequired()`. Constants `KIND_JOIN_TENANT`, `KIND_NEW_TENANT`. Owns every Clock call for invites. Constructor: `(emailService, accountService, tenantService, userModel = null, requireTerms = false, termsVersion = null, expiryDays = 7)`. |
 | `GoogleSignInService` | bind | `$config['oauth']['google']`, `Url::baseUrl()` | *v3.0.0.* "Continue with Google" without outside libraries. Constructor `(clientId, clientSecret, redirectUri)`. `authorizationRequest()` → `['url', 'state', 'nonce']` (32-character random state and nonce; `scope=openid email`). `exchangeCode(code, expectedNonce)` → success data `email` (normalised by `EmailAddress`); failure `system` with no message (the caller shows its own) when the exchange or any token check fails, or `validation` "Google did not confirm this email address." when `email_verified` is not true. Token endpoint call by curl, 10-second limit, failures logged with `error_log`. Uses `Clock` for the expiry check. §11 |
 | `SignupTenantResolver` | singleton | `TenantService` (default impl) | *v2.1.0.* Interface: `resolve(email, name): array{tenant_id, role, tenant_name?}`, called inside the account-creation transaction. Default `CreateTenantForSignup` — creates a tenant via `TenantNameGenerator` + `TenantService::create()` and returns role `owner`. Apps replace via `$container->override()`. §16.9 |
-| `UserService` | singleton | `User` model | Introduced v1.3.2. Owns business logic for the user record: `recordLogin(userId, tenantId)`, `saveSettings(userId, tenantId, data)`, and *(v3.0.0)* `deleteUser(tenantId, targetUserId)` and `changeRole(tenantId, targetUserId, newRole)` — see §16.10. Owns allowlist and null-coercion for user preferences; `saveSettings` allows `name` (v3.0.0) and `timezone` — never `email`. Computes timestamps via Clock and passes them to the User model. |
+| `UserService` | singleton | `User` model | Introduced v1.3.2. Owns business logic for the user record: `recordLogin(userId, tenantId)`, `saveSettings(userId, tenantId, data)`, and *(v3.0.0)* `deleteUser(tenantId, targetUserId)` and `changeRole(tenantId, targetUserId, newRole)` — see §16.10 — and, for support access (§11), `ownerForSupportAccess(actingUser, tenantId)` (`forbidden` unless `platform`, `not_found` when the tenant has no owner; success data `user_id`, `tenant_id`) and `platformUserForSupportReturn(userId, tenantId)` (`forbidden` unless still `platform` in that tenant). Neither writes anything. Owns allowlist and null-coercion for user preferences; `saveSettings` allows `name` (v3.0.0) and `timezone` — never `email`. Computes timestamps via Clock and passes them to the User model. |
 | `TenantService` | singleton | `Tenant` model | Introduced v1.3.2. Owns business logic for the tenant record: `saveSettings(tenantId, data)`, `create(name, baseSlug, companyEmail): int` *(v2.1.0 — owns slug uniqueness: suffixes `-2`, `-3`… with the UNIQUE index as final guard and retry on collision; safe inside a transaction)*, `deleteTenant(actingUser, tenantId)` *(v3.0.0 — the tenant's owner or a `platform` user, see §16.10)*. Owns allowlist and null-coercion for tenant settings. Computes timestamps via Clock and passes them to the Tenant model. |
 | `JoinTenantAsUser` | not in container | none | *v3.0.0.* `SignupTenantResolver` for an owner's invite: `new JoinTenantAsUser(tenantId)` → `resolve()` returns `['tenant_id' => tenantId, 'role' => 'user']`. Writes nothing. Constructed by `InviteService::acceptInvite()`. |
 | `TenantNameGenerator` | not in container | none | *v2.1.0.* Pure helper (no DB, no Clock), constructed by `CreateTenantForSignup`. `fromEmail(email): array{name, slug}` — business domain → organisation name (`jane@acme-corp.com` → `Acme Corp` / `acme-corp`; two-part suffixes like `co.uk` handled); free-mail domain (`FREE_MAIL_DOMAINS`, extendable via constructor) → `"<Name>'s Workspace"`. `slugify()` is public static. Slug uniqueness is not its job. |
@@ -1539,7 +1551,7 @@ When enabled, the framework enforces acceptance **server-side** and records **wh
 | GET | /tenant/{tenant_id}/users/edit | `showUserEdit` | platform (any tenant, `user_tenant_id` from the row) or owner (own tenant); query `user_id`, `user_tenant_id` |
 | POST | /tenant/{tenant_id}/users/save | `saveUser` | as above; saves the name only, via `UserService::saveSettings()` |
 | POST | /tenant/{tenant_id}/users/delete | `deleteUser` | as above; `UserService::deleteUser()` (the owner is refused by the service) |
-| GET | /tenant/{tenant_id}/tenants/edit | `showTenantEdit` | platform only; query `edit_tenant_id` |
+| GET | /tenant/{tenant_id}/tenants/edit | `showTenantEdit` | platform only; query `edit_tenant_id`. The screen's Capture Tenant button posts to the framework's support access route (§11) |
 | POST | /tenant/{tenant_id}/tenants/save | `saveTenant` | platform only; `TenantService::saveSettings()` |
 | POST | /tenant/{tenant_id}/tenants/delete | `deleteTenantAsPlatform` | platform only; the typed `tenant_name` must equal the tenant's name exactly, then `TenantService::deleteTenant()` |
 

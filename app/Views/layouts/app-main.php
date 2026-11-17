@@ -84,7 +84,7 @@
 	</head>
 	<body class="">
 		<?php include(APP_VIEWS_DIR . '/partials/gtm_body.html'); ?>
-		<header class="topbar">
+		<header class="topbar<?= \Frank\Core\Session::supportAccess() ? ' topbar--support' : '' ?>">
 			<?php include(APP_VIEWS_DIR . '/partials/app-header.php'); ?>
 		</header>
 		

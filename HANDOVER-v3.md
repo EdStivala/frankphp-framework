@@ -138,6 +138,42 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
   `getting-started/getting-email-up-and-running.mdx`, `changelog.mdx`.
   Microsoft is out of v3 (see above).
 
+## Sprint 5 — support access (DONE — tested and approved by the owner 2026-11-17; NOT committed)
+
+Rule (plan): a `platform` user logs in as a tenant owner at will; no record kept; nothing more in v3.
+
+Owner decisions 2026-11-17:
+- Button on Edit Tenant; a notice in the top bar while acting as the owner.
+- The owner's Last Login is untouched; the platform user can do everything the owner can (platform could already delete a tenant from Edit Tenant).
+- Wording: the Edit Tenant button "Capture Tenant" (icon on the right); in the top bar "Release Tenant" (icon on the left) and the chip "Acting as Tenant Owner" (no user or tenant name — the other header buttons show them). "Log in as owner" was kept after research, then replaced by "Capture Tenant".
+- Edit Tenant layout: a top row with Back to Users (arrow icon) on the left and Capture Tenant on the right, space below it, then the title.
+- During support access the whole top bar is red; Release Tenant and the chip are centred, Release Tenant on the left. Breaking on small screens is left to apps (support on a small device is not expected).
+- How the top bar knows: a framework helper `Session::supportAccess()` called by the layout and header (owner's choice of three options).
+
+Built:
+- Framework: `UserService::ownerForSupportAccess()` and `platformUserForSupportReturn()` (inherited tenant-scoped `where()` / `find()`); `AuthController::supportStart()` / `supportStop()`; routes `POST /tenant/{tenant_id}/support/start|stop` (`[$tm, $auth, $json]`, CSRF-checked); session key `support` (`user_id`, `tenant_id` of the platform user); `Session::supportAccess()`; private `AuthController::switchSessionUser()` now used by every sign-in and by start / stop (a normal sign-in ends support access).
+- App template: `users/tenant-edit.php` (top row, Capture Tenant form), `partials/app-header.php` (Release Tenant + chip), `layouts/app-main.php` (`topbar--support` class), `app-header.css` (`.topbar--support`).
+- `codebase.md` (§2, §11, §12, §13, §15.2, §16.3, §16.4, §16.5, §16.10) and `CHANGELOG.md` (Added, Changed, upgrade note 12) updated. Docs site: sprint 6.
+
+Tested and passed by the owner: Capture Tenant (lands on the owner's dashboard as the owner; edits work; Last Login not updated); the red top bar, chip and Release Tenant (back to the platform user's own dashboard).
+
+Not tested: a refusal (not platform, no owner, bad CSRF token); Release Tenant when the platform user is no longer `platform` (the session ends).
+
+Provisional (copied from patterns, not confirmed):
+1. Names: `ownerForSupportAccess`, `platformUserForSupportReturn`, `supportStart`, `supportStop`, `switchSessionUser`, `supportAccess`, session key `support`, field `target_tenant_id`, addresses `/tenant/{tenant_id}/support/start|stop`, CSS class `topbar--support`.
+2. Every refusal goes to the person's own dashboard with "forbidden"; the service messages are shown nowhere.
+3. Release Tenant lands on the platform user's dashboard, not the Users screen (the framework only knows the dashboard).
+4. If the platform user is no longer `platform` at Release Tenant, the session ends and they go to `/login`.
+5. With more than one owner in a tenant, the first found is used.
+6. Look: red `--color-danger` bar with a `--color-danger-dark` border; white outline on header buttons; white pill chip with red text and eye icon; `mb-4` gap under the Edit Tenant top row.
+7. Logout during support access ends the platform user's session too.
+
+Noticed while reading, not changed (owner to decide):
+- `BaseModel::all()` puts `$tenantID` into the SQL text instead of a bound parameter (codebase.md says all queries are prepared).
+- `Tenant` imports and calls `Clock` in `effectiveTimezone()`; `effectiveTimezone()` / `effectiveDateFormat()` are not in codebase.md.
+- Stale docblocks: `UserAdminController` (routes list, "Account Settings", CSRF wording), `UserManagementService` (row fields miss `tenantId`, return values miss `me`), `app/bootstrap.php` comment above `UserAdminController`.
+- Inline `style=` attributes in `users/management-dashboard.php` and `users/tenant-edit.php`.
+
 ## Done in the 2026-11-17 session (committed, tested by the owner)
 
 - `UserService::changeRole()` sets `updated_at`.
@@ -181,7 +217,7 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
 - Sprint 2 documentation-site pages: deferred by the owner until the sprints
   settle (sprint 6).
 - Later sprints per the plan: 3 invites (done), 4 Google/Microsoft (done;
-  Microsoft left out of v3), 5 support access (next), 6 documentation,
+  Microsoft left out of v3), 5 support access (done, not committed), 6 documentation,
   7 migrate AppTracker - Dev then BitfitterV2.
 
 ## Behaviour built without the owner's decision (still to be put to the owner)

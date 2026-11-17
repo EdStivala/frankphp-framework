@@ -30,6 +30,8 @@ use Frank\Services\UserService;
  *                  when the invite is accepted or turns out unusable
  * - google_signin  — ['state', 'nonce'] while the person is at Google's
  *                    sign-in page (/login/google), checked on the return
+ * - support        — ['user_id', 'tenant_id'] of the platform user while they
+ *                    are logged in as a tenant owner (support access)
  *
  * Dependencies injected via container (bootstrap.php):
  * - LoginCodeService
@@ -316,6 +318,70 @@ class AuthController extends BaseController
     }
 
     // ----------------------------------------------------------------
+    // Support access (v3.0.0) — a platform user logs in as a tenant owner
+    // ----------------------------------------------------------------
+
+    /**
+     * POST /tenant/{tenant_id}/support/start — field: target_tenant_id.
+     * The signed-in person must be 'platform' (UserService decides). They
+     * become the target tenant's owner; their own id and tenant are kept in
+     * the session ('support') so they can get back. No record is kept and
+     * recordLogin is not called, so the owner's last login is untouched.
+     */
+    public function supportStart(Request $request, array $params): mixed
+    {
+        $forbidden = "/tenant/{$request->tenant['id']}/dashboard?error=forbidden";
+
+        $data = $request->bodyParams ?? $_POST;
+        if (!Session::csrfValid($data)) {
+            Response::redirect($forbidden);
+        }
+
+        $result = $this->userService->ownerForSupportAccess(
+            $request->user,
+            (int) ($data['target_tenant_id'] ?? 0)
+        );
+
+        if (!$result->success) {
+            Response::redirect($forbidden);
+        }
+
+        $this->switchSessionUser((int) $result->get('user_id'), [
+            'user_id'   => (int) $request->user['id'],
+            'tenant_id' => (int) $request->user['tenant_id'],
+        ]);
+        Response::redirect("/tenant/{$result->get('tenant_id')}/dashboard");
+    }
+
+    /**
+     * POST /tenant/{tenant_id}/support/stop — "Release Tenant". The platform
+     * user kept in the session becomes the signed-in person again, without
+     * recordLogin. If they are no longer a platform user, the session ends.
+     */
+    public function supportStop(Request $request, array $params): mixed
+    {
+        $support = $_SESSION['support'] ?? null;
+
+        $data = $request->bodyParams ?? $_POST;
+        if (!is_array($support) || !Session::csrfValid($data)) {
+            Response::redirect("/tenant/{$request->tenant['id']}/dashboard?error=forbidden");
+        }
+
+        $result = $this->userService->platformUserForSupportReturn(
+            (int) ($support['user_id'] ?? 0),
+            (int) ($support['tenant_id'] ?? 0)
+        );
+
+        if (!$result->success) {
+            Session::destroy();
+            Response::redirect('/login');
+        }
+
+        $this->switchSessionUser((int) $result->get('user_id'));
+        Response::redirect("/tenant/{$result->get('tenant_id')}/dashboard");
+    }
+
+    // ----------------------------------------------------------------
     // Logout
     // ----------------------------------------------------------------
 
@@ -339,9 +405,7 @@ class AuthController extends BaseController
         $userId   = (int) $result->get('user_id');
         $tenantId = (int) $result->get('tenant_id');
 
-        session_regenerate_id(true);
-        unset($_SESSION['login_email'], $_SESSION['login_terms'], $_SESSION['invite']);
-        $_SESSION['user_id'] = $userId;
+        $this->switchSessionUser($userId);
 
         // The code is already spent and the session is established, so a
         // recordLogin failure is logged and never blocks the person.
@@ -350,6 +414,22 @@ class AuthController extends BaseController
         }
 
         Response::redirect("/tenant/{$tenantId}/dashboard");
+    }
+
+    /**
+     * Make $userId the signed-in person: a new session id, the in-flight
+     * sign-in state cleared, and support access set ($support) or cleared.
+     * Used by every sign-in and by support access start / stop.
+     */
+    private function switchSessionUser(int $userId, ?array $support = null): void
+    {
+        session_regenerate_id(true);
+        unset($_SESSION['login_email'], $_SESSION['login_terms'], $_SESSION['invite'], $_SESSION['support']);
+        $_SESSION['user_id'] = $userId;
+
+        if ($support !== null) {
+            $_SESSION['support'] = $support;
+        }
     }
 
     /**

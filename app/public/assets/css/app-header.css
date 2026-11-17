@@ -19,6 +19,22 @@
 	z-index: 1030;
 }
 
+/* Support access (v3.0.0): a platform user logged in as a tenant owner.
+   The whole top bar turns red so the session cannot be mistaken for a normal one. */
+.topbar--support {
+	background-color: var(--color-danger);
+	border-bottom-color: var(--color-danger-dark);
+}
+.topbar--support .btn-header-glass {
+	color: #FFFFFF;
+	border-color: rgba(255, 255, 255, 0.6);
+}
+.topbar--support .btn-header-glass:hover,
+.topbar--support .btn-header-glass:focus {
+	background-color: rgba(255, 255, 255, 0.15);
+	border-color: #FFFFFF;
+}
+
 /* Logo: Pure CSS version */
 .logo-text {
 	font-size: 1.25rem;
