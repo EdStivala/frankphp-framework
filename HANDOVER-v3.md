@@ -57,7 +57,7 @@ Reuse refactors this sprint: `EmailAddress` (email rules), `EmailService`
 `sendTemplated()`, `AccountService` (account creation for sign-up and invites).
 
 Docs: codebase.md (§2, §8.1, §8.2, §11, §14, §15, §16.1–16.5, §16.8–16.11) and
-CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
+CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 7, docs overhaul).
 
 ## Sprint 4 — Google and Microsoft (DONE — approved by the owner 2026-11-17; committed in 37a263e and cd5a786)
 
@@ -89,7 +89,7 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
   in `app/Views/auth/login.php` (PHP comment, not sent to the browser) so a
   developer who sets the keys does not get a button that does nothing.
   `AuthController` still passes `microsoftEnabled` (unused for now).
-  DOCS SITE (sprint 6): list Continue with Microsoft as a future enhancement.
+  DOCS SITE (sprint 7, docs overhaul): list Continue with Microsoft as a future enhancement.
 - END OF SPRINT 4 — to investigate and amend (owner instruction 2026-11-17):
   `EmailService::getBaseUrl()`. It lives in the email class but is used for
   site addresses generally (invite links, the Google return address), and it
@@ -99,7 +99,7 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
   breaking): new `Frank\Core\Url` with `isHttps()` (moved from `Session`) and
   `baseUrl()`. `Session`, `InviteService` and the Google binding use it;
   `EmailService::getBaseUrl()` removed (apps calling it must switch to
-  `Url::baseUrl()` — migration guide, sprint 6). The `Host` header point was
+  `Url::baseUrl()` — migration guide, sprint 7 docs overhaul). The `Host` header point was
   set aside by the owner.
 - Login buttons wired: Google is a link to `/login/google` when its keys are
   set; otherwise the disabled button. `AuthController` receives `$config`;
@@ -131,7 +131,7 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
 - Not tested: an address Google did not confirm (hard to produce);
   `/login/google` typed in with no keys set (should return to `/login`).
 - `codebase.md` and `CHANGELOG.md` updated for sprint 4 (2026-11-17).
-- Sprint 4 docs-site pages: FOLDED INTO SPRINT 6 (owner decision 2026-11-17),
+- Sprint 4 docs-site pages: FOLDED INTO SPRINT 7 (docs overhaul) (owner decision 2026-11-17),
   like sprints 2 and 3. Pages found by a keyword search (not yet read):
   `users/signup-flow.mdx`, `users/users-dashboard.mdx`,
   `architecture/dependency-injection.mdx`, `architecture/tenant-isolation.mdx`,
@@ -154,7 +154,7 @@ Owner decisions 2026-11-17:
 Built:
 - Framework: `UserService::ownerForSupportAccess()` and `platformUserForSupportReturn()` (inherited tenant-scoped `where()` / `find()`); `AuthController::supportStart()` / `supportStop()`; routes `POST /tenant/{tenant_id}/support/start|stop` (`[$tm, $auth, $json]`, CSRF-checked); session key `support` (`user_id`, `tenant_id` of the platform user); `Session::supportAccess()`; private `AuthController::switchSessionUser()` now used by every sign-in and by start / stop (a normal sign-in ends support access).
 - App template: `users/tenant-edit.php` (top row, Capture Tenant form), `partials/app-header.php` (Release Tenant + chip), `layouts/app-main.php` (`topbar--support` class), `app-header.css` (`.topbar--support`).
-- `codebase.md` (§2, §11, §12, §13, §15.2, §16.3, §16.4, §16.5, §16.10) and `CHANGELOG.md` (Added, Changed, upgrade note 12) updated. Docs site: sprint 6.
+- `codebase.md` (§2, §11, §12, §13, §15.2, §16.3, §16.4, §16.5, §16.10) and `CHANGELOG.md` (Added, Changed, upgrade note 12) updated. Docs site: sprint 7 (docs overhaul).
 
 Tested and passed by the owner: Capture Tenant (lands on the owner's dashboard as the owner; edits work; Last Login not updated); the red top bar, chip and Release Tenant (back to the platform user's own dashboard).
 
@@ -212,14 +212,15 @@ Noticed while reading, not changed (owner to decide):
 - Deleting your own account — DONE: every remaining role is covered. `user`
   uses Delete my account (User Settings); `owner` deletes the tenant (Tenant
   Settings); `platform` can never delete themself (owner's decision).
-- BitfitterV2: `workouts`, `workout_exercises` and `exercises` use
-  `ON UPDATE CURRENT_TIMESTAMP` and their models declare `updated_at`. Their
-  Services must set `updated_at`; to be handled at its migration (sprint 7).
 - Sprint 2 documentation-site pages: deferred by the owner until the sprints
-  settle (sprint 6).
-- Later sprints per the plan: 3 invites (done), 4 Google/Microsoft (done;
-  Microsoft left out of v3), 5 support access (done), 6 documentation,
-  7 migrate AppTracker - Dev then BitfitterV2.
+  settle (sprint 7, docs overhaul).
+- Sprints per the plan, amended by the owner 2026-11-17: 0–5 done (5 support
+  access); 6 cut the v3 release and upload it to GitHub, following the release
+  section of the current docs as a test, and add AI release instructions to
+  codebase.md; 7 total overhaul of the documentation once v3 is public (scope
+  set by the owner); 8 a little social media marketing and a look at the
+  FrankPHP marketing page; 9 migrate AppTracker - Dev (very late). BitfitterV2
+  is not part of the plan.
 
 ## Behaviour built without the owner's decision (still to be put to the owner)
 
