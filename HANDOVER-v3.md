@@ -13,6 +13,7 @@ item is the owner's call.
   - `99e9854` sprint 3: invites.
   - `37a263e` sprint 4: Google sign-in, CSRF in Session, Url helper.
   - `cd5a786` sprint 4: Microsoft left out of v3; button commented out.
+  - `9f11832` sprint 5: support access (Capture / Release Tenant).
 - Approved plan: `/Users/edstivala/.claude/plans/this-is-a-planning-adaptive-mitten.md`.
 - Working rules are in the project memory (no choices without instruction,
   one small step at a time, the owner drives, check files rather than memory,
@@ -138,7 +139,7 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
   `getting-started/getting-email-up-and-running.mdx`, `changelog.mdx`.
   Microsoft is out of v3 (see above).
 
-## Sprint 5 — support access (DONE — tested and approved by the owner 2026-11-17; NOT committed)
+## Sprint 5 — support access (DONE — tested and approved by the owner 2026-11-17; committed in 9f11832)
 
 Rule (plan): a `platform` user logs in as a tenant owner at will; no record kept; nothing more in v3.
 
@@ -217,7 +218,7 @@ Noticed while reading, not changed (owner to decide):
 - Sprint 2 documentation-site pages: deferred by the owner until the sprints
   settle (sprint 6).
 - Later sprints per the plan: 3 invites (done), 4 Google/Microsoft (done;
-  Microsoft left out of v3), 5 support access (done, not committed), 6 documentation,
+  Microsoft left out of v3), 5 support access (done), 6 documentation,
   7 migrate AppTracker - Dev then BitfitterV2.
 
 ## Behaviour built without the owner's decision (still to be put to the owner)
