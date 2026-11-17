@@ -11,8 +11,8 @@ item is the owner's call.
   - `0c7f09b` sprint 2 checkpoint.
   - `e9ca98c`, `3a7b807` sprint 2 completed (2026-11-17; tested by the owner).
   - `99e9854` sprint 3: invites.
-  - `37a263e` sprint 4 (in progress): Google sign-in, CSRF in Session, Url
-    helper. Later sprint 4 changes are not committed (see the Sprint 4 section).
+  - `37a263e` sprint 4: Google sign-in, CSRF in Session, Url helper.
+  - `cd5a786` sprint 4: Microsoft left out of v3; button commented out.
 - Approved plan: `/Users/edstivala/.claude/plans/this-is-a-planning-adaptive-mitten.md`.
 - Working rules are in the project memory (no choices without instruction,
   one small step at a time, the owner drives, check files rather than memory,
@@ -58,7 +58,7 @@ Reuse refactors this sprint: `EmailAddress` (email rules), `EmailService`
 Docs: codebase.md (§2, §8.1, §8.2, §11, §14, §15, §16.1–16.5, §16.8–16.11) and
 CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
 
-## Sprint 4 — Google and Microsoft (in progress; committed to 37a263e, later changes not committed)
+## Sprint 4 — Google and Microsoft (DONE — approved by the owner 2026-11-17; committed in 37a263e and cd5a786)
 
 - Login screen (`app/Views/auth/login.php`): "Continue with Google" and
   "Continue with Microsoft" buttons added below the email form, after an "or"
@@ -130,8 +130,13 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
 - Not tested: an address Google did not confirm (hard to produce);
   `/login/google` typed in with no keys set (should return to `/login`).
 - `codebase.md` and `CHANGELOG.md` updated for sprint 4 (2026-11-17).
-- Still to do in sprint 4: the docs-site pages the plan names. Microsoft is
-  out of v3 (see above).
+- Sprint 4 docs-site pages: FOLDED INTO SPRINT 6 (owner decision 2026-11-17),
+  like sprints 2 and 3. Pages found by a keyword search (not yet read):
+  `users/signup-flow.mdx`, `users/users-dashboard.mdx`,
+  `architecture/dependency-injection.mdx`, `architecture/tenant-isolation.mdx`,
+  `getting-started/get-frankphp-running-rewritten.mdx`,
+  `getting-started/getting-email-up-and-running.mdx`, `changelog.mdx`.
+  Microsoft is out of v3 (see above).
 
 ## Done in the 2026-11-17 session (committed, tested by the owner)
 
@@ -175,8 +180,9 @@ CHANGELOG.md updated for sprint 3. Docs site: not touched (sprint 6).
   Services must set `updated_at`; to be handled at its migration (sprint 7).
 - Sprint 2 documentation-site pages: deferred by the owner until the sprints
   settle (sprint 6).
-- Later sprints per the plan: 3 invites, 4 Google/Microsoft, 5 support access,
-  6 documentation, 7 migrate AppTracker - Dev then BitfitterV2.
+- Later sprints per the plan: 3 invites (done), 4 Google/Microsoft (done;
+  Microsoft left out of v3), 5 support access (next), 6 documentation,
+  7 migrate AppTracker - Dev then BitfitterV2.
 
 ## Behaviour built without the owner's decision (still to be put to the owner)
 
